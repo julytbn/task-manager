@@ -48,20 +48,21 @@ model Service {
 
 // Projet pour un client
 model Projet {
-  id               String       @id @default(cuid())
-  titre            String
-  description      String?
-  client           Client       @relation(fields: [clientId], references: [id])
-  clientId         String
-  service          Service      @relation(fields: [serviceId], references: [id])
-  serviceId        String
-  statut           StatutProjet @default(EN_COURS)
-  budget           Float?
-  dateDebut        DateTime?
-  dateFin          DateTime?
-  dateEcheance     DateTime?
-  dateCreation     DateTime     @default(now())
-  dateModification DateTime     @updatedAt
+  id                   String                @id @default(cuid())
+  titre                String
+  description          String?
+  client               Client                @relation(fields: [clientId], references: [id])
+  clientId             String
+  service              Service               @relation(fields: [serviceId], references: [id])
+  serviceId            String
+  statut               StatutProjet          @default(EN_COURS)
+  budget               Float?
+  frequencePaiement    FrequencePaiement     @default(PONCTUEL)
+  dateDebut            DateTime?
+  dateFin              DateTime?
+  dateEcheance         DateTime?
+  dateCreation         DateTime              @default(now())
+  dateModification     DateTime              @updatedAt
 
   // Optionnel : assigner un projet à une équipe
   equipe   Equipe? @relation("ProjetAEquipe", fields: [equipeId], references: [id])
@@ -120,16 +121,18 @@ model Paiement {
   facture   Facture? @relation(fields: [factureId], references: [id])
   factureId String?
 
-  montant          Float
-  moyenPaiement    MoyenPaiement
-  reference        String?
-  datePaiement     DateTime       @default(now())
-  dateReception    DateTime?
-  statut           StatutPaiement @default(EN_ATTENTE)
-  notes            String?
-  preuvePaiement   String?
-  dateCreation     DateTime       @default(now())
-  dateModification DateTime       @updatedAt
+  montant               Float
+  moyenPaiement         MoyenPaiement
+  reference             String?
+  datePaiement          DateTime       @default(now())
+  datePaiementAttendu   DateTime?      // Date d'échéance attendue basée sur la fréquence
+  dateReception         DateTime?
+  statut                StatutPaiement @default(EN_ATTENTE)
+  notes                 String?
+  preuvePaiement        String?
+  notificationEnvoyee   Boolean        @default(false) // Pour savoir si une notification a été envoyée
+  dateCreation          DateTime       @default(now())
+  dateModification      DateTime       @updatedAt
 
   @@map("paiements")
 }
@@ -432,4 +435,12 @@ enum TypeNotification {
   TACHE
   ALERTE
   SUCCES
+}
+
+enum FrequencePaiement {
+  PONCTUEL
+  MENSUEL
+  TRIMESTRIEL
+  SEMESTRIEL
+  ANNUEL
 }

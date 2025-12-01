@@ -127,3 +127,8 @@ export function Stat({ label, value, icon, trend, trendValue }: StatProps) {
     </Card>
   )
 }
+
+// Expose shared components implemented in separate files
+export { StatCard } from './StatCard'
+export { Modal } from './Modal'
+export { EmptyState } from './EmptyState'

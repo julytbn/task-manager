@@ -27,6 +27,7 @@ type Project = {
   dateDebut: string | Date
   dateFin: string | Date
   budget: number
+  frequencePaiement?: string
   tasks: Array<{
     id: number
     title: string
@@ -366,6 +367,20 @@ function ProjectCard({ project, onCreateTask }: { project: Project; onCreateTask
             {project.budget ? `${(project.budget / 1000000).toFixed(1)}M FCFA` : 'N/A'}
           </p>
         </div>
+
+        {/* Frequency */}
+        {project.frequencePaiement && (
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Fréquence</p>
+            <p className="text-sm text-gray-700 font-medium">
+              {project.frequencePaiement === 'PONCTUEL' && 'Ponctuel'}
+              {project.frequencePaiement === 'MENSUEL' && 'Mensuel'}
+              {project.frequencePaiement === 'TRIMESTRIEL' && 'Trimestriel'}
+              {project.frequencePaiement === 'SEMESTRIEL' && 'Semestriel'}
+              {project.frequencePaiement === 'ANNUEL' && 'Annuel'}
+            </p>
+          </div>
+        )}
 
         {/* Date Period */}
         <div>

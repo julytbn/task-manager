@@ -7,6 +7,8 @@ import DashboardAgenda from '@/components/dashboard/DashboardAgenda'
 import DashboardTasks from '@/components/dashboard/DashboardTasks'
 import DashboardPayments from '@/components/dashboard/DashboardPayments'
 import DashboardPerformance from '@/components/dashboard/DashboardPerformance'
+import { useProjectsStatistics } from '@/lib/useProjectsStatistics'
+import { StatCard } from '@/components/ui'
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 
@@ -14,6 +16,12 @@ const colors = ['#4F46E5', '#3B82F6', '#F59E0B', '#10B981']
 
 
 export default function ManagerDashboard() {
+  const { data: projStats, loading: projLoading, error: projError } = useProjectsStatistics()
+
+  const totalProjects = projStats?.totalProjets ?? 0
+  const projetsEnCours = projStats?.projetsEnCours ?? 0
+  const budgetTotalFormatted = projStats?.budgetTotalFormatted ?? '0 FCFA'
+
   const [tasks, setTasks] = useState<any[]>([])
   const [payments, setPayments] = useState<any[]>([])
   const [paymentsTotals, setPaymentsTotals] = useState<{ total: number; paid: number; pending: number }>({ total: 0, paid: 0, pending: 0 })
@@ -44,11 +52,12 @@ export default function ManagerDashboard() {
   const tasksPaid = payments.filter((p: any) => p.statut === 'CONFIRME').length
   const totalAmount = paymentsTotals.total || 0
 
+  // Note: removed hardcoded 'change' values — show only DB-derived metrics here.
   const stats = [
-    { title: 'Total des tâches', value: totalTasks, change: '+0%', isPositive: true, icon: <ListChecks className="h-6 w-6 text-white" />, color: 'bg-indigo-600' },
-    { title: 'Tâches en cours', value: tasksInProgress, change: '+0%', isPositive: true, icon: <Clock className="h-6 w-6 text-white" />, color: 'bg-blue-500' },
-    { title: 'Tâches payées', value: tasksPaid, change: '+0%', isPositive: true, icon: <DollarSign className="h-6 w-6 text-white" />, color: 'bg-emerald-500' },
-    { title: 'Montant total', value: `${totalAmount.toLocaleString()} FCFA`, change: '+0%', isPositive: true, icon: <TrendingUp className="h-6 w-6 text-white" />, color: 'bg-purple-500' }
+    { title: 'Total des tâches', value: totalTasks, icon: <ListChecks className="h-6 w-6 text-white" />, color: 'bg-indigo-600' },
+    { title: 'Tâches en cours', value: tasksInProgress, icon: <Clock className="h-6 w-6 text-white" />, color: 'bg-blue-500' },
+    { title: 'Tâches payées', value: tasksPaid, icon: <DollarSign className="h-6 w-6 text-white" />, color: 'bg-emerald-500' },
+    { title: 'Montant total', value: `${totalAmount.toLocaleString()} FCFA`, icon: <TrendingUp className="h-6 w-6 text-white" />, color: 'bg-purple-500' }
   ]
 
   const taskCounts = useMemo(() => {
@@ -82,20 +91,21 @@ export default function ManagerDashboard() {
         <p className="text-gray-500">Bienvenue sur votre espace de gestion</p>
       </div>
 
+      {/* Project stats summary (using shared StatCard) */}
+      <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard label="Projets totaux" value={projLoading ? '...' : totalProjects} description={projError ? 'Erreur' : undefined} />
+        <StatCard label="Projets en cours" value={projLoading ? '...' : projetsEnCours} />
+        <StatCard label="Budget total" value={projLoading ? '...' : budgetTotalFormatted} />
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {stats.map((stat, index) => (
-          <div key={index} className="bg-white rounded-xl shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div className={`p-3 rounded-lg ${stat.color} inline-block`}>{stat.icon}</div>
-              <div className="text-right">
-                <p className="text-sm text-gray-500">{stat.title}</p>
-                <p className="text-2xl font-bold mt-1">{stat.value}</p>
-                <div className={`inline-flex items-center text-sm mt-1 ${stat.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                  {stat.isPositive ? <ArrowUp className="h-4 w-4 mr-1" /> : <ArrowDown className="h-4 w-4 mr-1" />}
-                  {stat.change}
-                </div>
-              </div>
+          <div key={index} className="bg-white rounded-xl shadow-sm p-5 flex items-start justify-between border border-gray-100 hover:shadow-md transition-shadow">
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">{stat.title}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-2">{stat.value}</p>
             </div>
+            <div className={`p-3 rounded-lg ${stat.color} inline-block flex-shrink-0`}>{stat.icon}</div>
           </div>
         ))}
       </div>
@@ -125,7 +135,7 @@ export default function ManagerDashboard() {
           </div>
 
           <div className="grid grid-cols-1 gap-6">
-            <DashboardTasks />
+            <DashboardTasks compact={true} />
             <DashboardPayments />
           </div>
         </div>

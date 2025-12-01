@@ -11,7 +11,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "prisma:seed": "node prisma/seed.js",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "test:payment-late": "node scripts/testPaymentLateDetection.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.0.0",

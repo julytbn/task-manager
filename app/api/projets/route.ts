@@ -50,6 +50,7 @@ export async function GET() {
         status: status,
         progress,
         budget: projet.budget || null,
+        frequencePaiement: projet.frequencePaiement,
         tasks: projet.taches ? projet.taches.map(t => ({
           id: t.id,
           title: t.titre,
@@ -105,6 +106,7 @@ export async function POST(request: Request) {
         client: { connect: { id: data.clientId } },
         service: { connect: { id: data.serviceId } },
         statut: data.statut || 'EN_COURS',
+        frequencePaiement: data.frequencePaiement || 'PONCTUEL',
         dateDebut: data.dateDebut ? new Date(data.dateDebut) : null,
         dateFin: data.dateFin ? new Date(data.dateFin) : null,
         dateEcheance: data.dateEcheance ? new Date(data.dateEcheance) : null,

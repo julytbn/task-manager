@@ -12,7 +12,7 @@ type Tache = {
   estPayee?: boolean
 }
 
-export default function DashboardTasks() {
+  export default function DashboardTasks({ compact = false }: { compact?: boolean }) {
   const [tasks, setTasks] = useState<Tache[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -82,6 +82,25 @@ export default function DashboardTasks() {
           <AlertCircle size={24} className="text-[#DCE3EB]" />
           <p className="text-[#5A6A80]">Aucune tâche assignée pour le moment</p>
         </Card>
+      ) : compact ? (
+        <div className="space-y-2">
+          {tasks.slice(0, 8).map((t: any) => {
+            const statusBadgeVariant = statusVariant(t.statut)
+            const statusLabelText = statusLabel(t.statut)
+            return (
+              <div key={t.id} className="bg-white border border-border rounded-md p-2 flex items-center justify-between hover:bg-gray-50">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-[#1E1E1E] truncate">{t.titre}</div>
+                    <div className="text-xs text-[#5A6A80] truncate">{t.projet?.nom || '—'} · {t.dateEcheance ? new Date(t.dateEcheance).toLocaleDateString('fr-FR') : 'N/A'}</div>
+                  </div>
+                </div>
+                <Badge variant={statusBadgeVariant} className="text-xs whitespace-nowrap ml-2">{statusLabelText}</Badge>
+              </div>
+            )
+          })}
+          {tasks.length > 8 && <p className="text-xs text-[#5A6A80] px-2 py-1">+{tasks.length - 8} autres...</p>}
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {tasks.map((t: any) => {

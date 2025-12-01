@@ -45,11 +45,15 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     if (data.dateEcheance !== undefined) updateData.dateEcheance = data.dateEcheance ? new Date(data.dateEcheance) : null
     if (data.notes !== undefined) updateData.notes = data.notes
 
-    // Recalcul montantTotal si montant ou tauxTVA change
+    // Recalcul montantTotal si montant ou tauxTVA change (utiliser des réels et arrondir)
     if (data.montant !== undefined || data.tauxTVA !== undefined) {
-      const montant = data.montant ?? existing.montant
-      const tva = data.tauxTVA ?? existing.tauxTVA
-      updateData.montantTotal = montant * (1 + tva)
+      const montant = Number((data.montant ?? existing.montant) ?? 0)
+      const tva = Number((data.tauxTVA ?? existing.tauxTVA) ?? 0)
+      const montantTotal = montant * (1 + tva)
+      // arrondir à 2 décimales
+      updateData.montantTotal = Number(montantTotal.toFixed(2))
+      updateData.montant = Number(montant.toFixed(2))
+      updateData.tauxTVA = Number(tva)
     }
 
     const updated = await prisma.facture.update({
@@ -63,7 +67,19 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       }
     })
 
-    return NextResponse.json(updated)
+    // Calculer la somme des paiements réels associés et déterminer le restant (>= 0)
+    const sumResult = await prisma.paiement.aggregate({
+      _sum: { montant: true },
+      where: { factureId: params.id }
+    })
+    const totalPaid = Number((sumResult._sum.montant ?? 0))
+    const restantRaw = Number(updated.montantTotal) - totalPaid
+    const restant = restantRaw > 0 ? Number(restantRaw.toFixed(2)) : 0
+
+    // Retourner la facture mise à jour avec le champ calculé `restant`
+    const responsePayload = { ...updated, restant }
+
+    return NextResponse.json(responsePayload)
   } catch (error) {
     console.error('Erreur update facture:', error)
     return NextResponse.json(

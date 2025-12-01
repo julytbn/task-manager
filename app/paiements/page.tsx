@@ -4,6 +4,7 @@ import PaiementsOverview from '@/components/PaiementsOverview'
 import PaiementsTable from '@/components/PaiementsTable'
 import PaiementDetailModal from '@/components/PaiementDetailModal'
 import PaiementEditModal from '@/components/PaiementEditModal'
+import NouveauPaiementModal from '@/components/NouveauPaiementModal'
 import { Plus } from 'lucide-react'
 
 // Mock data - à remplacer par des vraies données depuis l'API
@@ -47,6 +48,7 @@ export default function PaiementsPage() {
   const [selectedPaiementId, setSelectedPaiementId] = useState<string | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [paiements, setPaiements] = useState(mockPaiements)
 
   const handleViewDetails = (id: string) => {
@@ -88,6 +90,12 @@ export default function PaiementsPage() {
     alert('✅ Paiement supprimé avec succès')
   }
 
+  const handleSaveNewPaiement = (newPaiement: any) => {
+    setPaiements([newPaiement, ...paiements])
+    setIsCreateOpen(false)
+    alert('✅ Paiement créé avec succès')
+  }
+
   const selectedPaiement = paiements.find((p) => p.id === selectedPaiementId)
 
   // Calculer les statistiques
@@ -124,7 +132,10 @@ export default function PaiementsPage() {
           <h1 className="text-3xl font-bold text-gray-900">💵 Paiements</h1>
           <p className="text-gray-600 mt-2">Gérez et suivez tous les paiements de vos projets</p>
         </div>
-        <button className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium shadow-lg">
+        <button 
+          onClick={() => setIsCreateOpen(true)}
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium shadow-lg"
+        >
           <Plus size={20} />
           Nouveau Paiement
         </button>
@@ -159,6 +170,13 @@ export default function PaiementsPage() {
           onSave={handleSaveEdit}
         />
       )}
+
+      {/* Create Modal */}
+      <NouveauPaiementModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onSave={handleSaveNewPaiement}
+      />
     </div>
   )
 }
