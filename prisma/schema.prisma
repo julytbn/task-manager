@@ -1,0 +1,435 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Client de l'entreprise
+model Client {
+  id               String     @id @default(cuid())
+  nom              String
+  prenom           String
+  email            String?
+  telephone        String?
+  entreprise       String?
+  adresse          String?
+  type             TypeClient @default(PARTICULIER)
+  dateNaissance    DateTime?
+  dateCreation     DateTime   @default(now())
+  dateModification DateTime   @updatedAt
+
+  projets   Projet[]
+  factures  Facture[]
+  souhaits  Souhait[]
+  paiements Paiement[]
+
+  @@map("clients")
+}
+
+// Services offerts par Kekeli Group
+model Service {
+  id               String           @id @default(cuid())
+  nom              String           @unique
+  description      String?
+  categorie        CategorieService
+  prix             Float?
+  dureeEstimee     Int?
+  dateCreation     DateTime         @default(now())
+  dateModification DateTime         @updatedAt
+
+  projets Projet[]
+  taches  Tache[]
+
+  @@map("services")
+}
+
+// Projet pour un client
+model Projet {
+  id               String       @id @default(cuid())
+  titre            String
+  description      String?
+  client           Client       @relation(fields: [clientId], references: [id])
+  clientId         String
+  service          Service      @relation(fields: [serviceId], references: [id])
+  serviceId        String
+  statut           StatutProjet @default(EN_COURS)
+  budget           Float?
+  dateDebut        DateTime?
+  dateFin          DateTime?
+  dateEcheance     DateTime?
+  dateCreation     DateTime     @default(now())
+  dateModification DateTime     @updatedAt
+
+  // Optionnel : assigner un projet à une équipe
+  equipe   Equipe? @relation("ProjetAEquipe", fields: [equipeId], references: [id])
+  equipeId String?
+
+  taches    Tache[]
+  factures  Facture[]
+  paiements Paiement[] @relation("PaiementsDuProjet")
+
+  @@map("projets")
+}
+
+// Tâches individuelles dans un projet
+model Tache {
+  id               String       @id @default(cuid())
+  titre            String
+  description      String?
+  projet           Projet       @relation(fields: [projetId], references: [id])
+  projetId         String
+  service          Service?     @relation(fields: [serviceId], references: [id])
+  serviceId        String?
+  assigneA         Utilisateur? @relation(fields: [assigneAId], references: [id])
+  assigneAId       String?
+  statut           StatutTache  @default(A_FAIRE)
+  priorite         Priorite     @default(MOYENNE)
+  dateEcheance     DateTime?
+  heuresEstimees   Float?
+  heuresReelles    Float?
+  facturable       Boolean      @default(true)
+  estPayee         Boolean      @default(false)
+  montant          Float?
+  dateCreation     DateTime     @default(now())
+  dateModification DateTime     @updatedAt
+  // Optional link to an équipe handling this task
+  equipe           Equipe?      @relation("TacheEquipe", fields: [equipeId], references: [id])
+  equipeId         String?
+
+  // Relation avec facture
+  facture   Facture? @relation(fields: [factureId], references: [id])
+  factureId String?
+
+  paiements Paiement[]
+
+  @@map("taches")
+}
+
+// Paiements
+model Paiement {
+  id        String   @id @default(cuid())
+  tache     Tache    @relation(fields: [tacheId], references: [id])
+  tacheId   String
+  projet    Projet   @relation("PaiementsDuProjet", fields: [projetId], references: [id])
+  projetId  String
+  client    Client   @relation(fields: [clientId], references: [id])
+  clientId  String
+  facture   Facture? @relation(fields: [factureId], references: [id])
+  factureId String?
+
+  montant          Float
+  moyenPaiement    MoyenPaiement
+  reference        String?
+  datePaiement     DateTime       @default(now())
+  dateReception    DateTime?
+  statut           StatutPaiement @default(EN_ATTENTE)
+  notes            String?
+  preuvePaiement   String?
+  dateCreation     DateTime       @default(now())
+  dateModification DateTime       @updatedAt
+
+  @@map("paiements")
+}
+
+// Factures
+model Facture {
+  id               String        @id @default(cuid())
+  numero           String        @unique
+  client           Client        @relation(fields: [clientId], references: [id])
+  clientId         String
+  projet           Projet?       @relation(fields: [projetId], references: [id])
+  projetId         String?
+  taches           Tache[]
+  paiements        Paiement[]
+  statut           StatutFacture @default(EN_ATTENTE)
+  montant          Float
+  tauxTVA          Float         @default(0.18)
+  montantTotal     Float
+  dateEmission     DateTime      @default(now())
+  dateEcheance     DateTime?
+  datePaiement     DateTime?
+  notes            String?
+  dateCreation     DateTime      @default(now())
+  dateModification DateTime      @updatedAt
+
+  @@map("factures")
+}
+
+// Utilisateurs/Employés
+model Utilisateur {
+  id            String          @id @default(cuid())
+  nom           String
+  prenom        String
+  email         String          @unique
+  telephone     String?
+  role          RoleUtilisateur @default(EMPLOYE)
+  departement   String?
+  actif         Boolean         @default(true)
+  dateNaissance DateTime?
+
+  // Authentification
+  motDePasse   String?
+  emailVerifie DateTime?
+
+  dateCreation     DateTime @default(now())
+  dateModification DateTime @updatedAt
+
+  taches         Tache[]
+  souhaits       Souhait[]
+  equipesLead    Equipe[]       @relation("EquipeLeader")
+  membresEquipes MembreEquipe[]
+  notifications  Notification[]
+
+  @@map("utilisateurs")
+}
+
+// Historique des souhaits (anniversaires, bonne année)
+model Souhait {
+  id            String       @id @default(cuid())
+  type          TypeSouhait
+  message       String
+  destinataire  Client?      @relation(fields: [clientId], references: [id])
+  clientId      String?
+  employe       Utilisateur? @relation(fields: [utilisateurId], references: [id])
+  utilisateurId String?
+  dateEnvoi     DateTime     @default(now())
+  envoye        Boolean      @default(false)
+  dateCreation  DateTime     @default(now())
+
+  @@map("souhaits")
+}
+
+// Équipes et membres d'équipe
+
+model Equipe {
+  id               String         @id @default(cuid())
+  nom              String
+  description      String?
+  objectifs        String?
+  dateEcheance     DateTime?
+  lead             Utilisateur?   @relation("EquipeLeader", fields: [leadId], references: [id])
+  leadId           String?
+  membres          MembreEquipe[]
+  projets          Projet[]       @relation("ProjetAEquipe")
+  taches           Tache[]        @relation("TacheEquipe")
+  dateCreation     DateTime       @default(now())
+  dateModification DateTime       @updatedAt
+
+  @@map("equipes")
+}
+
+model MembreEquipe {
+  id            String      @id @default(cuid())
+  equipe        Equipe      @relation(fields: [equipeId], references: [id])
+  equipeId      String
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+  utilisateurId String
+  role          String? // ex: 'marketing', 'comptable', 'membre'
+  dateAjout     DateTime    @default(now())
+
+  @@unique([equipeId, utilisateurId])
+  @@map("membres_equipes")
+}
+
+// Notifications internes pour les utilisateurs
+model Notification {
+  id               String   @id @default(cuid())
+  utilisateur      Utilisateur @relation(fields: [utilisateurId], references: [id])
+  utilisateurId    String
+  titre            String
+  message          String
+  type             TypeNotification @default(INFO)
+  lien             String?  // Lien vers la ressource (ex: /dashboard/equipes/[id])
+  lu               Boolean  @default(false)
+  dateCreation     DateTime @default(now())
+  dateModification DateTime @updatedAt
+
+  @@map("notifications")
+}
+
+// Tables d'énumérations pour la flexibilité et la maintenabilité
+model EnumStatutTache {
+  id    String @id @default(cuid())
+  cle   String @unique
+  label String
+  ordre Int    @default(0)
+  actif Boolean @default(true)
+
+  @@map("enum_statuts_taches")
+}
+
+model EnumPriorite {
+  id    String @id @default(cuid())
+  cle   String @unique
+  label String
+  ordre Int    @default(0)
+  actif Boolean @default(true)
+
+  @@map("enum_priorites")
+}
+
+model EnumStatutProjet {
+  id    String @id @default(cuid())
+  cle   String @unique
+  label String
+  ordre Int    @default(0)
+  actif Boolean @default(true)
+
+  @@map("enum_statuts_projets")
+}
+
+model EnumCategorieService {
+  id    String @id @default(cuid())
+  cle   String @unique
+  label String
+  ordre Int    @default(0)
+  actif Boolean @default(true)
+
+  @@map("enum_categories_services")
+}
+
+model EnumTypeClient {
+  id    String @id @default(cuid())
+  cle   String @unique
+  label String
+  ordre Int    @default(0)
+  actif Boolean @default(true)
+
+  @@map("enum_types_clients")
+}
+
+model EnumStatutFacture {
+  id    String @id @default(cuid())
+  cle   String @unique
+  label String
+  ordre Int    @default(0)
+  actif Boolean @default(true)
+
+  @@map("enum_statuts_factures")
+}
+
+model EnumStatutPaiement {
+  id    String @id @default(cuid())
+  cle   String @unique
+  label String
+  ordre Int    @default(0)
+  actif Boolean @default(true)
+
+  @@map("enum_statuts_paiements")
+}
+
+model EnumMoyenPaiement {
+  id    String @id @default(cuid())
+  cle   String @unique
+  label String
+  ordre Int    @default(0)
+  actif Boolean @default(true)
+
+  @@map("enum_moyens_paiement")
+}
+
+model EnumTypeNotification {
+  id    String @id @default(cuid())
+  cle   String @unique
+  label String
+  ordre Int    @default(0)
+  actif Boolean @default(true)
+
+  @@map("enum_types_notifications")
+}
+
+// Enums pour les statuts et types
+enum TypeClient {
+  PARTICULIER
+  ENTREPRISE
+  ORGANISATION
+}
+
+enum CategorieService {
+  COMPTABILITE
+  AUDIT_FISCALITE
+  MARKETING
+  COMMUNICATION
+  REDACTION_GESTION_PROJET
+  DEMARRAGE_ADMINISTRATIF
+  FORMATION
+  COACHING
+  ETUDE_MARCHE
+  CONCEPTION_IMPRESSION
+  IMMOBILIER
+}
+
+enum StatutProjet {
+  PROPOSITION
+  EN_ATTENTE
+  EN_COURS
+  TERMINE
+  EN_RETARD
+  ANNULE
+}
+
+enum StatutTache {
+  A_FAIRE
+  EN_COURS
+  EN_REVISION
+  TERMINE
+  ANNULE
+}
+
+enum Priorite {
+  BASSE
+  MOYENNE
+  HAUTE
+  URGENTE
+}
+
+enum StatutFacture {
+  BROUILLON
+  EN_ATTENTE
+  PARTIELLEMENT_PAYEE
+  PAYEE
+  RETARD
+  ANNULEE
+}
+
+enum StatutPaiement {
+  EN_ATTENTE
+  CONFIRME
+  REFUSE
+  REMBOURSE
+}
+
+enum MoyenPaiement {
+  ESPECES
+  CHEQUE
+  VIREMENT_BANCAIRE
+  CARTE_BANCAIRE
+  MOBILE_MONEY
+  PAYPAL
+  AUTRE
+}
+
+enum RoleUtilisateur {
+  ADMIN
+  MANAGER
+  EMPLOYE
+  CONSULTANT
+}
+
+enum TypeSouhait {
+  ANNIVERSAIRE
+  BONNE_ANNEE
+  FETE
+  AUTRE
+}
+
+enum TypeNotification {
+  INFO
+  EQUIPE
+  TACHE
+  ALERTE
+  SUCCES
+}
