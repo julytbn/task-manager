@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useState } from 'react'
+import MainLayout from '../../components/MainLayout'
 import EquipesList from '@/components/EquipesList'
 import TeamDetailModal from '@/components/TeamDetailModal'
 import CreateTeamModal from '@/components/CreateTeamModal'
@@ -177,14 +178,15 @@ export default function EquipesPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <MainLayout>
+      <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">👥 Gestion des équipes</h1>
-          <p className="text-gray-600 mt-2">Créez, assignez et suivez les performances de vos équipes</p>
+          <h1 className="text-3xl font-bold gold-gradient-text">👥 Gestion des équipes</h1>
+          <p className="text-[var(--color-anthracite)] mt-2">Créez, assignez et suivez les performances de vos équipes</p>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => setIsCreateOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"><Plus size={18}/> Créer une équipe</button>
+          <button onClick={() => setIsCreateOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-[var(--color-gold)] text-[var(--color-black-deep)] rounded-md hover:bg-[var(--color-gold-accent)]"><Plus size={18}/> Créer une équipe</button>
         </div>
       </div>
 
@@ -195,11 +197,13 @@ export default function EquipesPage() {
         </div>
       )}
 
-      {isLoading ? (
-        <div className="text-center py-8">Chargement des équipes...</div>
-      ) : (
-        <EquipesList teams={teams} onView={handleView} onEdit={handleEditTeam} onDelete={handleDelete} onAddMember={handleAddMember} onAssignProject={handleAssignProject} />
-      )}
+      <div className="bg-[var(--color-offwhite)] rounded-xl shadow-sm border border-[var(--color-border)] p-6">
+        {isLoading ? (
+          <div className="text-center py-8">Chargement des équipes...</div>
+        ) : (
+          <EquipesList teams={teams} onView={handleView} onEdit={handleEditTeam} onDelete={handleDelete} onAddMember={handleAddMember} onAssignProject={handleAssignProject} />
+        )}
+      </div>
 
       <TeamDetailModal team={selectedTeam ? {
         id: selectedTeam.id,
@@ -216,5 +220,6 @@ export default function EquipesPage() {
 
       <EditTeamModal isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} onSave={handleSaveEdit} initialName={editTeamData?.name} initialDescription={editTeamData?.description} />
     </div>
+    </MainLayout>
   )
 }

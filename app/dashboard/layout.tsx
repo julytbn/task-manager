@@ -13,12 +13,14 @@ export default async function DashboardLayout({
   const isManager = session?.user?.role === 'MANAGER'
 
   return (
-    <div>
+    <div className="flex min-h-screen bg-gray-50 overflow-hidden">
       {isManager && <ManagerSidebar />}
-      <div className={`${isManager ? 'ml-[230px]' : ''} flex flex-col min-h-screen`}>
+      <div className={`${isManager ? 'ml-[250px]' : 'w-full'} flex-1 flex flex-col h-screen`}>
         {isManager && <ManagerHeader />}
-        <main className="flex-1 bg-gray-50 overflow-auto">
-          {children}
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>

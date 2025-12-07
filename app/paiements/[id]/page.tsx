@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import UiLayout from '../../../components/UiLayout'
+import MainLayout from '../../../components/MainLayout'
 import { useParams } from 'next/navigation'
 
 export default function PaiementDetailPage() {
@@ -33,23 +33,23 @@ export default function PaiementDetailPage() {
     return () => { mounted = false }
   }, [id])
 
-  if (loading) return <UiLayout><div className="text-center py-8">Chargement...</div></UiLayout>
-  if (error) return <UiLayout><div className="bg-red-50 text-red-700 p-4 rounded">{error}</div></UiLayout>
-  if (!paiement) return <UiLayout><div className="text-center py-8 text-gray-500">Paiement non trouvé</div></UiLayout>
+  if (loading) return <MainLayout><div className="text-center py-8">Chargement...</div></MainLayout>
+  if (error) return <MainLayout><div className="bg-red-50 text-red-700 p-4 rounded">{error}</div></MainLayout>
+  if (!paiement) return <MainLayout><div className="text-center py-8 text-gray-500">Paiement non trouvé</div></MainLayout>
 
   return (
-    <UiLayout>
+    <MainLayout>
       <div className="mb-6">
-        <Link href="/paiements" className="text-blue-600 hover:underline">
+        <Link href="/paiements" className="text-[var(--color-gold)] hover:underline">
           ← Retour aux paiements
         </Link>
       </div>
 
-      <div className="bg-white rounded shadow p-8 max-w-2xl">
+      <div className="bg-[var(--color-offwhite)] border border-[var(--color-border)] rounded shadow p-8 max-w-2xl">
         <div className="flex justify-between items-start mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Détail paiement</h1>
-            <p className="text-sm text-gray-500 mt-1">ID: {paiement.id}</p>
+            <h1 className="text-3xl font-bold gold-gradient-text">Détail paiement</h1>
+            <p className="text-sm text-[var(--color-anthracite)] mt-1">ID: {paiement.id}</p>
           </div>
           <span className={`inline-flex px-4 py-2 rounded-lg font-semibold text-sm ${
             paiement.statut === 'CONFIRME' ? 'bg-green-100 text-green-800' :
@@ -62,43 +62,43 @@ export default function PaiementDetailPage() {
           </span>
         </div>
 
-        <div className="space-y-4 mb-8 pb-8 border-b">
+        <div className="space-y-4 mb-8 pb-8 border-b border-[var(--color-border)]">
           <div>
-            <h3 className="text-sm font-semibold text-gray-600 uppercase mb-1">Tâche</h3>
-            <p className="text-lg text-gray-900">{paiement.tache?.titre || '—'}</p>
+            <h3 className="text-sm font-semibold text-[var(--color-anthracite)] uppercase mb-1">Tâche</h3>
+            <p className="text-lg text-[var(--color-black-deep)]">{paiement.tache?.titre || '—'}</p>
           </div>
           {paiement.projet && (
             <div>
-              <h3 className="text-sm font-semibold text-gray-600 uppercase mb-1">Projet</h3>
-              <p className="text-lg text-gray-900">{paiement.projet.titre}</p>
+              <h3 className="text-sm font-semibold text-[var(--color-anthracite)] uppercase mb-1">Projet</h3>
+              <p className="text-lg text-[var(--color-black-deep)]">{paiement.projet.titre}</p>
             </div>
           )}
         </div>
 
-        <div className="space-y-4 mb-8 pb-8 border-b">
+        <div className="space-y-4 mb-8 pb-8 border-b border-[var(--color-border)]">
           <div className="flex justify-between">
-            <span className="text-gray-700">Montant</span>
-            <span className="font-bold text-xl text-blue-600">{paiement.montant.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}</span>
+            <span className="text-[var(--color-anthracite)]">Montant</span>
+            <span className="font-bold text-xl text-[var(--color-gold)]">{paiement.montant.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-700">Moyen de paiement</span>
+            <span className="text-[var(--color-anthracite)]">Moyen de paiement</span>
             <span className="font-medium">{paiement.moyenPaiement || '—'}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-700">Date de paiement</span>
+            <span className="text-[var(--color-anthracite)]">Date de paiement</span>
             <span className="font-medium">{paiement.datePaiement ? new Date(paiement.datePaiement).toLocaleDateString('fr-FR') : '—'}</span>
           </div>
         </div>
 
         <div className="flex gap-3 pt-4">
-          <button className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          <button className="px-6 py-2 bg-[var(--color-gold)] text-[var(--color-black-deep)] font-semibold rounded hover:brightness-95">
             Éditer
           </button>
-          <button className="px-6 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50">
+          <button className="px-6 py-2 border border-[var(--color-border)] text-[var(--color-anthracite)] rounded hover:bg-[var(--color-offwhite)]">
             Supprimer
           </button>
         </div>
       </div>
-    </UiLayout>
+    </MainLayout>
   )
 }

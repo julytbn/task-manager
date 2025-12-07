@@ -5,18 +5,18 @@ import { Clock, CheckCircle, AlertCircle } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 
 type ProjectDetail = {
-  id: number
+  id: string
   title: string
-  client: { id: number; nom: string } | null
-  service?: { id: number; nom: string } | null
+  client: { id: string; nom: string } | null
+  service?: { id: string; nom: string } | null
   status: 'en_cours' | 'termine' | 'en_retard'
   progress: number
   budget?: number | null
   dateDebut?: string | null
   dateFin?: string | null
   dateEcheance?: string | null
-  tasks: Array<{ id: number; title: string; status: string }>
-  team: Array<{ id: number; name: string; email?: string }>
+  tasks: Array<{ id: string; title: string; status: string }>
+  team: Array<{ id: string; name: string; email?: string }>
   description?: string | null
 }
 

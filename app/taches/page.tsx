@@ -1,14 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Plus } from 'lucide-react'
-import { NouvelleTacheModal } from '@/components/NouvelleTacheModal'
+import MainLayout from '@/components/MainLayout'
+import DataTable from '@/components/DataTable'
+import { FormField, Select, Button } from '@/components/FormField'
 
 interface TacheItem {
   id: string
   titre: string
   description?: string
-  projet?: { titre?: string }
+  projet?: { nom?: string; titre?: string }
   assigneA?: { prenom?: string; nom?: string }
   statut?: string
   priorite?: string
@@ -17,89 +19,134 @@ interface TacheItem {
 }
 
 export default function TachesPage() {
-  const [isModalOpen, setIsModalOpen] = useState(false)
   const [tasks, setTasks] = useState<TacheItem[]>([])
-  const [loading, setLoading] = useState(false)
-
-  const loadTasks = async () => {
-    setLoading(true)
-    try {
-      const res = await fetch('/api/taches')
-      if (!res.ok) throw new Error('Erreur récupération tâches')
-      const data = await res.json()
-      setTasks(data)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [filters, setFilters] = useState({
+    statut: '',
+    priorite: '',
+  })
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    loadTasks()
+    let mounted = true
+    ;(async () => {
+      try {
+        const res = await fetch('/api/taches')
+        const data = res.ok ? await res.json() : []
+        if (mounted) setTasks(data || [])
+      } catch (err) {
+        console.error('Erreur chargement tâches:', err)
+      } finally {
+        if (mounted) setIsLoading(false)
+      }
+    })()
+    return () => { mounted = false }
   }, [])
 
-  const handleSaveTache = async (data: any) => {
-    try {
-      const response = await fetch('/api/taches', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      })
+  const filteredTasks = useMemo(() => {
+    return tasks.filter(task => {
+      if (filters.statut && task.statut !== filters.statut) return false
+      if (filters.priorite && task.priorite !== filters.priorite) return false
+      return true
+    })
+  }, [tasks, filters])
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}))
-        throw new Error(err.error || 'Erreur lors de la création de la tâche')
-      }
+  const handleEdit = (task: any) => {
+    console.log('Éditer tâche:', task)
+  }
 
-      await loadTasks()
-      setIsModalOpen(false)
-    } catch (error:any) {
-      console.error('Erreur:', error)
-      alert(error.message || 'Une erreur est survenue lors de la création de la tâche')
-    }
+  const handleDelete = (task: any) => {
+    console.log('Supprimer tâche:', task)
+  }
+
+  const handleView = (task: any) => {
+    console.log('Afficher tâche:', task)
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-blue-900">Toutes les tâches</h1>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-        >
-          <Plus size={16} className="mr-2" />
-          Nouvelle Tâche
-        </button>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-        {loading ? (
-          <div className="p-6">Chargement des tâches...</div>
-        ) : (
-          <div className="p-6 space-y-4">
-            {tasks.length === 0 && <div>Aucune tâche trouvée.</div>}
-            {tasks.map(task => (
-              <div key={task.id} className="p-4 border rounded-md">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="font-medium">{task.titre}</div>
-                    <div className="text-sm text-gray-500">{task.projet?.titre || ''}</div>
-                  </div>
-                  <div className="text-sm text-gray-700">{task.statut}</div>
-                </div>
-                <div className="mt-2 text-sm text-gray-500">Assigné: {task.assigneA ? `${task.assigneA.prenom} ${task.assigneA.nom}` : '—'}</div>
-              </div>
-            ))}
+    <MainLayout>
+      <div className="space-y-8">
+        {/* Page Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold gold-gradient-text">Gestion des tâches</h1>
+            <p className="text-[var(--color-anthracite)]/70 mt-2">Tous les projets et leurs tâches associées</p>
           </div>
-        )}
-      </div>
+          <Button variant="primary" size="lg">
+            <Plus size={20} />
+            Nouvelle tâche
+          </Button>
+        </div>
 
-      <NouvelleTacheModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={handleSaveTache}
-      />
-    </div>
+        {/* Filters */}
+        <div className="bg-[var(--color-offwhite)] rounded-xl shadow-sm border border-[var(--color-border)] p-4 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <Select
+            label="Statut"
+            options={[
+              { label: 'À faire', value: 'A_FAIRE' },
+              { label: 'En cours', value: 'EN_COURS' },
+              { label: 'En révision', value: 'EN_REVISION' },
+              { label: 'Terminée', value: 'TERMINEE' },
+            ]}
+            value={filters.statut}
+            onChange={(e) => setFilters({ ...filters, statut: e.target.value })}
+          />
+          <Select
+            label="Priorité"
+            options={[
+              { label: 'Basse', value: 'BASSE' },
+              { label: 'Normale', value: 'NORMALE' },
+              { label: 'Haute', value: 'HAUTE' },
+              { label: 'Urgent', value: 'URGENT' },
+            ]}
+            value={filters.priorite}
+            onChange={(e) => setFilters({ ...filters, priorite: e.target.value })}
+          />
+          <Button
+            variant="secondary"
+            onClick={() => setFilters({ statut: '', priorite: '' })}
+            className="mt-6"
+          >
+            Réinitialiser
+          </Button>
+        </div>
+
+        {/* Table */}
+        <div className="bg-[var(--color-offwhite)] rounded-xl shadow-sm border border-[var(--color-border)] p-6">
+          <div className="mb-6">
+            <h2 className="text-xl font-bold gold-gradient-text">
+              Tâches ({filteredTasks.length})
+            </h2>
+          </div>
+          {isLoading ? (
+            <div className="text-center py-12 text-[var(--color-anthracite)]/70">
+              Chargement des tâches...
+            </div>
+          ) : (
+            <DataTable
+              columns={[
+                { key: 'titre', label: 'Titre', sortable: true, width: '25%' },
+                { key: 'projet', label: 'Projet', sortable: true, width: '20%' },
+                { key: 'assignee', label: 'Assignée à', width: '20%' },
+                { key: 'statut', label: 'Statut', sortable: true, width: '15%' },
+                { key: 'priorite', label: 'Priorité', width: '10%' },
+                { key: 'dateEcheance', label: 'Échéance', sortable: true, width: '10%' },
+              ]}
+              data={filteredTasks.map(t => ({
+                titre: t.titre || 'Sans titre',
+                projet: t.projet?.nom || t.projet?.titre || '-',
+                assignee: t.assigneA?.nom || 'Non assigné',
+                statut: t.statut || 'N/A',
+                priorite: t.priorite || 'Normale',
+                dateEcheance: t.dateEcheance ? new Date(t.dateEcheance).toLocaleDateString('fr-FR') : '-',
+              }))}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onView={handleView}
+              itemsPerPage={15}
+            />
+          )}
+        </div>
+      </div>
+    </MainLayout>
   )
 }

@@ -20,23 +20,23 @@ export async function GET() {
 
     const projetsAvecStatut = projets.map(projet => {
       const totalTasks = projet.taches?.length || 0;
-      const completed = totalTasks > 0 ? 
-        projet.taches.filter(t => t.statut === 'TERMINE').length : 0;
-      const progress = totalTasks > 0 ? Math.round((completed / totalTasks) * 100) : 0;
 
-      // Gestion des statuts
-      let status: StatutProjetAffiche = 'en_cours';
-      const statutProjet = projet.statut as string;
-      
-      if (statutProjet === 'TERMINE' || statutProjet === 'ANNULE') {
-        status = 'termine';
-      } else if (statutProjet === 'EN_RETARD') {
-        status = 'en_retard';
-      }
+      // Calculer la progression en pondérant le statut des tâches
+      // TERMINE -> 100, EN_COURS -> 50, autre -> 0
+      const taskScores: number[] = (projet.taches || []).map(t => {
+        const s = (t.statut || '').toString().toUpperCase();
+        if (s.includes('TERMINE')) return 100;
+        if (s.includes('EN_COURS') || s.includes('ENCOURS') || s.includes('PROGRESS')) return 50;
+        return 0;
+      });
+
+      const progress = totalTasks > 0 ? Math.round(taskScores.reduce((a, b) => a + b, 0) / totalTasks) : 0;
 
       return {
         id: projet.id,
-        title: projet.titre,
+        titre: projet.titre,
+        // exposer l'enum brut tel qu'en base (ex: 'EN_COURS', 'TERMINE')
+        statut: projet.statut || null,
         client: projet.client ? {
           id: projet.client.id,
           nom: projet.client.nom,
@@ -47,14 +47,13 @@ export async function GET() {
           id: projet.service.id,
           nom: projet.service.nom
         } : null,
-        status: status,
         progress,
         budget: projet.budget || null,
         frequencePaiement: projet.frequencePaiement,
-        tasks: projet.taches ? projet.taches.map(t => ({
+        taches: projet.taches ? projet.taches.map(t => ({
           id: t.id,
-          title: t.titre,
-          status: t.statut,
+          titre: t.titre,
+          statut: t.statut,
           createdAt: t.dateCreation?.toISOString() || '',
           updatedAt: t.dateModification?.toISOString() || ''
         })) : [],

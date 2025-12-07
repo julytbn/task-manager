@@ -45,13 +45,13 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 }
 
 export function Button({ variant = 'primary', size = 'md', className = '', children, ...props }: ButtonProps) {
-  const baseStyles = 'font-medium rounded-lg transition-all duration-200 font-inter'
+  const baseStyles = 'font-medium rounded-lg transition-all duration-200'
   
   const variants_map = {
-    primary: 'bg-primary hover:bg-primaryHover text-white shadow-sm',
-    secondary: 'bg-surface hover:bg-gray-100 text-text border border-border',
-    danger: 'bg-danger hover:bg-red-700 text-white shadow-sm',
-    ghost: 'hover:bg-gray-100 text-text',
+    primary: 'bg-gold hover:bg-gold-bright text-black shadow-sm font-semibold',
+    secondary: 'bg-surface hover:bg-offwhite text-anthracite border border-border',
+    danger: 'bg-red-600 hover:bg-red-700 text-white shadow-sm',
+    ghost: 'hover:bg-offwhite text-anthracite',
   }
 
   const sizes = {

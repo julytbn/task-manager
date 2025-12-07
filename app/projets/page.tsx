@@ -1,459 +1,270 @@
- 'use client'
+'use client'
 
-import Link from "next/link"
-import { Plus, Clock, CheckCircle, AlertCircle, Users, Search } from "lucide-react"
-import { NouvelleTacheModal } from '@/components/NouvelleTacheModal'
-import { useEffect, useState } from "react"
-import ProjectModal from "@/components/ProjectModal"; // Import the modal
-import { useProjectsStatistics } from '@/lib/useProjectsStatistics'
+import React, { useState, useEffect, useMemo } from 'react'
+import { Plus, Grid, List } from 'lucide-react'
+import { MainLayout, StatCard, DataTable, ProgressBar } from '../../components'
+import { FormField } from '../../components/FormField'
+import { Button } from '../../components/ui'
+import ProjectModal from '../../components/ProjectModal'
+import ProjectDetailModal from '../../components/ProjectDetailModal'
+import EditProjectModal from '../../components/EditProjectModal'
 
-type Project = {
-  id: number
-  title: string
-  client: {
-    id: number
-    nom: string
-    email?: string
-    telephone?: string
-  } | null
-  status: 'en_cours' | 'termine' | 'en_retard'
-  progress: number
-  team: Array<{
-    id: number
-    name: string
-    avatar: string | null
-    email: string
-  }>
-  dateDebut: string | Date
-  dateFin: string | Date
-  budget: number
-  frequencePaiement?: string
-  tasks: Array<{
-    id: number
-    title: string
-    status: string
-    createdAt: string
-    updatedAt: string
-  }>
-  createdAt: string
-  updatedAt: string
-  service?: {
-    id: number
-    nom: string
-  } | null
-}
-
-const statusConfig = {
-  en_cours: { 
-    color: 'bg-blue-500', 
-    label: 'En cours',
-    badge: 'bg-blue-100 text-blue-800'
-  },
-  termine: { 
-    color: 'bg-green-500', 
-    label: 'Terminé',
-    badge: 'bg-green-100 text-green-800'
-  },
-  en_retard: { 
-    color: 'bg-red-500', 
-    label: 'En retard',
-    badge: 'bg-red-100 text-red-800'
-  },
-}
-
-const getStatusIcon = (status: 'en_cours' | 'termine' | 'en_retard') => {
-  switch(status) {
-    case 'en_cours': return <Clock size={14} />
-    case 'termine': return <CheckCircle size={14} />
-    case 'en_retard': return <AlertCircle size={14} />
-    default: return <Clock size={14} />
+const fetchProjects = async () => {
+  const response = await fetch('/api/projets')
+  if (response.ok) {
+    const json = await response.json()
+    // Normaliser les clés retournées par l'API afin d'assurer une compatibilité
+    // avec le reste de l'application (certaines routes renvoient `title`/`status`).
+    if (Array.isArray(json)) {
+      return json.map((p: any) => ({
+        // garder les valeurs existantes mais fournir des alias attendus
+        ...p,
+        titre: p.titre || p.title || p.nom || '',
+        statut: p.statut || p.status || p.statut || '',
+      }))
+    }
+    // cas où l'API renvoie un objet unique
+    return {
+      ...json,
+      titre: json.titre || json.title || json.nom || '',
+      statut: json.statut || json.status || json.statut || '',
+    }
   }
+  return []
 }
 
-const filterConfig = {
-  tous: 'Tous',
-  propositions: 'Propositions',
-  en_cours: 'En cours',
-  termine: 'Terminés',
-}
-
-export default function ProjetsPage() {
-  const { data: statsData, loading: statsLoading, error: statsError, refreshStatistics } = useProjectsStatistics()
-  
-  const [projects, setProjects] = useState<Project[]>([])
+const Page = () => {
+  const [projects, setProjects] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [selectedFilter, setSelectedFilter] = useState('tous')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false)
-  const [taskProjectId, setTaskProjectId] = useState<number | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table')
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [selectedProject, setSelectedProject] = useState<any>(null)
 
-  const fetchProjects = async () => {
-    try {
-      setIsLoading(true)
-      const response = await fetch('/api/projets')
-      if (!response.ok) {
-        throw new Error('Erreur lors de la récupération des projets')
-      }
-      const data = await response.json()
-      setProjects(data)
-    } catch (err) {
-      console.error('Erreur:', err)
-      setError('Impossible de charger les projets')
-    } finally {
+  useEffect(() => {
+    fetchProjects().then((data) => {
+      setProjects(data || [])
       setIsLoading(false)
+    })
+  }, [])
+
+  const filteredProjects = useMemo(() => {
+    return projects.filter(
+      (p) =>
+        (p.titre || p.nom || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (p.client?.nom || '').toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }, [projects, searchTerm])
+
+  const stats = {
+    total: projects.length,
+    inProgress: projects.filter((p) => (p.statut || '').toString().toUpperCase().includes('EN_COURS')).length,
+    completed: projects.filter((p) => (p.statut || '').toString().toUpperCase().includes('TERMINE')).length,
+    avgProgress: projects.length > 0 ? Math.round(projects.reduce((sum, p) => sum + (Number(p.progress) || 0), 0) / projects.length) : 0,
+  }
+
+  // Fonction pour calculer la progression en fonction du statut
+  const getProgressFromStatus = (statut: string | undefined): number => {
+    const status = statut?.toUpperCase() || ''
+    if (status.includes('TERMINE')) return 100
+    if (status.includes('EN_COURS')) return 50
+    return 0
+  }
+
+  const handleEdit = (project: any) => {
+    setSelectedProject(project)
+    setIsEditOpen(true)
+  }
+
+  const handleDelete = async (projectId: number) => {
+    try {
+      const response = await fetch(`/api/projets/${projectId}`, {
+        method: 'DELETE',
+      })
+      if (response.ok) {
+        setProjects(projects.filter((p) => p.id !== projectId))
+        setIsDetailOpen(false)
+        alert('Projet supprimé avec succès')
+      } else {
+        const error = await response.json()
+        alert(`Erreur lors de la suppression: ${error.message || 'Erreur inconnue'}`)
+      }
+    } catch (err) {
+      console.error('Erreur lors de la suppression du projet:', err)
+      alert('Erreur lors de la suppression du projet')
     }
   }
 
-  useEffect(() => {
-    fetchProjects()
-  }, [])
-
-  // Filtrer les projets selon le filtre et la recherche
-  const filteredProjects = projects.filter(project => {
-    const matchesSearch = project.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         (project.client && project.client.nom.toLowerCase().includes(searchQuery.toLowerCase()))
-    
-    if (selectedFilter === 'tous') return matchesSearch
-    if (selectedFilter === 'en_cours') return matchesSearch && project.status === 'en_cours'
-    if (selectedFilter === 'termine') return matchesSearch && project.status === 'termine'
-    if (selectedFilter === 'propositions') return matchesSearch && project.status === 'en_retard'
-    
-    return matchesSearch
-  })
-
-  // Utiliser les statistiques du hook si disponibles, sinon calculer localement
-  const stats = statsData ? {
-    total: statsData.totalProjets,
-    enCours: statsData.projetsEnCours,
-    termines: statsData.projetsTermines,
-    budgetTotal: statsData.budgetTotal,
-    budgetFormatted: statsData.budgetTotalFormatted
-  } : {
-    total: projects.length,
-    enCours: projects.filter(p => p.status === 'en_cours').length,
-    termines: projects.filter(p => p.status === 'termine').length,
-    budgetTotal: projects.reduce((sum, p) => sum + (p.budget || 0), 0),
-    budgetFormatted: `${(projects.reduce((sum, p) => sum + (p.budget || 0), 0) / 1000000).toFixed(0)}M FCFA`
+  const handleDeleteFromTable = async (row: any) => {
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer le projet "${row.titre}" ? Cette action est irréversible.`)) {
+      await handleDelete(row.id)
+    }
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    )
+  const handleView = (project: any) => {
+    setSelectedProject(project)
+    setIsDetailOpen(true)
   }
 
-  if (error) {
-    return (
-      <div className="bg-red-50 border-l-4 border-red-500 p-4">
-        <div className="flex">
-          <div className="flex-shrink-0">
-            <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <div className="ml-3">
-            <p className="text-sm text-red-700">{error}</p>
-          </div>
-        </div>
-      </div>
-    )
+  const handleProjectCreated = async () => {
+    try {
+      const data = await fetchProjects()
+      setProjects(data || [])
+    } catch (err) {
+      console.error('Erreur rafraîchissement projets:', err)
+    }
+    setIsProjectModalOpen(false)
+  }
+
+  const handleSaveEdit = (updatedProject: any) => {
+    setIsEditOpen(false)
+    setSelectedProject(null)
   }
 
   return (
-    <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Gestion des Projets</h1>
-          <p className="text-gray-600 mt-1">Suivez tous vos projets et leur progression</p>
-        </div>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors w-full sm:w-auto"
-        >
-          <Plus size={18} />
-          <span>Nouveau Projet</span>
-        </button>
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <KpiCard 
-          label="Total Projets" 
-          value={stats.total}
-          icon="📁"
-        />
-        <KpiCard 
-          label="En Cours" 
-          value={stats.enCours}
-          icon="⚙️"
-          color="blue"
-        />
-        <KpiCard 
-          label="Terminés" 
-          value={stats.termines}
-          icon="✓"
-          color="green"
-        />
-        <KpiCard 
-          label="Budget Total" 
-          value={stats.budgetFormatted || `${(stats.budgetTotal / 1000000).toFixed(0)}M FCFA`}
-          icon="💰"
-          color="orange"
-        />
-      </div>
-
-      <ProjectModal 
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onProjectCreated={() => {
-          fetchProjects() // Refresh projects list
-        }}
-      />
-
-      {/* Nouvelle Tâche Modal (création d'une tâche liée à un projet) */}
-      <NouvelleTacheModal
-        isOpen={isTaskModalOpen}
-        initial={{ projetId: taskProjectId ?? undefined }}
-        onClose={() => { setIsTaskModalOpen(false); setTaskProjectId(null); }}
-        onSave={async (payload: any) => {
-          try {
-            const res = await fetch('/api/taches', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload),
-            })
-
-            const body = await res.json().catch(() => null)
-
-            if (!res.ok) {
-              // Provide user-facing feedback when creation fails (403 = permission)
-              const message = body?.message || body?.error || `Erreur lors de la création (${res.status})`
-              window.alert(message)
-              console.error('Erreur création tâche:', body || res.status)
-              return
-            }
-
-            // Success: notify user, refresh and close modal
-            window.alert('Tâche créée avec succès')
-            setIsTaskModalOpen(false)
-            setTaskProjectId(null)
-            fetchProjects()
-            if (typeof refreshStatistics === 'function') refreshStatistics()
-          } catch (e) {
-            console.error('Erreur lors de la création de la tâche', e)
-            window.alert('Une erreur réseau est survenue lors de la création de la tâche')
-          }
-        }}
-      />
-
-      {/* Projects Section */}
-      <div className="bg-white rounded-lg shadow-sm">
-        <div className="p-6">
-          {/* Search and Filter */}
-          <div className="mb-8">
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 text-gray-400" size={18} />
-                <input 
-                  type="text"
-                  placeholder="Rechercher un projet..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            {/* Filter Tabs */}
-            <div className="flex gap-2 border-b">
-              {Object.entries(filterConfig).map(([key, label]) => (
-                <button
-                  key={key}
-                  onClick={() => setSelectedFilter(key)}
-                  className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                    selectedFilter === key
-                      ? 'border-blue-600 text-blue-600'
-                      : 'border-transparent text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+    <MainLayout>
+      <div className="space-y-8">
+        {/* Page Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold gold-gradient-text">Gestion des projets</h1>
+            <p className="text-[var(--color-anthracite)]/70 mt-2">Tous vos projets en un seul endroit</p>
           </div>
+          <Button variant="primary" size="lg" onClick={() => setIsProjectModalOpen(true)}>
+            <Plus size={20} />
+            Nouveau projet
+          </Button>
+        </div>
 
-          {/* Projects Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <StatCard icon={Plus} title="Projets totaux" value={stats.total} trend={{ value: 8, direction: 'up' }} />
+          <StatCard icon={Plus} title="En cours" value={stats.inProgress} trend={{ value: 5, direction: 'up' }} />
+          <StatCard icon={Plus} title="Terminés" value={stats.completed} trend={{ value: 3, direction: 'up' }} />
+          <StatCard icon={Plus} title="Progression moyenne" value={`${stats.avgProgress}%`} trend={{ value: 12, direction: 'up' }} />
+        </div>
+
+        {/* Search & View Toggle */}
+        <div className="card flex items-center gap-4">
+          <div className="flex-1">
+            <FormField placeholder="Rechercher par titre ou client..." value={searchTerm} onChange={(e: any) => setSearchTerm(e.target.value)} />
+          </div>
+          <div className="flex items-center gap-2 border-l border-[var(--color-border)] pl-4">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-[var(--color-gold)]/20 text-[var(--color-gold)]' : 'text-[var(--color-anthracite)] hover:bg-[var(--color-offwhite)]'}`}
+            >
+              <List size={20} />
+            </button>
+            <button
+              onClick={() => setViewMode('cards')}
+              className={`p-2 rounded-lg transition-all ${viewMode === 'cards' ? 'bg-[var(--color-gold)]/20 text-[var(--color-gold)]' : 'text-[var(--color-anthracite)] hover:bg-[var(--color-offwhite)]'}`}
+            >
+              <Grid size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        {isLoading ? (
+          <div className="text-center py-12 text-[var(--color-anthracite)]/70">Chargement des projets...</div>
+        ) : viewMode === 'table' ? (
+          <div className="card">
+            <DataTable
+              columns={[
+                { key: 'titre', label: 'Projet', sortable: true, width: '20%' },
+                { key: 'client', label: 'Client', width: '20%' },
+                { key: 'statut', label: 'Statut', sortable: true, width: '15%' },
+                { key: 'progress', label: 'Progression', width: '25%' },
+                { key: 'budget', label: 'Budget', sortable: true, width: '15%' },
+                { key: 'dateDebut', label: 'Début', width: '10%' },
+              ]}
+              data={filteredProjects.map((p) => ({
+                ...p,
+                titre: p.titre || p.nom || 'Sans titre',
+                client: p.client?.nom || 'N/A',
+                statut: p.statut || 'N/A',
+                progress: `${(p.progress ?? getProgressFromStatus(p.statut))}%`,
+                budget: p.budget ? `${(p.budget / 1000).toFixed(0)}K FCFA` : '-',
+                dateDebut: p.dateDebut ? new Date(p.dateDebut).toLocaleDateString('fr-FR') : '-',
+              }))}
+              onEdit={handleEdit}
+              onDelete={handleDeleteFromTable}
+              itemsPerPage={10}
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProjects.map((project) => (
-              <ProjectCard key={project.id} project={project} onCreateTask={(id: number) => { setTaskProjectId(id); setIsTaskModalOpen(true); }} />
+              <div key={project.id} className="card group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleView(project)}>
+                {/* Project Image Placeholder */}
+                <div className="w-full h-40 bg-gradient-to-br from-[var(--color-gold)]/20 to-[var(--color-gold-shadow)]/20 rounded-lg mb-4 flex items-center justify-center">
+                  <span className="text-4xl font-bold gold-gradient-text">
+                    {(project.titre || project.nom)?.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+
+                {/* Project Info */}
+                <h3 className="text-lg font-bold text-[var(--color-black-deep)] mb-2">
+                  {project.titre || project.nom || 'Sans titre'}
+                </h3>
+                <p className="text-sm text-[var(--color-anthracite)]/70 mb-4">
+                  Client: {project.client?.nom || 'N/A'}
+                </p>
+
+                {/* Status Badge */}
+                <div className="flex items-center justify-between mb-4">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[var(--color-gold)]/20 text-[var(--color-gold)]">
+                    {project.statut || 'N/A'}
+                  </span>
+                  <span className="text-sm font-bold text-[var(--color-anthracite)]">
+                    {project.dateDebut ? new Date(project.dateDebut).toLocaleDateString('fr-FR') : '-'}
+                  </span>
+                </div>
+
+                {/* Progress Bar */}
+                <ProgressBar
+                  value={getProgressFromStatus(project.statut)}
+                  label="Progression"
+                  showPercentage={true}
+                  size="md"
+                />
+
+                {/* Budget */}
+                <div className="mt-6 pt-6 border-t border-[var(--color-border)]">
+                  <p className="text-xs uppercase text-[var(--color-anthracite)]/70 font-semibold mb-2">Budget</p>
+                  <p className="text-lg font-bold gold-gradient-text">
+                    {project.budget ? `${(project.budget / 1000).toFixed(0)}K FCFA` : '-'}
+                  </p>
+                </div>
+              </div>
             ))}
           </div>
-
-          {filteredProjects.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-gray-500">Aucun projet trouvé</p>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Composant KpiCard
-function KpiCard({ label, value, icon, color = 'gray' }: { label: string; value: string | number; icon: string; color?: string }) {
-  const colorClass = {
-    gray: 'bg-gray-50 border-gray-200',
-    blue: 'bg-blue-50 border-blue-200',
-    green: 'bg-green-50 border-green-200',
-    orange: 'bg-orange-50 border-orange-200',
-  }[color]
-
-  return (
-    <div className={`border rounded-lg p-6 ${colorClass}`}>
-      <div className="text-2xl mb-2">{icon}</div>
-      <p className="text-gray-600 text-sm mb-2">{label}</p>
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
-    </div>
-  )
-}
-
-// Composant ProjectCard amélioré
-function ProjectCard({ project, onCreateTask }: { project: Project; onCreateTask?: (id: number) => void }) {
-  const status = statusConfig[project.status] || statusConfig['en_cours']
-  
-  const progress = project.tasks?.length > 0 ? 
-    (project.tasks.filter(t => t.status === 'TERMINE').length / project.tasks.length) * 100 : 
-    project.progress || 0;
-
-  const tasksCompleted = project.tasks?.filter(t => t.status === 'TERMINE').length || 0
-  const totalTasks = project.tasks?.length || 0
-
-  return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
-      {/* Header with Status */}
-      <div className="p-6 border-b bg-gray-50">
-        <div className="flex items-start justify-between gap-4 mb-3">
-          <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold text-gray-900">{project.title}</h3>
-            <p className="text-sm text-gray-600 mt-1">{project.client?.nom || 'Sans client'}</p>
-          </div>
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${status.badge}`}>
-            {getStatusIcon(project.status)}
-            {status.label}
-          </span>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="p-6 flex-1 flex flex-col gap-4">
-        {/* Service if available */}
-        {project.service && (
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Service</p>
-            <p className="text-sm text-gray-700 font-medium">{project.service.nom}</p>
-          </div>
-        )}
-
-        {/* Budget */}
-        <div>
-          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Budget</p>
-          <p className="text-sm text-gray-900 font-semibold">
-            {project.budget ? `${(project.budget / 1000000).toFixed(1)}M FCFA` : 'N/A'}
-          </p>
-        </div>
-
-        {/* Frequency */}
-        {project.frequencePaiement && (
-          <div>
-            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Fréquence</p>
-            <p className="text-sm text-gray-700 font-medium">
-              {project.frequencePaiement === 'PONCTUEL' && 'Ponctuel'}
-              {project.frequencePaiement === 'MENSUEL' && 'Mensuel'}
-              {project.frequencePaiement === 'TRIMESTRIEL' && 'Trimestriel'}
-              {project.frequencePaiement === 'SEMESTRIEL' && 'Semestriel'}
-              {project.frequencePaiement === 'ANNUEL' && 'Annuel'}
-            </p>
-          </div>
-        )}
-
-        {/* Date Period */}
-        <div>
-          <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Période</p>
-          <p className="text-sm text-gray-700">
-            {project.dateDebut ? new Date(project.dateDebut).toLocaleDateString('fr-FR') : 'N/A'} - {project.dateFin ? new Date(project.dateFin).toLocaleDateString('fr-FR') : 'N/A'}
-          </p>
-        </div>
-
-        {/* Tasks */}
-        <div>
-          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Tâches</p>
-          <p className="text-sm text-gray-700 font-medium">
-            {tasksCompleted} / {totalTasks}
-          </p>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="mt-2">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-xs text-gray-500">Progression</span>
-            <span className="text-xs font-semibold text-gray-700">{Math.round(progress)}%</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-            <div 
-              className={`h-2.5 rounded-full transition-all ${status.color}`}
-              style={{ width: `${progress}%` }}
-            ></div>
-          </div>
-        </div>
-
-        {/* Team Members */}
-        {project.team && project.team.length > 0 && (
-          <div className="mt-4 pt-4 border-t">
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500 uppercase tracking-wide">Équipe</span>
-              <div className="flex -space-x-2">
-                {project.team.slice(0, 3).map((member, index) => (
-                  <div 
-                    key={index}
-                    className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-xs font-medium border-2 border-white text-white flex-shrink-0"
-                  >
-                    {member.avatar || member.name?.charAt(0) || '?'}
-                  </div>
-                ))}
-                {project.team.length > 3 && (
-                  <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-xs font-medium border-2 border-white text-gray-700">
-                    +{project.team.length - 3}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
         )}
       </div>
 
-      {/* Footer */}
-      <div className="px-6 py-4 bg-gray-50 border-t text-right flex items-center justify-end gap-3">
-        <button
-          type="button"
-          onClick={() => onCreateTask && onCreateTask(project.id)}
-          className="px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
-        >
-          Nouvelle tâche
-        </button>
-        <Link 
-          href={`/projets/${project.id}`}
-          className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 gap-1"
-        >
-          Voir détails
-          <span>→</span>
-        </Link>
-      </div>
-    </div>
+      <ProjectModal
+        isOpen={isProjectModalOpen}
+        onClose={() => setIsProjectModalOpen(false)}
+        onProjectCreated={handleProjectCreated}
+      />
+      <ProjectDetailModal
+        project={selectedProject}
+        isOpen={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
+      <EditProjectModal
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        onSave={handleSaveEdit}
+        project={selectedProject}
+      />
+    </MainLayout>
   )
 }
+
+export default Page

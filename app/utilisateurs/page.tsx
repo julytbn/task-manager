@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useState } from 'react'
-import UiLayout from "../../components/UiLayout"
+import MainLayout from "@/components/MainLayout"
 import { Plus, Edit2, Trash2 } from 'lucide-react'
 
 type Utilisateur = {
@@ -54,72 +54,77 @@ export default function UtilisateursPage() {
   }
 
   return (
-    <UiLayout>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-blue-900">Utilisateurs</h2>
-        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-          <Plus size={16} />
-          Ajouter utilisateur
-        </button>
-      </div>
-
-      {loading && <div className="text-center py-8">Chargement...</div>}
-      {error && <div className="bg-red-50 text-red-700 p-4 rounded mb-4">{error}</div>}
-
-      {!loading && !error && utilisateurs.length === 0 && (
-        <div className="text-center py-8 text-gray-500">Aucun utilisateur trouvé</div>
-      )}
-
-      {!loading && !error && utilisateurs.length > 0 && (
-        <div className="bg-white rounded shadow overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="px-6 py-3 text-left font-semibold">Nom</th>
-                <th className="px-6 py-3 text-left font-semibold">Email</th>
-                <th className="px-6 py-3 text-left font-semibold">Téléphone</th>
-                <th className="px-6 py-3 text-left font-semibold">Rôle</th>
-                <th className="px-6 py-3 text-left font-semibold">Département</th>
-                <th className="px-6 py-3 text-left font-semibold">Statut</th>
-                <th className="px-6 py-3 text-right font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {utilisateurs.map((user) => {
-                const roleBadge = getRoleBadge(user.role)
-                return (
-                  <tr key={user.id} className="border-b hover:bg-gray-50">
-                    <td className="px-6 py-3 font-medium">{user.prenom} {user.nom}</td>
-                    <td className="px-6 py-3 text-gray-600">{user.email}</td>
-                    <td className="px-6 py-3 text-gray-600">{user.telephone || '—'}</td>
-                    <td className="px-6 py-3">
-                      <span className={`inline-flex px-3 py-1 rounded text-xs font-semibold ${roleBadge.color}`}>
-                        {roleBadge.label}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3 text-gray-600">{user.departement || '—'}</td>
-                    <td className="px-6 py-3">
-                      <span className={`inline-flex px-2 py-1 rounded text-xs ${
-                        user.actif ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-                      }`}>
-                        {user.actif ? 'Actif' : 'Inactif'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-3 text-right flex gap-2 justify-end">
-                      <button className="p-1 text-blue-600 hover:bg-blue-50 rounded" title="Éditer">
-                        <Edit2 size={16} />
-                      </button>
-                      <button className="p-1 text-red-600 hover:bg-red-50 rounded" title="Supprimer">
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+    <MainLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold gold-gradient-text">Utilisateurs</h1>
+            <p className="text-[var(--color-anthracite)] mt-2">Gérez les utilisateurs, rôles et accès</p>
+          </div>
+          <button className="flex items-center gap-2 px-4 py-2 bg-[var(--color-gold)] text-[var(--color-black-deep)] rounded hover:bg-[var(--color-gold-accent)]">
+            <Plus size={16} />
+            Ajouter utilisateur
+          </button>
         </div>
-      )}
-    </UiLayout>
+
+        {loading && <div className="text-center py-8 text-[var(--color-anthracite)]">Chargement...</div>}
+        {error && <div className="bg-red-50 text-red-700 p-4 rounded mb-4">{error}</div>}
+
+        {!loading && !error && utilisateurs.length === 0 && (
+          <div className="text-center py-8 text-[var(--color-anthracite)]">Aucun utilisateur trouvé</div>
+        )}
+
+        {!loading && !error && utilisateurs.length > 0 && (
+          <div className="bg-[var(--color-offwhite)] rounded-xl shadow-sm border border-[var(--color-border)] overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-[var(--color-gold)]/10 border-b border-[var(--color-border)]">
+                <tr>
+                  <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">Nom</th>
+                  <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">Email</th>
+                  <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">Téléphone</th>
+                  <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">Rôle</th>
+                  <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">Département</th>
+                  <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">Statut</th>
+                  <th className="px-6 py-3 text-right font-semibold text-[var(--color-gold)]">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {utilisateurs.map((user) => {
+                  const roleBadge = getRoleBadge(user.role)
+                  return (
+                    <tr key={user.id} className="border-b border-[var(--color-border)] hover:bg-[var(--color-gold)]/5">
+                      <td className="px-6 py-3 font-medium">{user.prenom} {user.nom}</td>
+                      <td className="px-6 py-3 text-[var(--color-anthracite)]">{user.email}</td>
+                      <td className="px-6 py-3 text-[var(--color-anthracite)]">{user.telephone || '—'}</td>
+                      <td className="px-6 py-3">
+                        <span className={`inline-flex px-3 py-1 rounded text-xs font-semibold ${roleBadge.color}`}>
+                          {roleBadge.label}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3 text-[var(--color-anthracite)]">{user.departement || '—'}</td>
+                      <td className="px-6 py-3">
+                        <span className={`inline-flex px-2 py-1 rounded text-xs ${
+                          user.actif ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                        }`}>
+                          {user.actif ? 'Actif' : 'Inactif'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3 text-right flex gap-2 justify-end">
+                        <button className="p-1 text-[var(--color-gold)] hover:bg-[var(--color-gold)]/10 rounded" title="Éditer">
+                          <Edit2 size={16} />
+                        </button>
+                        <button className="p-1 text-red-600 hover:bg-red-50 rounded" title="Supprimer">
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </MainLayout>
   )
 }

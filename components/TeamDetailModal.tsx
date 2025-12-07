@@ -26,54 +26,59 @@ export default function TeamDetailModal({ team, isOpen, onClose, onRemoveMember,
   if (!isOpen || !team) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white w-[95%] md:w-3/4 lg:w-2/3 max-h-[80vh] overflow-auto rounded-lg shadow-lg p-6 z-10">
-        <div className="flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white w-[95%] md:w-3/4 lg:w-2/3 max-h-[90vh] overflow-auto rounded-lg shadow-xl p-8 relative">
+        {/* En-tête */}
+        <div className="flex items-start justify-between mb-6">
           <div>
-            <h2 className="text-2xl font-semibold">{team.name} — Détails</h2>
-            <p className="text-sm text-gray-600">Chef d'équipe • {team.lead} • Créée le {team.createdAt || '—'}</p>
+            <h2 className="text-2xl font-bold text-[var(--color-black-deep)]">{team.name}</h2>
+            <p className="text-sm text-[var(--color-anthracite)]/70 mt-1">
+              Chef d'équipe: <span className="font-semibold text-[var(--color-gold)]">{team.lead}</span> • Créée le {team.createdAt || '—'}
+            </p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-md bg-gray-100 hover:bg-gray-200"><X /></button>
+          <button 
+            onClick={onClose} 
+            className="p-2 rounded-lg hover:bg-[var(--color-offwhite)] text-[var(--color-anthracite)]"
+          >
+            <X size={24} />
+          </button>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="lg:col-span-2">
-            <h3 className="text-lg font-medium">Membres</h3>
-            <div className="mt-3 bg-gray-50 border rounded-md overflow-x-auto">
+        {/* Contenu principal */}
+        <div className="space-y-6">
+          {/* Membres */}
+          <div>
+            <h3 className="text-lg font-bold text-[var(--color-black-deep)] mb-4">
+              Membres ({team.members?.length || 0})
+            </h3>
+            <div className="bg-[var(--color-offwhite)] rounded-lg border border-[var(--color-border)] overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-white">
+                <thead className="bg-[var(--color-gold)]/10 border-b border-[var(--color-border)]">
                   <tr>
-                    <th className="text-left px-3 py-2 whitespace-nowrap">Collaborateur</th>
-                    <th className="text-left px-3 py-2 whitespace-nowrap">Poste</th>
-                    <th className="text-left px-3 py-2 whitespace-nowrap">Email</th>
-                    <th className="text-center px-3 py-2 whitespace-nowrap">Tâches</th>
-                    <th className="text-center px-3 py-2 whitespace-nowrap">Progression</th>
-                    <th className="text-right px-3 py-2 whitespace-nowrap">Actions</th>
+                    <th className="text-left px-6 py-3 font-semibold text-[var(--color-gold)]">Collaborateur</th>
+                    <th className="text-left px-6 py-3 font-semibold text-[var(--color-gold)]">Poste</th>
+                    <th className="text-left px-6 py-3 font-semibold text-[var(--color-gold)]">Email</th>
+                    <th className="text-center px-6 py-3 font-semibold text-[var(--color-gold)]">Tâches</th>
+                    <th className="text-center px-6 py-3 font-semibold text-[var(--color-gold)]">Progression</th>
+                    <th className="text-right px-6 py-3 font-semibold text-[var(--color-gold)]">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-[var(--color-border)] bg-white">
                   {team.members && team.members.length > 0 ? team.members.map((m) => (
-                    <tr key={m.id} className="border-t hover:bg-gray-100">
-                      <td className="px-3 py-3 whitespace-nowrap">{m.name}</td>
-                      <td className="px-3 py-3 whitespace-nowrap">{m.role}</td>
-                      <td className="px-3 py-3 text-sm text-gray-600 whitespace-nowrap">{m.email || '—'}</td>
-                      <td className="px-3 py-3 text-center">{m.tasksInProgress || 0}</td>
-                      <td className="px-3 py-3 text-center">{m.progress ? `${m.progress}%` : '—'}</td>
-                      <td className="px-3 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            title="Retirer le membre"
-                            onClick={() => {
-                              if (window.confirm(`Retirer ${m.name} de l'équipe ?`)) {
-                                onRemoveMember?.(team.id, m.id)
-                              }
-                            }}
-                            className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded-md hover:bg-red-200 whitespace-nowrap"
-                          >Retirer</button>
-
+                    <tr key={m.id} className="hover:bg-[var(--color-offwhite)] transition-colors">
+                      <td className="px-6 py-3 font-medium text-[var(--color-black-deep)]">{m.name}</td>
+                      <td className="px-6 py-3 text-[var(--color-anthracite)]">{m.role}</td>
+                      <td className="px-6 py-3 text-[var(--color-anthracite)]/70">{m.email || '—'}</td>
+                      <td className="px-6 py-3 text-center text-[var(--color-black-deep)]">{m.tasksInProgress || 0}</td>
+                      <td className="px-6 py-3 text-center">
+                        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-[var(--color-gold)]/20 text-[var(--color-gold)]">
+                          {m.progress ? `${m.progress}%` : '—'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
                           {m.name === team.lead ? (
-                            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-md whitespace-nowrap">Chef</span>
+                            <span className="px-3 py-1 text-xs font-semibold bg-[var(--color-gold)]/20 text-[var(--color-gold)] rounded-full">👑 Chef</span>
                           ) : (
                             <button
                               title="Promouvoir en chef"
@@ -82,41 +87,101 @@ export default function TeamDetailModal({ team, isOpen, onClose, onRemoveMember,
                                   onPromoteLead?.(team.id, m.id)
                                 }
                               }}
-                              className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-md hover:bg-green-200 whitespace-nowrap"
-                            >Chef</button>
+                              className="px-3 py-1 text-xs font-semibold bg-[var(--color-gold)]/20 text-[var(--color-gold)] rounded-full hover:bg-[var(--color-gold)]/30 transition-colors"
+                            >
+                              Promouvoir
+                            </button>
                           )}
+                          <button
+                            title="Retirer le membre"
+                            onClick={() => {
+                              if (window.confirm(`Retirer ${m.name} de l'équipe ?`)) {
+                                onRemoveMember?.(team.id, m.id)
+                              }
+                            }}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <UserMinus size={18} />
+                          </button>
                         </div>
                       </td>
                     </tr>
                   )) : (
-                    <tr><td colSpan={6} className="px-4 py-3 text-center text-gray-500">Aucun membre</td></tr>
+                    <tr><td colSpan={6} className="px-6 py-8 text-center text-[var(--color-anthracite)]/70">Aucun membre</td></tr>
                   )}
                 </tbody>
               </table>
             </div>
           </div>
 
+          {/* Projets assignés */}
           <div>
-            <h3 className="text-lg font-medium">Projets assignés</h3>
-            <div className="mt-3 space-y-3">
-              {team.projects.map((p) => (
-                <div key={p.name} className="bg-white border rounded-md p-3 flex items-center justify-between">
-                  <div>
-                    <div className="font-medium">{p.name}</div>
-                    <div className="text-sm text-gray-600">{p.state} • {p.deadline || '—'}</div>
+            <h3 className="text-lg font-bold text-[var(--color-black-deep)] mb-4">
+              Projets assignés ({team.projects?.length || 0})
+            </h3>
+            {team.projects && team.projects.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {team.projects.map((p) => (
+                  <div key={p.name} className="bg-white border border-[var(--color-border)] rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h4 className="font-semibold text-[var(--color-black-deep)]">{p.name}</h4>
+                        <p className="text-xs text-[var(--color-anthracite)]/70 mt-1">{p.state} • {p.deadline || '—'}</p>
+                      </div>
+                      <span className="px-2 py-1 rounded-full text-xs font-semibold bg-[var(--color-gold)]/20 text-[var(--color-gold)]">
+                        {p.progress}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-[var(--color-border)] rounded-full h-2">
+                      <div 
+                        className="bg-[var(--color-gold)] h-2 rounded-full transition-all" 
+                        style={{ width: `${p.progress}%` }}
+                      ></div>
+                    </div>
+                    {p.payment && (
+                      <p className="text-xs text-[var(--color-anthracite)]/70 mt-2">Paiement: {p.payment}</p>
+                    )}
                   </div>
-                  <div className="text-right">
-                    <div className="text-sm text-gray-700">{p.progress}%</div>
-                    <div className="text-xs text-gray-500">{p.payment || '—'}</div>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 bg-[var(--color-offwhite)] rounded-lg border border-[var(--color-border)]">
+                <p className="text-[var(--color-anthracite)]/70">Aucun projet assigné</p>
+              </div>
+            )}
+          </div>
+
+          {/* Statistiques rapides */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-[var(--color-border)]">
+            <div className="bg-[var(--color-offwhite)] rounded-lg p-4">
+              <p className="text-xs font-semibold text-[var(--color-anthracite)]/70 uppercase mb-2">Total Membres</p>
+              <p className="text-2xl font-bold text-[var(--color-black-deep)]">{team.membersCount}</p>
+            </div>
+            <div className="bg-[var(--color-offwhite)] rounded-lg p-4">
+              <p className="text-xs font-semibold text-[var(--color-anthracite)]/70 uppercase mb-2">Statut</p>
+              <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+                team.status === 'Active' ? 'bg-green-100 text-green-800' 
+                : team.status === 'En attente' ? 'bg-yellow-100 text-yellow-800' 
+                : 'bg-red-100 text-red-800'
+              }`}>
+                {team.status}
+              </span>
+            </div>
+            <div className="bg-[var(--color-offwhite)] rounded-lg p-4">
+              <p className="text-xs font-semibold text-[var(--color-anthracite)]/70 uppercase mb-2">Projets</p>
+              <p className="text-2xl font-bold text-[var(--color-gold)]">{team.projects?.length || 0}</p>
             </div>
           </div>
         </div>
 
-        <div className="mt-6 flex items-center justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2 bg-gray-50 border rounded-md">Fermer</button>
+        {/* Pied de page */}
+        <div className="mt-8 pt-6 border-t border-[var(--color-border)] flex justify-end">
+          <button 
+            onClick={onClose} 
+            className="px-6 py-2.5 bg-[var(--color-gold)] text-[var(--color-black-deep)] rounded-lg font-semibold hover:brightness-95 transition-all"
+          >
+            Fermer
+          </button>
         </div>
       </div>
     </div>

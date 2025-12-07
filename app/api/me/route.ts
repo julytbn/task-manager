@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../../lib/auth'
@@ -137,6 +139,7 @@ export async function PUT(request: Request) {
     const updates: any = {}
     if (data.nom !== undefined) updates.nom = data.nom
     if (data.prenom !== undefined) updates.prenom = data.prenom
+    if (data.email !== undefined) updates.email = data.email
     if (data.telephone !== undefined) updates.telephone = data.telephone
     if (data.departement !== undefined) updates.departement = data.departement
 
@@ -157,5 +160,44 @@ export async function PUT(request: Request) {
   } catch (error) {
     console.error('PUT /api/me error', error)
     return NextResponse.json({ error: 'Erreur mise à jour utilisateur' }, { status: 500 })
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+
+    const data = await request.json()
+    const { currentPassword, newPassword } = data
+
+    if (!currentPassword || !newPassword) {
+      return NextResponse.json({ error: 'Mot de passe actuel et nouveau mot de passe requis' }, { status: 400 })
+    }
+
+    const existing = await prisma.utilisateur.findUnique({
+      where: { id: session.user.id },
+      select: { motDePasse: true }
+    })
+
+    if (!existing || !existing.motDePasse) {
+      return NextResponse.json({ error: 'Mot de passe introuvable' }, { status: 400 })
+    }
+
+    const passwordValid = await bcrypt.compare(currentPassword, existing.motDePasse)
+    if (!passwordValid) {
+      return NextResponse.json({ error: 'Mot de passe actuel invalide' }, { status: 403 })
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10)
+    await prisma.utilisateur.update({
+      where: { id: session.user.id },
+      data: { motDePasse: hashed }
+    })
+
+    return NextResponse.json({ message: 'Mot de passe changé avec succès' })
+  } catch (error) {
+    console.error('PATCH /api/me error', error)
+    return NextResponse.json({ error: 'Erreur lors du changement de mot de passe' }, { status: 500 })
   }
 }

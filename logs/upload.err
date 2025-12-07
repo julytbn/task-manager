@@ -1,0 +1,18 @@
+Upload error: PrismaClientKnownRequestError: 
+Invalid `prisma.documentClient.create()` invocation in
+C:\Users\DELL G15\Desktop\ReactProjet\task-log - Copie\task-manager\scripts\upload-server.js:206:45
+
+  203 const taille = Math.round((bufferLength / 1024 / 1024) * 100) / 100
+  204 
+  205 // Save to database
+→ 206 const doc = await prisma.documentClient.create(
+Foreign key constraint failed on the field: `(not available)`
+    at _n.handleRequestError (C:\Users\DELL G15\Desktop\ReactProjet\task-log - Copie\task-manager\node_modules\@prisma\client\runtime\library.js:123:6854)
+    at _n.handleAndLogRequestError (C:\Users\DELL G15\Desktop\ReactProjet\task-log - Copie\task-manager\node_modules\@prisma\client\runtime\library.js:123:6188)
+    at _n.request (C:\Users\DELL G15\Desktop\ReactProjet\task-log - Copie\task-manager\node_modules\@prisma\client\runtime\library.js:123:5896)
+    at async l (C:\Users\DELL G15\Desktop\ReactProjet\task-log - Copie\task-manager\node_modules\@prisma\client\runtime\library.js:128:10871)
+    at async C:\Users\DELL G15\Desktop\ReactProjet\task-log - Copie\task-manager\scripts\upload-server.js:206:17 {
+  code: 'P2003',
+  clientVersion: '5.10.2',
+  meta: { modelName: 'DocumentClient', field_name: '(not available)' }
+}

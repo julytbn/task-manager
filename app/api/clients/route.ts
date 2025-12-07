@@ -3,8 +3,41 @@ import { prisma } from '../../../lib/prisma'
 
 export async function GET() {
   try {
-    const clients = await prisma.client.findMany({ orderBy: { nom: 'asc' } })
-    return NextResponse.json(clients)
+    const clients = await prisma.client.findMany({
+      orderBy: { nom: 'asc' },
+      include: {
+        _count: { select: { projets: true } },
+        factures: { select: { montantTotal: true } },
+        projets: { select: { montantEstime: true, budget: true } }
+      }
+    })
+
+    // Calculer un résumé allégé pour le frontend :
+    // - projetsCount : nombre de projets
+    // - montantProjets : somme des montants estimés (ou budget) des projets
+    // - montantFactures : somme des factures.montantTotal
+    // Par compatibilité, `montantTotal` sera défini sur `montantProjets` (demande: montant total des projets)
+    const result = clients.map((c) => {
+      const montantFactures = (c.factures || []).reduce((sum, f) => sum + (f.montantTotal || 0), 0)
+      const montantProjets = (c.projets || []).reduce((sum, p) => sum + ((p.montantEstime ?? p.budget) || 0), 0)
+      return {
+        id: c.id,
+        nom: c.nom,
+        prenom: c.prenom,
+        email: c.email,
+        telephone: c.telephone,
+        entreprise: c.entreprise,
+        adresse: c.adresse,
+        type: c.type,
+        dateCreation: c.dateCreation,
+        projetsCount: c._count?.projets ?? 0,
+        montantProjets,
+        montantFactures,
+        montantTotal: montantProjets
+      }
+    })
+
+    return NextResponse.json(result)
   } catch (error) {
     console.error('GET /api/clients error', error)
     return NextResponse.json({ error: 'Failed to fetch clients' }, { status: 500 })

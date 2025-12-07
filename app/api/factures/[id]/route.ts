@@ -7,7 +7,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
       where: { id: params.id },
       include: {
         client: true,
+        service: true,
         projet: true,
+        abonnement: true,
         taches: {
           include: { assigneA: { select: { nom: true, prenom: true } } }
         },
@@ -19,7 +21,18 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 })
     }
 
-    return NextResponse.json(facture)
+    // Calculer le montant payé
+    const sumResult = await prisma.paiement.aggregate({
+      _sum: { montant: true },
+      where: { factureId: params.id }
+    })
+    const montantPaye = Number(sumResult._sum.montant ?? 0)
+
+    return NextResponse.json({
+      ...facture,
+      montantPaye,
+      montantRestant: Math.max(0, facture.montantTotal - montantPaye)
+    })
   } catch (error) {
     console.error('Erreur récupération facture:', error)
     return NextResponse.json(
@@ -43,6 +56,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     if (data.montant !== undefined) updateData.montant = data.montant
     if (data.tauxTVA !== undefined) updateData.tauxTVA = data.tauxTVA
     if (data.dateEcheance !== undefined) updateData.dateEcheance = data.dateEcheance ? new Date(data.dateEcheance) : null
+    if (data.datePaiement !== undefined) updateData.datePaiement = data.datePaiement ? new Date(data.datePaiement) : null
     if (data.notes !== undefined) updateData.notes = data.notes
 
     // Recalcul montantTotal si montant ou tauxTVA change (utiliser des réels et arrondir)

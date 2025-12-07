@@ -10,6 +10,7 @@ export async function GET() {
     const factures = await prisma.facture.findMany({
       include: {
         client: { select: { id: true, nom: true } },
+        service: { select: { id: true, nom: true } },
         projet: { select: { id: true, titre: true } }
       },
       orderBy: { dateEmission: 'desc' }
@@ -29,9 +30,9 @@ export async function POST(request: Request) {
   try {
     const data = await request.json()
 
-    if (!data.numero || !data.clientId || !data.montant) {
+    if (!data.numero || !data.clientId || !data.serviceId || !data.montant) {
       return NextResponse.json(
-        { error: 'Champs obligatoires manquants (numero, clientId, montant)' },
+        { error: 'Champs obligatoires manquants (numero, clientId, serviceId, montant)' },
         { status: 400 }
       )
     }
@@ -42,6 +43,8 @@ export async function POST(request: Request) {
       data: {
         numero: data.numero,
         client: { connect: { id: data.clientId } },
+        service: data.serviceId ? { connect: { id: data.serviceId } } : undefined,
+        abonnement: data.abonnementId ? { connect: { id: data.abonnementId } } : undefined,
         projet: data.projetId ? { connect: { id: data.projetId } } : undefined,
         statut: data.statut || 'EN_ATTENTE',
         montant: data.montant,
@@ -52,6 +55,7 @@ export async function POST(request: Request) {
       },
       include: {
         client: { select: { id: true, nom: true } },
+        service: { select: { id: true, nom: true } },
         projet: { select: { id: true, titre: true } }
       }
     })

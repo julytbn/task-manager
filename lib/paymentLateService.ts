@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { sendEmail, generateLatePaymentEmail } from '@/lib/email'
 
 /**
  * Service pour détecter les paiements en retard et créer des notifications
@@ -76,6 +77,7 @@ export async function checkAndNotifyLatePayments() {
       include: {
         projet: true,
         client: true,
+        facture: true,
         tache: {
           include: {
             assigneA: true,
@@ -88,8 +90,16 @@ export async function checkAndNotifyLatePayments() {
 
     for (const payment of pendingPayments) {
       // Calculer la date d'échéance attendue
-      const dueDate = (payment as any).datePaiementAttendu || 
-        calculateDueDateFromFrequency(payment.datePaiement, (payment.projet as any).frequencePaiement)
+      // CORRECTION: Utiliser facture.dateEcheance au lieu de datePaiementAttendu (inexistant)
+      let dueDate = payment.facture?.dateEcheance
+      
+      if (!dueDate) {
+        // Fallback: calculer à partir de la fréquence si pas de facture/dateEcheance
+        dueDate = calculateDueDateFromFrequency(
+          payment.datePaiement, 
+          (payment.projet as any)?.frequencePaiement || 'PONCTUEL'
+        )
+      }
 
       // Vérifier si c'est en retard
       if (isPaymentLate(dueDate, payment.statut)) {
@@ -113,16 +123,79 @@ export async function checkAndNotifyLatePayments() {
         })
 
         for (const manager of managers) {
-          // Créer la notification
+          // Avoid duplicate notifications for the same payment -> check existing
+          const lien = `/dashboard/manager/paiements/${payment.id}`
+          const sourceId = payment.id
+          const sourceType = 'PAIEMENT'
+
+          // Try to avoid duplicate alerts for same payment and manager within last 7 days or if unread
+          const existing = await prisma.notification.findFirst({
+            where: ({
+              utilisateurId: manager.id,
+              type: 'ALERTE',
+              OR: [
+                { sourceId },
+                {
+                  AND: [
+                    { lien },
+                    { lu: false }
+                  ]
+                },
+                {
+                  AND: [
+                    { lien },
+                    { dateCreation: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } }
+                  ]
+                }
+              ]
+            } as any)
+          } as any)
+
+          if (existing) {
+            // already notified recently for this manager
+            continue
+          }
+
+          // Create the notification with sourceId/sourceType
           await prisma.notification.create({
-            data: {
+            data: ({
               utilisateurId: manager.id,
               titre: `Paiement en retard - ${payment.client.nom}`,
-              message: `Le paiement de ${payment.montant} FCFA pour le projet "${payment.projet.titre}" est en retard de ${daysLate} jours. Client: ${payment.client.nom}`,
+              message: `Le paiement de ${payment.montant} FCFA pour le projet \"${payment.projet?.titre || 'N/A'}\" est en retard de ${daysLate} jours. Client: ${payment.client.nom}`,
               type: 'ALERTE',
-              lien: `/dashboard/manager/paiements`,
-            },
-          })
+              lien,
+              sourceId,
+              sourceType,
+            } as any)
+          } as any)
+
+          // 📧 NOUVEAU: Envoyer email d'alerte
+          try {
+            const emailTemplate = generateLatePaymentEmail({
+              managerName: `${manager.prenom || ''} ${manager.nom || manager.email}`.trim(),
+              clientName: payment.client.nom,
+              amount: payment.montant || 0,
+              daysLate,
+              projectName: payment.projet?.titre,
+              dashboardUrl: `${process.env.BASE_URL || 'http://localhost:3000'}/dashboard/manager/paiements`
+            })
+
+            const result = await sendEmail({
+              to: manager.email,
+              subject: emailTemplate.subject,
+              html: emailTemplate.html,
+              from: process.env.SMTP_FROM || 'noreply@kekeligroup.com'
+            })
+
+            if (result.success) {
+              console.log(`📧 Email alerte retard envoyé à ${manager.email}`)
+            } else {
+              console.warn(`⚠️ Erreur envoi email à ${manager.email}:`, result.error)
+            }
+          } catch (emailError) {
+            console.error(`❌ Erreur lors de l'envoi d'email à ${manager.email}:`, emailError)
+            // Continuer même si l'email échoue - la notification est créée en BDD
+          }
         }
       } catch (error) {
         console.error(`Erreur lors de la création de notification pour le paiement ${payment.id}:`, error)

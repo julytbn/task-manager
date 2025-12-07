@@ -4,13 +4,15 @@ import { useState, useEffect, Suspense } from 'react'
 import { signIn, getSession } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import LoginHeader from '../../components/LoginHeader'
+import Image from 'next/image'
+import { Eye, EyeOff } from 'lucide-react'
 
 function ConnexionContent() {
   const [email, setEmail] = useState('')
   const [motDePasse, setMotDePasse] = useState('')
   const [erreur, setErreur] = useState('')
   const [chargement, setChargement] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -58,83 +60,112 @@ function ConnexionContent() {
   }
 
   return (
-    <>
-      <LoginHeader />
-      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex flex-col justify-center px-4 sm:px-6 lg:px-8" style={{ backgroundColor: 'var(--color-offwhite)' }}>
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Connexion à Kekeli Group
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Accédez à votre espace de travail
-        </p>
-      </div>
+        {/* Logo et titre en haut */}
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <Image
+              src="/kekeli-logo.svg"
+              alt="Kekeli Logo"
+              width={80}
+              height={40}
+            />
+          </div>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--color-gold)' }}>
+            KEKELI GROUP
+          </h1>
+          <p className="text-sm text-gray-600 mt-2">
+            Connectez-vous pour accéder à votre espace de travail
+          </p>
+        </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            {erreur && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                {erreur}
+        {/* Formulaire */}
+        <div className="bg-white py-8 px-6 shadow-lg rounded-lg border-t-4" style={{ borderTopColor: 'var(--color-gold)' }}>
+            <form className="space-y-6" onSubmit={handleSubmit}>
+              {erreur && (
+                <div className="p-4 rounded-lg border border-red-200 bg-red-50 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-red-600"></div>
+                  <span className="text-red-800 text-sm font-medium">{erreur}</span>
+                </div>
+              )}
+
+              {searchParams.get('message') && (
+                <div className="p-4 rounded-lg border border-green-200 bg-green-50 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-600"></div>
+                  <span className="text-green-800 text-sm font-medium">{searchParams.get('message')}</span>
+                </div>
+              )}
+
+              <div>
+                <label htmlFor="email" className="block text-sm font-semibold" style={{ color: 'var(--color-black-deep)' }}>
+                  Adresse Email
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="mt-2 block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition"
+                  placeholder="vous@example.com"
+                />
               </div>
-            )}
 
-            {searchParams.get('message') && (
-              <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-                {searchParams.get('message')}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label htmlFor="motDePasse" className="block text-sm font-semibold" style={{ color: 'var(--color-black-deep)' }}>
+                    Mot de passe
+                  </label>
+                  <Link href="/mot-de-passe-oublie" className="text-xs transition hover:opacity-75" style={{ color: 'var(--color-gold)' }}>
+                    Mot de passe oublié ?
+                  </Link>
+                </div>
+                <div className="mt-2 relative">
+                  <input
+                    id="motDePasse"
+                    name="motDePasse"
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={motDePasse}
+                    onChange={(e) => setMotDePasse(e.target.value)}
+                    className="block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
-            )}
 
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
+              <div>
+                <button
+                  type="submit"
+                  disabled={chargement}
+                  className="w-full py-2 px-4 rounded-lg font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                  style={{ backgroundColor: 'var(--color-gold)', color: 'var(--color-black-deep)' }}
+                >
+                  {chargement ? 'Connexion en cours...' : 'Se connecter'}
+                </button>
+              </div>
 
-            <div>
-              <label htmlFor="motDePasse" className="block text-sm font-medium text-gray-700">
-                Mot de passe
-              </label>
-              <input
-                id="motDePasse"
-                name="motDePasse"
-                type="password"
-                required
-                value={motDePasse}
-                onChange={(e) => setMotDePasse(e.target.value)}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                disabled={chargement}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300"
-              >
-                {chargement ? 'Connexion...' : 'Se connecter'}
-              </button>
-            </div>
-
-            <div className="text-center">
-              <Link href="/inscription" className="text-blue-600 hover:text-blue-500">
-                Pas de compte ? S&apos;inscrire
-              </Link>
-            </div>
-          </form>
+              <div className="text-center pt-4 border-t border-gray-200">
+                <p className="text-sm text-gray-600">
+                  Pas de compte ?{' '}
+                  <Link href="/inscription" className="font-semibold transition hover:opacity-75" style={{ color: 'var(--color-gold)' }}>
+                    S&apos;inscrire
+                  </Link>
+                </p>
+              </div>
+            </form>
         </div>
       </div>
-      </div>
-    </>
+    </div>
   )
 }
 

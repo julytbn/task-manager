@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import fs from 'fs'
+import path from 'path'
 
 export async function GET() {
   try {
@@ -33,7 +35,31 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const data = await request.json()
+
+    const contentType = request.headers.get('content-type') || ''
+    let data: any = {}
+    let uploadedFiles: any[] = []
+
+    // handle multipart/form-data (file uploads) or JSON
+    if (contentType.includes('multipart/form-data')) {
+      const form = await request.formData()
+      data.titre = form.get('titre')?.toString() || ''
+      data.projet = form.get('projet')?.toString() || ''
+      data.service = form.get('service')?.toString() || undefined
+      data.description = form.get('description')?.toString() || null
+      data.priorite = form.get('priorite')?.toString() || undefined
+      data.dateEcheance = form.get('dateEcheance')?.toString() || undefined
+      data.heuresEstimees = form.get('heuresEstimees')?.toString() || undefined
+      data.montant = form.get('montant')?.toString() || undefined
+      data.facturable = form.get('facturable')?.toString() === 'true'
+      data.statut = form.get('statut')?.toString() || undefined
+
+      // collect files
+      const files = form.getAll('files') || []
+      uploadedFiles = files as any[]
+    } else {
+      data = await request.json()
+    }
 
     const session = await getServerSession(authOptions)
 
@@ -88,8 +114,8 @@ export async function POST(request: Request) {
           }
         }
       } else {
-        // No team context: only admins may assign tasks outside of a team
-        if (session?.user?.role !== 'ADMIN') {
+        // No team context: allow admins and managers to assign tasks outside of a team
+        if (session?.user?.role !== 'ADMIN' && session?.user?.role !== 'MANAGER') {
           return NextResponse.json({ error: 'Permission refusée : assignment hors équipe réservé aux administrateurs' }, { status: 403 })
         }
       }
@@ -108,14 +134,111 @@ export async function POST(request: Request) {
       }
     })
 
+    // If files were uploaded, save them under storage/uploads/tasks/{taskId}
+    if (uploadedFiles && uploadedFiles.length > 0) {
+      try {
+        interface UploadedFile {
+          name: string
+          type: string
+          arrayBuffer(): Promise<ArrayBuffer>
+        }
+        const base = path.join(process.cwd(), 'storage', 'uploads', 'tasks', nouvelleTache.id)
+        await fs.promises.mkdir(base, { recursive: true })
+        const saved: Array<{ name: string; originalName: string; size: number; mime: string | null; url: string }> = []
+        for (const f of uploadedFiles) {
+          // f is a web File-like object
+          const file = f as unknown as UploadedFile
+          const arrayBuffer = await file.arrayBuffer()
+          const buffer = Buffer.from(arrayBuffer)
+          const safeName = `${Date.now()}-${String(file.name).replace(/[^a-zA-Z0-9.\-_]/g, '_')}`
+          const filePath = path.join(base, safeName)
+          await fs.promises.writeFile(filePath, buffer)
+          const fileMeta = {
+              name: safeName,
+              originalName: file.name,
+              size: buffer.length,
+              mime: file.type || null,
+              // Serve files via protected endpoint
+              url: `/api/uploads/tasks/${nouvelleTache.id}/${safeName}`
+            }
+          saved.push(fileMeta)
+          // create a DocumentTache record in DB
+          try {
+            await prisma.documentTache.create({
+              data: {
+                nom: fileMeta.originalName || fileMeta.name,
+                description: null,
+                type: fileMeta.mime || undefined,
+                url: fileMeta.url,
+                tacheId: nouvelleTache.id,
+                taille: fileMeta.size,
+                uploadPar: session?.user?.id || undefined
+              }
+            })
+          } catch (e) {
+            console.error('Erreur création DocumentTache:', e)
+          }
+        }
+        // write metadata
+        await fs.promises.writeFile(path.join(base, '_files.json'), JSON.stringify(saved, null, 2))
+        // attach files metadata to response
+        ;(nouvelleTache as any).files = saved
+      } catch (fsErr) {
+        console.error('Erreur enregistrement fichiers:', fsErr)
+      }
+    }
+
+    // Create notifications for managers to inform them of the new submission
+    try {
+      // Get submitter info if available
+      let submitterName = 'Un employé'
+      if (session?.user?.id) {
+        try {
+          const user = await prisma.utilisateur.findUnique({ where: { id: session.user.id }, select: { nom: true, prenom: true } })
+          if (user) submitterName = `${user.prenom || ''} ${user.nom || ''}`.trim() || submitterName
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      const managers = await prisma.utilisateur.findMany({ where: { role: 'MANAGER' }, select: { id: true } })
+      type NotificationData = {
+        utilisateurId: string
+        titre: string
+        message: string
+        lien: string
+        sourceId: string
+        sourceType: string
+      }
+      const notifications: NotificationData[] = managers.map(m => ({
+        utilisateurId: m.id,
+        titre: 'Nouvelle tâche soumise',
+        message: `${submitterName} a soumis la tâche « ${nouvelleTache.titre} ».`,
+        lien: `/taches/${nouvelleTache.id}`,
+        sourceId: nouvelleTache.id,
+        sourceType: 'TACHE'
+      }))
+
+      // create notifications in DB (one by manager)
+      for (const n of notifications) {
+        try {
+          await prisma.notification.create({ data: n })
+        } catch (e) {
+          console.error('Erreur création notification:', e)
+        }
+      }
+    } catch (notifErr) {
+      console.error('Erreur lors de la création des notifications:', notifErr)
+    }
+
     return NextResponse.json(nouvelleTache, { status: 201 })
 
   } catch (error) {
     console.error('Erreur création tâche:', error)
 
-    const err = error as any
+    const err = error as Error & { code?: string }
     
-    if (err.code === 'P2002') {
+    if ((err as any).code === 'P2002') {
       return NextResponse.json(
         { error: 'Une tâche similaire existe déjà' },
         { status: 400 }
@@ -156,6 +279,7 @@ export async function PUT(request: Request) {
     const updateData: any = {}
     if (data.titre !== undefined) updateData.titre = data.titre
     if (data.description !== undefined) updateData.description = data.description
+    if (data.commentaire !== undefined) updateData.commentaire = data.commentaire
     if (data.statut !== undefined) updateData.statut = data.statut
     if (data.priorite !== undefined) updateData.priorite = data.priorite
     if (data.dateEcheance !== undefined) updateData.dateEcheance = data.dateEcheance ? new Date(data.dateEcheance) : null
@@ -191,7 +315,8 @@ export async function PUT(request: Request) {
           }
         }
       } else {
-        if (session?.user?.role !== 'ADMIN') {
+        // When changing assignee and there's no team context, allow ADMIN and MANAGER
+        if (session?.user?.role !== 'ADMIN' && session?.user?.role !== 'MANAGER') {
           return NextResponse.json({ error: 'Permission refusée : assignment hors équipe réservé aux administrateurs' }, { status: 403 })
         }
       }

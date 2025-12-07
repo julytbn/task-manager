@@ -1,5 +1,6 @@
 {
     "vscode-pets.petSize": "large",
     "vscode-pets.theme": "beach",
-    "vscode-pets.petType": "cat"
+    "vscode-pets.petType": "cat",
+    "css.lint.unknownAtRules": "ignore"
 }

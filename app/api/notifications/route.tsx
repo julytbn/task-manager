@@ -52,19 +52,36 @@ export async function PATCH(request: Request) {
       )
     }
 
-    const notification = await prisma.notification.update({
+    // Récupérer l'utilisateur pour vérifier l'autorisation
+    const utilisateur = await prisma.utilisateur.findUnique({
+      where: { email: session.user.email },
+      select: { id: true },
+    })
+
+    if (!utilisateur) {
+      return NextResponse.json({ error: 'Utilisateur non trouvé' }, { status: 404 })
+    }
+
+    // Prisma ne permet pas d'utiliser un filtre relationnel dans `where` d'un `update`.
+    // Utiliser `updateMany` pour appliquer la mise à jour uniquement si la notification
+    // appartient bien à l'utilisateur connecté, puis récupérer la notification mise à jour.
+    const result = await prisma.notification.updateMany({
       where: {
         id: notificationId,
-        utilisateur: {
-          email: session.user.email,
-        },
+        utilisateurId: utilisateur.id,
       },
       data: {
         lu: true,
       },
     })
 
-    return NextResponse.json(notification)
+    if (result.count === 0) {
+      return NextResponse.json({ error: 'Notification introuvable ou accès refusé' }, { status: 404 })
+    }
+
+    const updated = await prisma.notification.findUnique({ where: { id: notificationId } })
+
+    return NextResponse.json(updated)
   } catch (error) {
     console.error('Erreur lors de la mise à jour de la notification:', error)
     return NextResponse.json(

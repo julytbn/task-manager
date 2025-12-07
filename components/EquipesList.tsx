@@ -58,26 +58,44 @@ export default function EquipesList({ teams, onView, onEdit, onDelete, onAddMemb
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center bg-white border rounded-md px-3 py-2 gap-2 w-full">
-          <Search size={16} />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Recherche par équipe / employé / projet" className="w-full outline-none" />
+      {/* Filtres */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-4 bg-[var(--color-offwhite)] border-b border-[var(--color-border)]">
+        <div className="flex items-center bg-white border border-[var(--color-border)] rounded-lg px-3 py-2 gap-2 flex-1">
+          <Search size={16} className="text-[var(--color-anthracite)]" />
+          <input 
+            value={query} 
+            onChange={(e) => setQuery(e.target.value)} 
+            placeholder="Recherche par équipe / employé / projet" 
+            className="w-full outline-none text-sm"
+          />
         </div>
 
-        <div className="flex items-center gap-2">
-          <select value={sizeFilter} onChange={(e) => setSizeFilter(e.target.value)} className="bg-white border rounded-md px-3 py-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <select 
+            value={sizeFilter} 
+            onChange={(e) => setSizeFilter(e.target.value)} 
+            className="bg-white border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-anthracite)]"
+          >
             <option value="">Taille</option>
             <option value="small">Petite (&lt;=5)</option>
             <option value="medium">Moyenne (6-15)</option>
             <option value="large">Grande (&gt;=16)</option>
           </select>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-white border rounded-md px-3 py-2">
+          <select 
+            value={statusFilter} 
+            onChange={(e) => setStatusFilter(e.target.value)} 
+            className="bg-white border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-anthracite)]"
+          >
             <option value="">Statut</option>
             <option value="Active">Active</option>
             <option value="En attente">En attente</option>
             <option value="Surchargée">Surchargée</option>
           </select>
-          <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} className="bg-white border rounded-md px-3 py-2">
+          <select 
+            value={projectFilter} 
+            onChange={(e) => setProjectFilter(e.target.value)} 
+            className="bg-white border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm text-[var(--color-anthracite)]"
+          >
             <option value="">Projet</option>
             {allProjects.map((p) => (
               <option key={p} value={p}>{p}</option>
@@ -86,84 +104,94 @@ export default function EquipesList({ teams, onView, onEdit, onDelete, onAddMemb
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div />
-        <div className="hidden">
-          <button onClick={() => setViewMode('grid')} aria-pressed={viewMode === 'grid'} className={`p-2 rounded-md border ${viewMode === 'grid' ? 'bg-gray-100' : 'bg-white'}`} title="Vue cartes">
-            <Grid size={16} />
-          </button>
-          <button onClick={() => setViewMode('table')} aria-pressed={viewMode === 'table'} className={`p-2 rounded-md border ${viewMode === 'table' ? 'bg-gray-100' : 'bg-white'}`} title="Vue tableau">
-            <List size={16} />
-          </button>
-        </div>
+      {/* Tableau */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-[var(--color-gold)]/10 border-b border-[var(--color-border)]">
+            <tr>
+              <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">Nom</th>
+              <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">Responsable</th>
+              <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">Membres</th>
+              <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">Projets</th>
+              <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">Statut</th>
+              <th className="px-6 py-3 text-right font-semibold text-[var(--color-gold)]">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[var(--color-border)] bg-white">
+            {filtered.map((t) => (
+              <tr key={t.id} className="hover:bg-[var(--color-offwhite)] transition-colors">
+                <td className="px-6 py-3 text-sm font-medium text-[var(--color-black-deep)]">{t.name}</td>
+                <td className="px-6 py-3 text-sm text-[var(--color-anthracite)]">{t.lead}</td>
+                <td className="px-6 py-3 text-sm">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[var(--color-gold)]/20 text-[var(--color-gold)]">
+                    {t.membersCount} membre{t.membersCount !== 1 ? 's' : ''}
+                  </span>
+                </td>
+                <td className="px-6 py-3 text-sm text-[var(--color-anthracite)]">
+                  {t.projects.length > 0 ? t.projects.slice(0, 2).join(', ') + (t.projects.length > 2 ? ` +${t.projects.length - 2}` : '') : '—'}
+                </td>
+                <td className="px-6 py-3 text-sm">
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    t.status === 'Active' ? 'bg-green-100 text-green-800' 
+                    : t.status === 'En attente' ? 'bg-yellow-100 text-yellow-800' 
+                    : 'bg-red-100 text-red-800'
+                  }`}>
+                    {t.status}
+                  </span>
+                </td>
+                <td className="px-6 py-3 text-right relative">
+                  <button 
+                    onClick={() => setOpenMenu(openMenu === t.id ? null : t.id)}
+                    className="p-2 hover:bg-[var(--color-offwhite)] rounded-lg text-[var(--color-anthracite)]"
+                  >
+                    <MoreVertical size={18} />
+                  </button>
+                  {openMenu === t.id && (
+                    <div className="absolute right-0 mt-2 w-52 bg-white border border-[var(--color-border)] rounded-lg shadow-lg z-10">
+                      <button 
+                        onClick={() => { onView(t.id); setOpenMenu(null); }} 
+                        className="w-full text-left px-4 py-2.5 text-sm text-[var(--color-gold)] hover:bg-[var(--color-gold)]/10 font-medium"
+                      >
+                        👁️ Voir détails
+                      </button>
+                      <button 
+                        onClick={() => { onEdit(t.id); setOpenMenu(null); }} 
+                        className="w-full text-left px-4 py-2.5 text-sm text-[var(--color-gold)] hover:bg-[var(--color-gold)]/10 font-medium"
+                      >
+                        ✏️ Éditer
+                      </button>
+                      <button 
+                        onClick={() => { onAddMember(t.id); setOpenMenu(null); }} 
+                        className="w-full text-left px-4 py-2.5 text-sm text-[var(--color-gold)] hover:bg-[var(--color-gold)]/10 font-medium"
+                      >
+                        ➕ Ajouter membre
+                      </button>
+                      <button 
+                        onClick={() => { onAssignProject(t.id); setOpenMenu(null); }} 
+                        className="w-full text-left px-4 py-2.5 text-sm text-[var(--color-gold)] hover:bg-[var(--color-gold)]/10 font-medium"
+                      >
+                        📋 Affecter projet
+                      </button>
+                      <button 
+                        onClick={() => { onDelete(t.id); setOpenMenu(null); }} 
+                        className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 border-t border-[var(--color-border)] font-medium"
+                      >
+                        🗑️ Supprimer
+                      </button>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
-      {viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((t) => (
-            <TeamCard key={t.id} team={t} onView={onView} onEdit={onEdit} onDelete={onDelete} onAddMember={onAddMember} onAssignProject={onAssignProject} />
-          ))}
-        </div>
-      ) : (
-        <div className="overflow-x-auto bg-white border rounded-md">
-          <table className="min-w-full divide-y">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Nom</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Responsable</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Membres</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Projets</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Statut</th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {filtered.map((t) => (
-                <tr key={t.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm text-gray-700">{t.name}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{t.lead}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{t.membersCount}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{t.projects.join(', ')}</td>
-                  <td className="px-4 py-3 text-sm">
-                    <span className={`px-2 py-1 rounded text-xs ${t.status === 'Active' ? 'bg-green-100 text-green-800' : t.status === 'En attente' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
-                      {t.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right relative">
-                    <button 
-                      onClick={() => setOpenMenu(openMenu === t.id ? null : t.id)}
-                      className="p-1 hover:bg-gray-100 rounded"
-                    >
-                      <MoreVertical size={16} />
-                    </button>
-                    {openMenu === t.id && (
-                      <div className="absolute right-0 mt-2 w-48 bg-white border rounded-md shadow-lg z-10">
-                        <button onClick={() => { onView(t.id); setOpenMenu(null); }} className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50">
-                          Voir détails
-                        </button>
-                        <button onClick={() => { onEdit(t.id); setOpenMenu(null); }} className="w-full text-left px-4 py-2 text-sm text-green-600 hover:bg-green-50">
-                          Éditer
-                        </button>
-                        <button onClick={() => { onAddMember(t.id); setOpenMenu(null); }} className="w-full text-left px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50">
-                          Ajouter membre
-                        </button>
-                        <button onClick={() => { onAssignProject(t.id); setOpenMenu(null); }} className="w-full text-left px-4 py-2 text-sm text-purple-600 hover:bg-purple-50">
-                          Affecter projet
-                        </button>
-                        <button onClick={() => { onDelete(t.id); setOpenMenu(null); }} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 border-t">
-                          Supprimer
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {filtered.length === 0 && (
+        <div className="text-center py-8 text-[var(--color-anthracite)]">
+          Aucune équipe trouvée.
         </div>
       )}
-
-      {filtered.length === 0 && <div className="text-gray-500">Aucune équipe trouvée.</div>}
     </div>
   )
 }

@@ -24,6 +24,7 @@ interface NouvelleTacheModalProps {
   onClose: () => void
   onSave: (data: any) => void
   initial?: any
+  readOnly?: boolean
 }
 export function NouvelleTacheModal({ isOpen, onClose, onSave, initial }: NouvelleTacheModalProps) {
   const [projets, setProjets] = useState<Projet[]>([])
@@ -117,6 +118,9 @@ export function NouvelleTacheModal({ isOpen, onClose, onSave, initial }: Nouvell
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    // If readOnly, do nothing
+    if ((initial as any)?.readOnly) return
+
     // Convertir les chaînes vides en null pour les champs optionnels
       const payload = {
         titre: formData.titre,
@@ -137,62 +141,51 @@ export function NouvelleTacheModal({ isOpen, onClose, onSave, initial }: Nouvell
 
   if (!isOpen) return null
 
-  if (isLoading) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white p-6 rounded-lg">
-          <p>Chargement des données...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white">
-          <h2 className="text-xl font-semibold">Nouvelle Tâche</h2>
-          <button 
-            onClick={onClose} 
-            className="text-gray-500 hover:text-gray-700"
-            aria-label="Fermer"
-          >
-            <X size={20} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+
+      <div className="relative w-full max-w-3xl bg-[var(--color-offwhite)] rounded-lg shadow-lg overflow-auto border border-[var(--color-gold)]/20" style={{ maxHeight: '90vh' }}>
+        <div className="flex items-center justify-between p-4 rounded-t-lg bg-gradient-to-r from-[var(--color-black-deep)] to-[var(--color-black-900)]/90">
+          <h3 className="text-lg font-semibold text-[var(--color-gold)]">Nouvelle Tâche</h3>
+          <button onClick={onClose} className="p-2 rounded hover:bg-[var(--color-black-900)]/20 text-[var(--color-offwhite)]">
+            <X />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div className="text-sm text-[var(--color-anthracite)] mb-4">Les champs avec * sont obligatoires</div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Titre *</label>
+            <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Titre *</label>
             <input
               type="text"
               name="titre"
               value={formData.titre}
               onChange={handleChange}
-              className="w-full p-2 border rounded-md"
+              className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Description</label>
             <textarea
               name="description"
               value={formData.description}
               onChange={handleChange}
               rows={3}
-              className="w-full p-2 border rounded-md"
+              className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white"
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Projet *</label>
+              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Projet *</label>
               <select
                 name="projetId"
                 value={formData.projetId}
                 onChange={handleChange}
-                className="w-full p-2 border rounded-md"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white"
                 required
               >
                 <option value="">Sélectionner un projet</option>
@@ -204,47 +197,47 @@ export function NouvelleTacheModal({ isOpen, onClose, onSave, initial }: Nouvell
               </select>
             </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Service (optionnel)</label>
-                <select
-                  name="serviceId"
-                  value={formData.serviceId}
-                  onChange={handleChange}
-                  className="w-full p-2 border rounded-md"
-                >
-                  <option value="">Aucun</option>
-                  {services.map(s => (
-                    <option key={s.id} value={s.id}>{s.nom}</option>
-                  ))}
-                </select>
-              </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Assigné à</label>
+              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Service (optionnel)</label>
               <select
-                name="assigneAId"
-                value={formData.assigneAId}
+                name="serviceId"
+                value={formData.serviceId}
                 onChange={handleChange}
-                className="w-full p-2 border rounded-md"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white"
               >
-                <option value="">Non assigné</option>
-                {employes.map(employe => (
-                  <option key={employe.id} value={employe.id}>
-                    {employe.prenom} {employe.nom}
-                  </option>
+                <option value="">Aucun</option>
+                {services.map(s => (
+                  <option key={s.id} value={s.id}>{s.nom}</option>
                 ))}
               </select>
             </div>
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Assigné à</label>
+            <select
+              name="assigneAId"
+              value={formData.assigneAId}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white"
+            >
+              <option value="">Non assigné</option>
+              {employes.map(employe => (
+                <option key={employe.id} value={employe.id}>
+                  {employe.prenom} {employe.nom}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Statut *</label>
+              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Statut *</label>
               <select
                 name="statut"
                 value={formData.statut}
                 onChange={handleChange}
-                className="w-full p-2 border rounded-md"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white"
                 required
               >
                 <option value="A_FAIRE">À faire</option>
@@ -255,12 +248,12 @@ export function NouvelleTacheModal({ isOpen, onClose, onSave, initial }: Nouvell
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Priorité *</label>
+              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Priorité *</label>
               <select
                 name="priorite"
                 value={formData.priorite}
                 onChange={handleChange}
-                className="w-full p-2 border rounded-md"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white"
                 required
               >
                 <option value="BASSE">Basse</option>
@@ -271,40 +264,40 @@ export function NouvelleTacheModal({ isOpen, onClose, onSave, initial }: Nouvell
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Date d'échéance</label>
+              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Date d'échéance</label>
               <input
                 type="date"
                 name="dateEcheance"
                 value={formData.dateEcheance}
                 onChange={handleChange}
-                className="w-full p-2 border rounded-md"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Temps estimé (heures)</label>
+              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Temps estimé (heures)</label>
               <input
                 type="number"
                 name="heuresEstimees"
                 value={formData.heuresEstimees}
                 onChange={handleChange}
                 min="1"
-                className="w-full p-2 border rounded-md"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Montant (€)</label>
+              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Montant (FCFA)</label>
               <input
                 type="number"
                 name="montant"
                 value={formData.montant}
                 onChange={handleChange}
-                step="0.01"
+                step="1"
                 min="0"
-                className="w-full p-2 border rounded-md"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white"
               />
             </div>
 
@@ -316,26 +309,26 @@ export function NouvelleTacheModal({ isOpen, onClose, onSave, initial }: Nouvell
                   name="facturable"
                   checked={formData.facturable}
                   onChange={handleChange}
-                  className="h-4 w-4 text-blue-600 rounded"
+                  className="h-4 w-4 rounded"
                 />
-                <label htmlFor="facturable" className="ml-2 block text-sm text-gray-700">
+                <label htmlFor="facturable" className="ml-2 block text-sm text-[var(--color-anthracite)]">
                   Facturable
                 </label>
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4 border-t mt-6">
+          <div className="flex justify-end gap-3 pt-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              className="px-4 py-2 bg-white border border-[var(--color-border)] rounded text-[var(--color-anthracite)]"
             >
               Annuler
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              className="px-4 py-2 bg-[var(--color-gold)] text-[var(--color-black-deep)] rounded font-semibold"
             >
               Enregistrer
             </button>

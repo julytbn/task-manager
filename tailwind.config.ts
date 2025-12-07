@@ -10,21 +10,35 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: '#0A66C2',
-        primaryLight: '#1A91F0',
-        primaryHover: '#05509A',
-        success: '#2ECC71',
-        warning: '#F1C40F',
-        danger: '#E74C3C',
-        background: '#F4F7FA',
-        surface: '#F0F4F8',
-        text: '#1E1E1E',
-        muted: '#5A6A80',
-        border: '#DCE3EB',
-        // keep existing font family ext
+        // Kekeli Group - luxury palette
+        black: {
+          DEFAULT: '#000000',
+          900: '#111111',
+        },
+        gold: {
+          DEFAULT: '#D4AF37',
+          bright: '#FFD700',
+          shade: '#C9A227',
+        },
+        offwhite: '#F8F9FA',
+        anthracite: '#333333',
+        // utility colors
+        background: '#F8F9FA',
+        surface: '#FFFFFF',
+        textPrimary: '#000000',
+        textMuted: '#666666',
+        border: '#E0E0E0',
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
+        serif: ['Playfair Display', 'serif'],
+        sans: ['Montserrat', 'Inter', 'sans-serif'],
+      },
+      borderRadius: {
+        sm: '4px',
+        md: '8px',
+      },
+      boxShadow: {
+        subtle: '0 2px 8px rgba(2,6,23,0.06)',
       },
     },
   },

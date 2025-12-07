@@ -1,0 +1,35 @@
+name: Check Late Payments - Daily CRON
+
+on:
+  schedule:
+    # Run every day at 07:00 UTC (9:00 AM CEST / 8:00 AM GMT)
+    - cron: '0 7 * * *'
+  # Allow manual trigger for testing
+  workflow_dispatch:
+
+jobs:
+  check-late-payments:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check late payments
+        run: |
+          curl -X POST \
+            -H "X-Internal-Secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.BASE_URL }}/api/paiements/check-late" \
+            -d '{}'
+        
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          BASE_URL: ${{ secrets.BASE_URL }}
+        
+        timeout-minutes: 5
+        continue-on-error: true
+
+      - name: Log result
+        if: always()
+        run: echo "Late payment check completed at $(date -u)"

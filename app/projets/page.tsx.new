@@ -1,0 +1,328 @@
+'use client'
+
+import React, { useState, useEffect, useMemo } from 'react'
+import { Plus, Grid, List } from 'lucide-react'
+import MainLayout from '@/components/MainLayout'
+import DataTable from '@/components/DataTable'
+import ProgressBar from '@/components/ProgressBar'
+import { FormField, Button } from '@/components/FormField'
+import StatCard from '@/components/StatCard'
+import ProjectModal from '@/components/ProjectModal'
+import ProjectDetailModal from '@/components/ProjectDetailModal'
+import EditProjectModal from '@/components/EditProjectModal'
+
+type Project = {
+  id: number
+  titre: string
+  nom?: string
+  description?: string
+  client?: {
+    id: number
+    nom: string
+    email?: string
+    telephone?: string
+  } | null
+  service?: {
+    id: number
+    nom: string
+  } | null
+  statut: string
+  progress: number
+  budget: number
+  dateDebut: string | Date
+  dateFin: string | Date
+  equipe?: Array<{ id: number; nom: string }>
+  clientId?: number
+  serviceId?: number
+  equipeId?: number
+  frequencePaiement?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export default function ProjetsPage() {
+  const [projects, setProjects] = useState<Project[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards')
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false)
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+
+  useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const response = await fetch('/api/projets')
+        if (!response.ok) throw new Error('Erreur récupération')
+        const data = await response.json()
+        if (mounted) setProjects(data || [])
+      } catch (err) {
+        console.error('Erreur:', err)
+      } finally {
+        if (mounted) setIsLoading(false)
+      }
+    })()
+    return () => { mounted = false }
+  }, [])
+
+  const filteredProjects = useMemo(() => {
+    return projects.filter(project =>
+      (project.titre || project.nom)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.client?.nom?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  }, [projects, searchTerm])
+
+  const stats = {
+    total: projects.length,
+    inProgress: projects.filter(p => p.statut?.toUpperCase().includes('EN_COURS')).length,
+    completed: projects.filter(p => p.statut?.toUpperCase().includes('TERMINE')).length,
+    avgProgress: projects.length > 0 
+      ? Math.round(projects.reduce((sum, p) => sum + (p.progress || 0), 0) / projects.length)
+      : 0,
+  }
+
+  const handleView = (project: Project) => {
+    setSelectedProject(project)
+    setIsDetailOpen(true)
+  }
+
+  const handleEdit = (project: any) => {
+    const fullProject = projects.find(p => p.id === project.id || p.titre === project.titre)
+    if (fullProject) {
+      setSelectedProject(fullProject)
+      setIsEditOpen(true)
+      setIsDetailOpen(false)
+    }
+  }
+
+  const handleDelete = async (projectId: number) => {
+    try {
+      const response = await fetch(`/api/projets?id=${projectId}`, { method: 'DELETE' })
+      if (response.ok) {
+        setProjects(projects.filter(p => p.id !== projectId))
+        alert('✅ Projet supprimé avec succès')
+      } else {
+        alert('❌ Erreur lors de la suppression')
+      }
+    } catch (err) {
+      console.error('Erreur suppression:', err)
+      alert('❌ Erreur lors de la suppression')
+    }
+  }
+
+  const handleSaveEdit = async (data: Partial<Project>) => {
+    try {
+      const response = await fetch(`/api/projets`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: selectedProject?.id, ...data })
+      })
+      if (response.ok) {
+        const updated = await response.json()
+        setProjects(projects.map(p => p.id === updated.id ? updated : p))
+        setIsEditOpen(false)
+        alert('✅ Projet modifié avec succès')
+      } else {
+        throw new Error('Erreur modification')
+      }
+    } catch (err) {
+      console.error('Erreur:', err)
+      alert('❌ Erreur lors de la modification')
+      throw err
+    }
+  }
+
+  const handleProjectCreated = async () => {
+    try {
+      const response = await fetch('/api/projets')
+      if (response.ok) {
+        const data = await response.json()
+        setProjects(data || [])
+      }
+    } catch (err) {
+      console.error('Erreur rafraîchissement projets:', err)
+    }
+    setIsProjectModalOpen(false)
+  }
+
+  return (
+    <MainLayout>
+      <div className="space-y-8">
+        {/* Page Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-bold gold-gradient-text">Gestion des projets</h1>
+            <p className="text-[var(--color-anthracite)]/70 mt-2">Tous vos projets en un seul endroit</p>
+          </div>
+          <Button variant="primary" size="lg" onClick={() => setIsProjectModalOpen(true)}>
+            <Plus size={20} />
+            Nouveau projet
+          </Button>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <StatCard
+            icon={Plus}
+            title="Projets totaux"
+            value={stats.total}
+            trend={{ value: 8, direction: 'up' }}
+          />
+          <StatCard
+            icon={Plus}
+            title="En cours"
+            value={stats.inProgress}
+            trend={{ value: 5, direction: 'up' }}
+          />
+          <StatCard
+            icon={Plus}
+            title="Terminés"
+            value={stats.completed}
+            trend={{ value: 3, direction: 'up' }}
+          />
+          <StatCard
+            icon={Plus}
+            title="Progression moyenne"
+            value={`${stats.avgProgress}%`}
+            trend={{ value: 12, direction: 'up' }}
+          />
+        </div>
+
+        {/* Search & View Toggle */}
+        <div className="card flex items-center gap-4">
+          <div className="flex-1">
+            <FormField
+              placeholder="Rechercher par titre ou client..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center gap-2 border-l border-[var(--color-border)] pl-4">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-2 rounded-lg transition-all ${
+                viewMode === 'table'
+                  ? 'bg-[var(--color-gold)]/20 text-[var(--color-gold)]'
+                  : 'text-[var(--color-anthracite)] hover:bg-[var(--color-offwhite)]'
+              }`}
+            >
+              <List size={20} />
+            </button>
+            <button
+              onClick={() => setViewMode('cards')}
+              className={`p-2 rounded-lg transition-all ${
+                viewMode === 'cards'
+                  ? 'bg-[var(--color-gold)]/20 text-[var(--color-gold)]'
+                  : 'text-[var(--color-anthracite)] hover:bg-[var(--color-offwhite)]'
+              }`}
+            >
+              <Grid size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        {isLoading ? (
+          <div className="text-center py-12 text-[var(--color-anthracite)]/70">
+            Chargement des projets...
+          </div>
+        ) : viewMode === 'table' ? (
+          <div className="card">
+            <DataTable
+              columns={[
+                { key: 'titre', label: 'Projet', sortable: true, width: '20%' },
+                { key: 'client', label: 'Client', width: '20%' },
+                { key: 'statut', label: 'Statut', sortable: true, width: '15%' },
+                { key: 'progress', label: 'Progression', width: '25%' },
+                { key: 'budget', label: 'Budget', sortable: true, width: '15%' },
+                { key: 'dateDebut', label: 'Début', width: '10%' },
+              ]}
+              data={filteredProjects.map(p => ({
+                ...p,
+                titre: p.titre || p.nom || 'Sans titre',
+                client: p.client?.nom || 'N/A',
+                statut: p.statut || 'N/A',
+                progress: `${p.progress || 0}%`,
+                budget: p.budget ? `${(p.budget / 1000).toFixed(0)}K FCFA` : '-',
+                dateDebut: p.dateDebut ? new Date(p.dateDebut).toLocaleDateString('fr-FR') : '-',
+              }))}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              itemsPerPage={10}
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProjects.map(project => (
+              <div key={project.id} className="card group cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleView(project)}>
+                {/* Project Image Placeholder */}
+                <div className="w-full h-40 bg-gradient-to-br from-[var(--color-gold)]/20 to-[var(--color-gold-shadow)]/20 rounded-lg mb-4 flex items-center justify-center">
+                  <span className="text-4xl font-bold gold-gradient-text">
+                    {(project.titre || project.nom)?.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+
+                {/* Project Info */}
+                <h3 className="text-lg font-bold text-[var(--color-black-deep)] mb-2">
+                  {project.titre || project.nom || 'Sans titre'}
+                </h3>
+                <p className="text-sm text-[var(--color-anthracite)]/70 mb-4">
+                  Client: {project.client?.nom || 'N/A'}
+                </p>
+
+                {/* Status Badge */}
+                <div className="flex items-center justify-between mb-4">
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[var(--color-gold)]/20 text-[var(--color-gold)]">
+                    {project.statut || 'N/A'}
+                  </span>
+                  <span className="text-sm font-bold text-[var(--color-anthracite)]">
+                    {new Date(project.dateDebut).toLocaleDateString('fr-FR')}
+                  </span>
+                </div>
+
+                {/* Progress Bar */}
+                <ProgressBar
+                  value={project.progress || 0}
+                  label="Progression"
+                  showPercentage={true}
+                  size="md"
+                />
+
+                {/* Budget */}
+                <div className="mt-6 pt-6 border-t border-[var(--color-border)]">
+                  <p className="text-xs uppercase text-[var(--color-anthracite)]/70 font-semibold mb-2">Budget</p>
+                  <p className="text-lg font-bold gold-gradient-text">
+                    {project.budget ? `${(project.budget / 1000).toFixed(0)}K FCFA` : '-'}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <ProjectModal 
+        isOpen={isProjectModalOpen} 
+        onClose={() => setIsProjectModalOpen(false)} 
+        onProjectCreated={handleProjectCreated}
+      />
+
+      <ProjectDetailModal
+        project={selectedProject}
+        isOpen={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
+
+      <EditProjectModal
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        onSave={handleSaveEdit}
+        project={selectedProject}
+      />
+    </MainLayout>
+  )
+}

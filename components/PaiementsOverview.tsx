@@ -1,19 +1,34 @@
 "use client"
 import { DollarSign, TrendingDown, CheckCircle2, Clock } from 'lucide-react'
 
+type Paiement = {
+  id: string
+  client?: string
+  projet?: string
+  montantTotal?: number
+  montantPayé?: number
+  soldeRestant?: number
+  methodePaiement?: string
+  statut: 'payé' | 'partiel' | 'impayé'
+  date?: string
+  montant?: number
+  factureId?: string
+  facture?: { numero?: string; client?: { nom?: string } }
+}
+
 interface PaiementsOverviewProps {
-  totalEncaisse: number
-  totalRestant: number
-  nombreConfirmes: number
-  nombreEnAttente: number
+  paiements: Paiement[]
 }
 
 export default function PaiementsOverview({
-  totalEncaisse,
-  totalRestant,
-  nombreConfirmes,
-  nombreEnAttente,
+  paiements,
 }: PaiementsOverviewProps) {
+  // Calculate totals from paiements array
+  const totalEncaisse = paiements.reduce((sum, p) => sum + (p.montantPayé || 0), 0)
+  const totalRestant = paiements.reduce((sum, p) => sum + (p.soldeRestant || 0), 0)
+  const nombreConfirmes = paiements.filter(p => p.statut === 'payé').length
+  const nombreEnAttente = paiements.filter(p => p.statut === 'impayé').length
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
       {/* Total encaissé */}
@@ -25,7 +40,7 @@ export default function PaiementsOverview({
           </div>
         </div>
         <div className="text-3xl font-bold text-gray-900 mb-2">
-          {totalEncaisse.toLocaleString('fr-FR')} FCFA
+          {(totalEncaisse || 0).toLocaleString('fr-FR')} FCFA
         </div>
         <p className="text-xs text-green-600 font-medium">↑ +12% ce mois</p>
       </div>
@@ -39,7 +54,7 @@ export default function PaiementsOverview({
           </div>
         </div>
         <div className="text-3xl font-bold text-gray-900 mb-2">
-          {totalRestant.toLocaleString('fr-FR')} FCFA
+          {(totalRestant || 0).toLocaleString('fr-FR')} FCFA
         </div>
         <p className="text-xs text-orange-600 font-medium">À suivre</p>
       </div>

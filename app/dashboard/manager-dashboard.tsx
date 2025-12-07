@@ -1,19 +1,41 @@
 "use client"
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowUp, ArrowDown, Clock, DollarSign, TrendingUp, MoreHorizontal, ListChecks } from 'lucide-react'
-import { Doughnut } from 'react-chartjs-2'
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js'
+import { Clock, DollarSign, TrendingUp, ListChecks, CheckCircle2 } from 'lucide-react'
+import { Line, Doughnut } from 'react-chartjs-2'
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  ArcElement,
+  Tooltip,
+  Legend,
+  Filler,
+} from 'chart.js'
+import MainLayout from '@/components/MainLayout'
+import StatCard from '@/components/StatCard'
+import DataTable from '@/components/DataTable'
 import DashboardAgenda from '@/components/dashboard/DashboardAgenda'
 import DashboardTasks from '@/components/dashboard/DashboardTasks'
 import DashboardPayments from '@/components/dashboard/DashboardPayments'
 import DashboardPerformance from '@/components/dashboard/DashboardPerformance'
+import DashboardPriorityDistribution from '@/components/dashboard/DashboardPriorityDistribution'
+import DashboardTeamPerformance from '@/components/dashboard/DashboardTeamPerformance'
+import DashboardLateIndicators from '@/components/dashboard/DashboardLateIndicators'
+import DashboardPaymentTimeline from '@/components/dashboard/DashboardPaymentTimeline'
 import { useProjectsStatistics } from '@/lib/useProjectsStatistics'
-import { StatCard } from '@/components/ui'
 
-ChartJS.register(ArcElement, Tooltip, Legend)
-
-const colors = ['#4F46E5', '#3B82F6', '#F59E0B', '#10B981']
-
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  ArcElement,
+  Tooltip,
+  Legend,
+  Filler
+)
 
 export default function ManagerDashboard() {
   const { data: projStats, loading: projLoading, error: projError } = useProjectsStatistics()
@@ -48,17 +70,17 @@ export default function ManagerDashboard() {
   }, [])
 
   const totalTasks = tasks.length
-  const tasksInProgress = tasks.filter(t => (t.statut || '').toString().toUpperCase().includes('EN_COURS') || (t.statut || '').toString().toUpperCase().includes('A_FAIRE')).length
-  const tasksPaid = payments.filter((p: any) => p.statut === 'CONFIRME').length
+  const tasksInProgress = tasks.filter(t => {
+    const s = (t.statut || '').toString().toUpperCase()
+    return s.includes('EN_COURS')
+  }).length
+  const tasksInProgressOrTodo = tasks.filter(t => {
+    const s = (t.statut || '').toString().toUpperCase()
+    return s.includes('EN_COURS') || s.includes('A_FAIRE') || s.includes('TODO')
+  }).length
+  const tasksPaid = payments.filter((p: any) => p.statut && p.statut.toUpperCase().includes('CONFIRME')).length
   const totalAmount = paymentsTotals.total || 0
-
-  // Note: removed hardcoded 'change' values — show only DB-derived metrics here.
-  const stats = [
-    { title: 'Total des tâches', value: totalTasks, icon: <ListChecks className="h-6 w-6 text-white" />, color: 'bg-indigo-600' },
-    { title: 'Tâches en cours', value: tasksInProgress, icon: <Clock className="h-6 w-6 text-white" />, color: 'bg-blue-500' },
-    { title: 'Tâches payées', value: tasksPaid, icon: <DollarSign className="h-6 w-6 text-white" />, color: 'bg-emerald-500' },
-    { title: 'Montant total', value: `${totalAmount.toLocaleString()} FCFA`, icon: <TrendingUp className="h-6 w-6 text-white" />, color: 'bg-purple-500' }
-  ]
+  const tasksDone = tasks.filter(t => (t.statut || '').toString().toUpperCase().includes('TERMINE')).length
 
   const taskCounts = useMemo(() => {
     const counts = { todo: 0, inProgress: 0, review: 0, done: 0 }
@@ -72,79 +94,227 @@ export default function ManagerDashboard() {
     return counts
   }, [tasks])
 
+  // Graphique linéaire des revenus mensuels (données réelles)
+  const revenueChartData = useMemo(() => {
+    // Calculer les revenus par mois à partir des paiements confirmés
+    const monthlyRevenue: { [key: string]: number } = {}
+    const now = new Date()
+    const last12Months: string[] = []
+    
+    for (let i = 11; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const monthLabel = date.toLocaleString('default', { month: 'short' })
+      last12Months.push(monthLabel)
+      monthlyRevenue[monthLabel] = 0
+    }
+
+    // Accumuler les paiements confirmés par mois
+    payments.forEach((p: any) => {
+      if (p.statut === 'CONFIRME' && p.datePaiement) {
+        const pDate = new Date(p.datePaiement)
+        const monthLabel = pDate.toLocaleString('default', { month: 'short' })
+        if (monthlyRevenue.hasOwnProperty(monthLabel)) {
+          monthlyRevenue[monthLabel] += p.montant || 0
+        }
+      }
+    })
+
+    return {
+      labels: last12Months,
+      datasets: [
+        {
+          label: 'Revenus (FCFA)',
+          data: last12Months.map(m => monthlyRevenue[m]),
+          borderColor: 'var(--color-gold)',
+          backgroundColor: 'rgba(212, 175, 55, 0.1)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: 'var(--color-gold)',
+          pointBorderColor: 'white',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+        },
+      ],
+    }
+  }, [payments])
+
+  const revenueChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top' as const,
+        labels: {
+          color: 'var(--color-anthracite)',
+          font: { size: 12 },
+          padding: 15,
+        },
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: { color: 'var(--color-anthracite)', font: { size: 12 } },
+        grid: { color: 'rgba(212, 175, 55, 0.1)' },
+      },
+      x: {
+        ticks: { color: 'var(--color-anthracite)', font: { size: 12 } },
+        grid: { display: false },
+      },
+    },
+  }
+
   const taskDistributionData = useMemo(() => ({
     labels: ['À faire', 'En cours', 'En révision', 'Terminées'],
-    datasets: [{ data: [taskCounts.todo, taskCounts.inProgress, taskCounts.review, taskCounts.done], backgroundColor: colors, borderWidth: 0 }]
+    datasets: [{
+      data: [taskCounts.todo, taskCounts.inProgress, taskCounts.review, taskCounts.done],
+      backgroundColor: ['#E0E0E0', '#FFD700', '#F59E0B', '#10B981'],
+      borderWidth: 0,
+    }],
   }), [taskCounts])
 
   const paymentStatusData = useMemo(() => {
     const paid = payments.filter(p => p.statut === 'CONFIRME').length
     const pending = payments.filter(p => p.statut === 'EN_ATTENTE').length
     const other = payments.length - paid - pending
-    return { labels: ['Payées', 'En attente', 'Autres'], datasets: [{ data: [paid, pending, other], backgroundColor: ['#10B981', '#F59E0B', '#EF4444'], borderWidth: 0 }] }
+    return {
+      labels: ['Payées', 'En attente', 'Autres'],
+      datasets: [{
+        data: [paid, pending, other],
+        backgroundColor: ['#10B981', '#FFD700', '#EF4444'],
+        borderWidth: 0,
+      }],
+    }
   }, [payments])
 
   return (
-    <div className="p-6">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Tableau de bord</h1>
-        <p className="text-gray-500">Bienvenue sur votre espace de gestion</p>
-      </div>
+    <MainLayout>
+      <div className="space-y-8">
+        {/* Page Title */}
+        <div>
+          <h1 className="text-4xl font-bold gold-gradient-text">Tableau de bord</h1>
+          <p className="text-[var(--color-anthracite)]/70 mt-2">Bienvenue sur votre espace de gestion Kekeli Group</p>
+        </div>
 
-      {/* Project stats summary (using shared StatCard) */}
-      <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label="Projets totaux" value={projLoading ? '...' : totalProjects} description={projError ? 'Erreur' : undefined} />
-        <StatCard label="Projets en cours" value={projLoading ? '...' : projetsEnCours} />
-        <StatCard label="Budget total" value={projLoading ? '...' : budgetTotalFormatted} />
-      </div>
+        {/* Stats Cards Grid - Responsive: 4 desktop, 2 tablet, 1 mobile */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard
+            icon={ListChecks}
+            title="Total tâches"
+            value={totalTasks}
+            trend={{ value: totalTasks > 0 ? Math.round((tasksDone / totalTasks) * 100) : 0, direction: 'up' }}
+          />
+          <StatCard
+            icon={Clock}
+            title="En cours"
+            value={tasksInProgress}
+            trend={{ value: totalTasks > 0 ? Math.round((tasksInProgress / totalTasks) * 100) : 0, direction: 'up' }}
+          />
+          <StatCard
+            icon={CheckCircle2}
+            title="Terminées"
+            value={tasksDone}
+            trend={{ value: totalTasks > 0 ? Math.round((tasksDone / totalTasks) * 100) : 0, direction: 'up' }}
+          />
+          <StatCard
+            icon={DollarSign}
+            title="Revenus"
+            value={`${(totalAmount / 1000).toFixed(0)}K FCFA`}
+            trend={{ value: payments.length > 0 ? Math.round((payments.filter((p: any) => p.statut && p.statut.toUpperCase().includes('CONFIRME')).length / payments.length) * 100) : 0, direction: 'up' }}
+          />
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {stats.map((stat, index) => (
-          <div key={index} className="bg-white rounded-xl shadow-sm p-5 flex items-start justify-between border border-gray-100 hover:shadow-md transition-shadow">
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">{stat.title}</p>
-              <p className="text-2xl font-bold text-gray-900 mt-2">{stat.value}</p>
+        {/* Charts Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Revenue Chart - Full width on mobile/tablet */}
+          <div className="lg:col-span-2 card">
+            <h2 className="text-xl font-bold text-[var(--color-black-deep)] mb-6">
+              Revenus mensuels
+            </h2>
+            <div style={{ height: 300 }}>
+              <Line data={revenueChartData} options={revenueChartOptions} />
             </div>
-            <div className={`p-3 rounded-lg ${stat.color} inline-block flex-shrink-0`}>{stat.icon}</div>
           </div>
-        ))}
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="font-medium">Répartition des tâches</h2>
-                <button className="text-gray-400 hover:text-gray-600"><MoreHorizontal className="h-5 w-5" /></button>
-              </div>
-              <div className="h-64">
-                <Doughnut data={taskDistributionData} options={{ plugins: { legend: { position: 'bottom' } }, cutout: '70%', maintainAspectRatio: false }} />
-              </div>
+          {/* Task Distribution */}
+          <div className="card">
+            <h2 className="text-xl font-bold text-[var(--color-black-deep)] mb-6">
+              Répartition des tâches
+            </h2>
+            <div style={{ height: 300 }}>
+              <Doughnut
+                data={taskDistributionData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { position: 'bottom' as const } },
+                  cutout: '70%',
+                }}
+              />
             </div>
-
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="font-medium">État des paiements</h2>
-                <button className="text-gray-400 hover:text-gray-600"><MoreHorizontal className="h-5 w-5" /></button>
-              </div>
-              <div className="h-64">
-                <Doughnut data={paymentStatusData} options={{ plugins: { legend: { position: 'bottom' } }, cutout: '70%', maintainAspectRatio: false }} />
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6">
-            <DashboardTasks compact={true} />
-            <DashboardPayments />
           </div>
         </div>
 
-        <aside className="lg:col-span-1 space-y-6">
-          <DashboardAgenda />
+        {/* Secondary Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Payment Status */}
+          <div className="card">
+            <h2 className="text-xl font-bold text-[var(--color-black-deep)] mb-6">
+              État des paiements
+            </h2>
+            <div style={{ height: 300 }}>
+              <Doughnut
+                data={paymentStatusData}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: { legend: { position: 'bottom' as const } },
+                  cutout: '70%',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Recent Tasks Table */}
+          <div className="card">
+            <h2 className="text-xl font-bold text-[var(--color-black-deep)] mb-6">
+              Tâches récentes
+            </h2>
+            <DataTable
+              columns={[
+                { key: 'titre', label: 'Titre', width: '50%' },
+                { key: 'statut', label: 'Statut', width: '25%' },
+                { key: 'priorite', label: 'Priorité', width: '25%' },
+              ]}
+              data={tasks.slice(0, 5).map(t => ({
+                titre: t.titre || 'Sans titre',
+                statut: t.statut || 'N/A',
+                priorite: t.priorite || 'Normale',
+              }))}
+              hasActions={false}
+            />
+          </div>
+        </div>
+
+        {/* Additional Analytics */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <DashboardPriorityDistribution />
+          <DashboardLateIndicators />
+        </div>
+
+        {/* Teams and Timeline */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <DashboardTeamPerformance />
+          <DashboardPaymentTimeline />
+        </div>
+
+        {/* Extended Insights */}
+        <div className="grid grid-cols-1 gap-6">
           <DashboardPerformance />
-        </aside>
+        </div>
       </div>
-    </div>
+    </MainLayout>
   )
 }

@@ -6,6 +6,7 @@ export default function SubmitTaskForm(){
   const [projects, setProjects] = useState<any[]>([])
   const [services, setServices] = useState<any[]>([])
   const { data: priorites, loading: prioritesLoading } = useEnums('priorites')
+  const { data: statutsTaches, loading: statutsLoading } = useEnums('statuts-taches')
   const [form, setForm] = useState<any>({ titre: '', projet: '', service: '', description: '', priorite: '', dateEcheance: '', heuresEstimees: '', montant: '', facturable: true })
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<any>(null)
@@ -33,23 +34,32 @@ export default function SubmitTaskForm(){
     }
   }, [prioritesLoading, priorites, form.priorite])
 
+  const [files, setFiles] = useState<File[]>([])
+
   const submit = async (e: any) => {
     e.preventDefault()
     setSubmitting(true)
     try{
-      const payload = {
-        titre: form.titre,
-        projet: form.projet,
-        service: form.service || undefined,
-        description: form.description,
-        priorite: form.priorite,
-        dateEcheance: form.dateEcheance,
-        heuresEstimees: form.heuresEstimees ? parseFloat(form.heuresEstimees) : undefined,
-        montant: form.montant ? parseFloat(form.montant) : undefined,
-        facturable: !!form.facturable,
-        statut: 'A_FAIRE'
-      }
-      const res = await fetch('/api/taches', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(payload) })
+      const formData = new FormData()
+      formData.append('titre', form.titre)
+      formData.append('projet', form.projet)
+      if (form.service) formData.append('service', form.service)
+      formData.append('description', form.description)
+      formData.append('priorite', form.priorite)
+      formData.append('dateEcheance', form.dateEcheance)
+      if (form.heuresEstimees) formData.append('heuresEstimees', String(form.heuresEstimees))
+      if (form.montant) formData.append('montant', String(form.montant))
+      formData.append('facturable', String(!!form.facturable))
+      // Default statut
+      const defaultStatut = (statutsTaches && statutsTaches.length > 0) ? (statutsTaches.find((s:any)=>s.cle==='A_FAIRE')?.cle || statutsTaches[0].cle) : 'A_FAIRE'
+      formData.append('statut', defaultStatut)
+
+      // Attach files
+      files.forEach((f) => {
+        formData.append('files', f, f.name)
+      })
+
+      const res = await fetch('/api/taches', { method: 'POST', body: formData })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Erreur')
       setResult(json)
@@ -130,8 +140,8 @@ export default function SubmitTaskForm(){
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-sm">Montant facturable</label>
-            <input type="number" value={form.montant} onChange={e=>setForm((f: any)=>({...f, montant:e.target.value}))} className="w-full border rounded px-2 py-1" />
+            <label className="text-sm">Montant facturable (FCFA)</label>
+            <input type="number" value={form.montant} onChange={e=>setForm((f: any)=>({...f, montant:e.target.value}))} placeholder="ex: 50000" className="w-full border rounded px-2 py-1" />
           </div>
           <div>
             <label className="text-sm">Facturable ?</label>
@@ -144,8 +154,8 @@ export default function SubmitTaskForm(){
 
         <div>
           <label className="text-sm">Fichiers joints (optionnel)</label>
-          <input type="file" disabled className="w-full" />
-          <div className="text-xs text-gray-500">Upload non implémenté — TODO : ajouter stockage (S3 / provider)</div>
+          <input type="file" multiple onChange={e => setFiles(Array.from(e.target.files || []))} className="w-full" />
+          <div className="text-xs text-gray-500">Formats acceptés: photo, PDF, Word, autre — plusieurs fichiers possibles</div>
         </div>
 
         <div className="flex justify-end">

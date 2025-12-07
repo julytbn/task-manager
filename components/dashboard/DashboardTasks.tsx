@@ -1,15 +1,21 @@
 "use client"
 import { Search, CheckCircle2, AlertCircle, Clock, MoreHorizontal } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Card, Badge, Section, Button } from '@/components/ui'
+import { Card, Badge, Section, Button, Modal } from '@/components/ui'
+  const [rejectModalOpen, setRejectModalOpen] = useState<string|null>(null)
 
 type Tache = {
   id: string
   titre: string
+  description?: string
   priorite?: string
   dateEcheance?: string | null
   statut?: string
   estPayee?: boolean
+  projet?: { nom?: string }
+  service?: { nom?: string }
+  collaborateur?: { nom?: string, prenom?: string }
+  documents?: { id: string, nom: string, url: string }[]
 }
 
   export default function DashboardTasks({ compact = false }: { compact?: boolean }) {
@@ -131,7 +137,7 @@ type Tache = {
                   </Badge>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 text-xs mb-4 pb-4 border-b border-[#DCE3EB]">
+                <div className="grid grid-cols-4 gap-2 text-xs mb-4 pb-4 border-b border-[#DCE3EB]">
                   <div>
                     <p className="text-[#5A6A80]">Projet</p>
                     <p className="font-medium text-[#1E1E1E] truncate">
@@ -148,13 +154,18 @@ type Tache = {
                     </p>
                   </div>
                   <div>
-                    <p className="text-[#5A6A80]">Paiement</p>
-                    <Badge 
-                      variant={t.estPayee ? 'success' : 'warning'} 
-                      className="text-xs"
-                    >
-                      {t.estPayee ? 'Payé' : 'En attente'}
-                    </Badge>
+                    <p className="text-[#5A6A80]">Collaborateur</p>
+                    <p className="font-medium text-[#1E1E1E]">
+                      {t.collaborateur ? `${t.collaborateur.prenom || ''} ${t.collaborateur.nom || ''}`.trim() : '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[#5A6A80]">Fichiers</p>
+                    <div className="flex flex-wrap gap-1">
+                      {t.documents && t.documents.length > 0 ? t.documents.map((doc: { id: string, nom: string, url: string }) => (
+                        <a key={doc.id} href={doc.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-600">{doc.nom}</a>
+                      )) : <span>—</span>}
+                    </div>
                   </div>
                 </div>
 
@@ -171,9 +182,53 @@ type Tache = {
                       variant="primary" 
                       size="sm"
                       className="flex-1"
+                      onClick={async () => {
+                        await fetch(`/api/taches`, {
+                          method: 'PUT',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ id: t.id, statut: 'VALIDEE' })
+                        })
+                        window.location.reload()
+                      }}
                     >
-                      Terminer
+                      Valider
                     </Button>
+                  )}
+                  {!isDone && (
+                    <>
+                      <Button 
+                        variant="danger" 
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setRejectModalOpen(t.id)}
+                      >
+                        Rejeter
+                      </Button>
+                      {rejectModalOpen === t.id && (
+                        <Modal isOpen={true} onClose={() => setRejectModalOpen(null)} title="Motif du rejet">
+                          <form
+                            onSubmit={e => {
+                              e.preventDefault();
+                              const form = e.target as HTMLFormElement;
+                              const comment = (form.elements.namedItem('comment') as HTMLTextAreaElement).value;
+                              if (comment) {
+                                fetch(`/api/taches`, {
+                                  method: 'PUT',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ id: t.id, statut: 'REJETEE', commentaire: comment })
+                                }).then(() => window.location.reload());
+                              }
+                            }}
+                          >
+                            <textarea name="comment" required placeholder="Motif du rejet" className="w-full border rounded p-2 mb-4" />
+                            <div className="flex justify-end gap-2">
+                              <button type="button" onClick={() => setRejectModalOpen(null)} className="px-4 py-2 bg-gray-200 rounded">Annuler</button>
+                              <button type="submit" className="px-4 py-2 bg-red-600 text-white rounded">Rejeter</button>
+                            </div>
+                          </form>
+                        </Modal>
+                      )}
+                    </>
                   )}
                 </div>
               </Card>

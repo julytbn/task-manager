@@ -1,9 +1,11 @@
 import './globals.css'
-import { Inter } from 'next/font/google'
 import { Providers } from './providers'
-import ConditionalTopNavbar from '@/components/ConditionalTopNavbar'
+import type { Metadata } from 'next'
 
-const inter = Inter({ subsets: ['latin'] })
+export const metadata: Metadata = {
+  title: 'Kekeli Group - Cabinet d\'expertise comptable',
+  description: 'Dashboard professionnel pour gestion d\'entreprise',
+}
 
 export default function RootLayout({
   children,
@@ -12,9 +14,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr" className="h-full">
-      <body className={`${inter.className} h-full bg-gray-50`}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+      </head>
+      <body className="h-full bg-[var(--color-offwhite)] text-[var(--color-anthracite)]">
         <Providers>
-          <ConditionalTopNavbar />
           {children}
         </Providers>
       </body>

@@ -24,6 +24,7 @@ export default function UiLayout({ children, showHeader = true }: Props) {
               <Link href="/kanban" className="hover:text-primaryLight">Kanban</Link>
               <Link href="/factures" className="hover:text-primaryLight">Factures</Link>
               <Link href="/paiements" className="hover:text-primaryLight">Paiements</Link>
+              <Link href="/abonnements" className="hover:text-primaryLight">Abonnements</Link>
               <Link href="/utilisateurs" className="hover:text-primaryLight">Utilisateurs</Link>
               <Link href="/parametres" className="hover:text-primaryLight">Paramètres</Link>
             </nav>

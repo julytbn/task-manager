@@ -12,6 +12,7 @@ type Tache = {
   estPayee?: boolean
   paiementPartiel?: boolean
   tempsPasse?: string
+  montant?: number
 }
 
 export default function TaskDetailsModal({ task, onClose, onUpdate }:{ task:Tache; onClose:()=>void; onUpdate:(id:string, patch:Partial<Tache>)=>void }){
@@ -50,6 +51,17 @@ export default function TaskDetailsModal({ task, onClose, onUpdate }:{ task:Tach
             <div>
               <div className="text-sm text-gray-600">Deadline</div>
               <div className="text-sm">{task.dateEcheance ? new Date(task.dateEcheance).toLocaleString() : '—'}</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-sm text-gray-600">Montant</div>
+              <div className="text-sm font-semibold">{task.montant ? `${Number(task.montant).toLocaleString('fr-FR')} FCFA` : '—'}</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-600">Paiement</div>
+              <div className="text-sm">{task.estPayee ? '✅ Payée' : task.paiementPartiel ? '⚠️ Partiel' : '❌ Non payée'}</div>
             </div>
           </div>
 

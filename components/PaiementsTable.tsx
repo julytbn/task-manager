@@ -4,14 +4,14 @@ import { Search, Filter, Eye, Edit2, Trash2 } from 'lucide-react'
 
 interface Paiement {
   id: string
-  client: string
-  projet: string
-  montantTotal: number
-  montantPayé: number
-  soldeRestant: number
-  methodePaiement: string
+  client?: any
+  projet?: any
+  montantTotal?: number
+  montantPayé?: number
+  soldeRestant?: number
+  methodePaiement?: string
   statut: 'payé' | 'partiel' | 'impayé'
-  date: string
+  date?: string
 }
 
 interface PaiementsTableProps {
@@ -31,12 +31,22 @@ export default function PaiementsTable({
   const [filtreStatut, setFiltreStatut] = useState<'tous' | 'payé' | 'partiel' | 'impayé'>('tous')
   const [filtreProjet, setFiltreProjet] = useState('tous')
 
+  // Helper to convert various client/projet shapes into a searchable/displayable string
+  const toText = (val: any) => {
+    if (!val) return ''
+    if (typeof val === 'string' || typeof val === 'number') return String(val)
+    if (typeof val === 'object') return (val.nom ?? val.titre ?? val.name ?? val.label ?? '')
+    return String(val)
+  }
+
+  const lowerQuery = searchQuery.toLowerCase()
   const paiementsFiltrés = paiements.filter((p) => {
-    const matchSearch =
-      p.client.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.projet.toLowerCase().includes(searchQuery.toLowerCase())
+    const clientText = toText(p.client).toLowerCase()
+    const projetText = toText(p.projet).toLowerCase()
+
+    const matchSearch = clientText.includes(lowerQuery) || projetText.includes(lowerQuery)
     const matchStatut = filtreStatut === 'tous' || p.statut === filtreStatut
-    const matchProjet = filtreProjet === 'tous' || p.projet === filtreProjet
+    const matchProjet = filtreProjet === 'tous' || (toText(p.projet) === filtreProjet)
 
     return matchSearch && matchStatut && matchProjet
   })
@@ -127,16 +137,16 @@ export default function PaiementsTable({
             {paiementsFiltrés.map((p) => (
               <tr key={p.id} className="border-b border-gray-100 hover:bg-blue-50 transition">
                 <td className="px-6 py-4 text-sm text-gray-600">{p.id.slice(0, 8)}</td>
-                <td className="px-6 py-4 text-sm font-medium text-gray-900">{p.client}</td>
-                <td className="px-6 py-4 text-sm text-gray-700">{p.projet}</td>
+                <td className="px-6 py-4 text-sm font-medium text-gray-900">{toText(p.client)}</td>
+                <td className="px-6 py-4 text-sm text-gray-700">{toText(p.projet)}</td>
                 <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                  {p.montantTotal.toLocaleString('fr-FR')} FCFA
+                  {(p.montantTotal || 0).toLocaleString('fr-FR')} FCFA
                 </td>
                 <td className="px-6 py-4 text-sm text-green-600 font-medium">
-                  {p.montantPayé.toLocaleString('fr-FR')} FCFA
+                  {(p.montantPayé || 0).toLocaleString('fr-FR')} FCFA
                 </td>
                 <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                  {p.soldeRestant.toLocaleString('fr-FR')} FCFA
+                  {(p.soldeRestant || 0).toLocaleString('fr-FR')} FCFA
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-600">{p.methodePaiement}</td>
                 <td className="px-6 py-4">{getStatutBadge(p.statut)}</td>

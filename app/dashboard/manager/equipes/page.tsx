@@ -227,28 +227,68 @@ export default function EquipesPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 p-6 bg-[var(--color-offwhite)] min-h-screen">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">👥 Gestion des équipes</h1>
-          <p className="text-gray-600 mt-2">Créez, assignez et suivez les performances de vos équipes</p>
+          <h1 className="text-3xl sm:text-4xl font-bold text-[var(--color-black-deep)]">👥 Gestion des équipes</h1>
+          <p className="text-[var(--color-anthracite)]/70 mt-2">Créez, assignez et suivez les performances de vos équipes</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button onClick={() => setIsCreateOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"><Plus size={18}/> Créer une équipe</button>
+        <button 
+          onClick={() => setIsCreateOpen(true)} 
+          className="flex items-center gap-2 px-6 py-3 bg-[var(--color-gold)] hover:brightness-95 text-[var(--color-black-deep)] rounded-lg font-semibold transition-all"
+        >
+          <Plus size={20}/> 
+          Créer une équipe
+        </button>
+      </div>
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="bg-white rounded-lg shadow-sm border border-[var(--color-border)] p-6 hover:shadow-md transition-shadow">
+          <p className="text-[var(--color-anthracite)]/70 text-sm font-medium mb-2">Total d'équipes</p>
+          <p className="text-3xl font-bold text-[var(--color-black-deep)]">{teams.length}</p>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm border border-[var(--color-border)] p-6 hover:shadow-md transition-shadow">
+          <p className="text-[var(--color-anthracite)]/70 text-sm font-medium mb-2">Membres totaux</p>
+          <p className="text-3xl font-bold text-[var(--color-gold)]">{teams.reduce((sum, t) => sum + (t.membersCount || 0), 0)}</p>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm border border-[var(--color-border)] p-6 hover:shadow-md transition-shadow">
+          <p className="text-[var(--color-anthracite)]/70 text-sm font-medium mb-2">Projets assignés</p>
+          <p className="text-3xl font-bold text-[var(--color-black-deep)]">{teams.reduce((sum, t) => sum + (t.projects?.length || 0), 0)}</p>
+        </div>
+        <div className="bg-white rounded-lg shadow-sm border border-[var(--color-border)] p-6 hover:shadow-md transition-shadow">
+          <p className="text-[var(--color-anthracite)]/70 text-sm font-medium mb-2">Équipes actives</p>
+          <p className="text-3xl font-bold text-[var(--color-black-deep)]">{teams.filter(t => t.status === 'Active').length}</p>
         </div>
       </div>
 
       {error && (
-        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-md text-red-800">
+        <div className="flex items-center gap-3 p-4 bg-red-50/80 border border-red-200 rounded-lg text-red-800">
           <AlertCircle size={18} />
-          {error}
+          <span>{error}</span>
         </div>
       )}
 
       {isLoading ? (
-        <div className="text-center py-8">Chargement des équipes...</div>
+        <div className="text-center py-12">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-gold)]"></div>
+          <p className="mt-4 text-[var(--color-anthracite)]">Chargement des équipes...</p>
+        </div>
+      ) : teams.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-lg border border-[var(--color-border)]">
+          <p className="text-[var(--color-anthracite)]/70 mb-4">Aucune équipe créée</p>
+          <button 
+            onClick={() => setIsCreateOpen(true)}
+            className="px-4 py-2 bg-[var(--color-gold)] text-[var(--color-black-deep)] rounded-lg font-semibold hover:brightness-95"
+          >
+            Créer une équipe
+          </button>
+        </div>
       ) : (
-        <EquipesList teams={teams} onView={handleView} onEdit={handleEditTeam} onDelete={handleDelete} onAddMember={handleAddMember} onAssignProject={handleAssignProject} />
+        <div className="bg-white rounded-lg shadow-sm border border-[var(--color-border)] overflow-hidden">
+          <EquipesList teams={teams} onView={handleView} onEdit={handleEditTeam} onDelete={handleDelete} onAddMember={handleAddMember} onAssignProject={handleAssignProject} />
+        </div>
       )}
 
       <TeamDetailModal team={selectedTeam ? {

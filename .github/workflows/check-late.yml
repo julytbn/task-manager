@@ -1,0 +1,22 @@
+name: Scheduled Check-Late
+
+on:
+  schedule:
+    - cron: '0 7 * * *' # Every day at 07:00 UTC (adjust as needed)
+  workflow_dispatch: {}
+
+jobs:
+  check-late:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call check-late endpoint
+        env:
+          CHECK_LATE_SECRET: ${{ secrets.CHECK_LATE_SECRET }}
+          BASE_URL: ${{ secrets.BASE_URL }}
+        run: |
+          if [ -z "$BASE_URL" ]; then
+            echo "BASE_URL not set. Define the app base URL in repo secrets as BASE_URL"
+            exit 1
+          fi
+          curl -s -X GET "$BASE_URL/api/paiements/check-late" -H "x-internal-secret: $CHECK_LATE_SECRET" -o check-late-result.json
+          cat check-late-result.json
