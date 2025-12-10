@@ -24,6 +24,7 @@ model Client {
   factures         Facture[]
   paiements        Paiement[]
   projets          Projet[]
+  devis            Devis[]
   souhaits         Souhait[]
 
   @@map("clients")
@@ -71,6 +72,7 @@ model Service {
   abonnements      Abonnement[]
   taches           Tache[]
   projetServices   ProjetService[]
+  devisServices    DevisService[]   @relation("ServicesInDevis")
 
   @@map("services")
 }
@@ -110,6 +112,7 @@ model Projet {
   dateDebut         DateTime?
   dateFin           DateTime?
   dateEcheance      DateTime?
+  devisId           String?           // Optionnel : lié à un devis validé
   dateCreation      DateTime          @default(now())
   dateModification  DateTime          @updatedAt
   equipeId          String?
@@ -117,8 +120,11 @@ model Projet {
   paiements         Paiement[]        @relation("PaiementsDuProjet")
   client            Client            @relation(fields: [clientId], references: [id])
   equipe            Equipe?           @relation("ProjetAEquipe", fields: [equipeId], references: [id])
+  devis             Devis?            @relation("DevisAuProjet", fields: [devisId], references: [id], onDelete: SetNull)
   projetServices    ProjetService[]
   taches            Tache[]
+  charges           Charge[]
+  timesheets        TimeSheet[]       @relation("TimesheetProjet")
 
   @@map("projets")
 }
@@ -161,6 +167,7 @@ model Tache {
   commentaire      String?
   DocumentTache    DocumentTache[]
   paiements        Paiement[]
+    timesheets       TimeSheet[]
   assigneA         Utilisateur?    @relation("TacheAssignee", fields: [assigneAId], references: [id])
   creeePar         Utilisateur?    @relation("TacheCreatedBy", fields: [creeParId], references: [id])
   equipe           Equipe?         @relation("TacheEquipe", fields: [equipeId], references: [id])
@@ -253,6 +260,9 @@ model Utilisateur {
   souhaits             Souhait[]
   tachesAssignees      Tache[]         @relation("TacheAssignee")
   tachesCreees         Tache[]         @relation("TacheCreatedBy")
+  timesheets           TimeSheet[]     @relation("TimesheetEmploye")
+  timesheetsValidees   TimeSheet[]     @relation("TimesheetValidatePar")
+  charges              Charge[]        @relation("ChargesEmploye")
 
   @@map("utilisateurs")
 }
@@ -410,6 +420,100 @@ model EnumTypeNotification {
   @@map("enum_types_notifications")
 }
 
+// ============================================
+// NOUVEAUX MODÈLES : Devis, Charge, TimeSheet
+// ============================================
+
+model Devis {
+  id            String          @id @default(cuid())
+  numero        String          @unique
+  clientId      String
+  titre         String?
+  description   String?
+  montant       Float
+  tauxTVA       Float           @default(0.18)
+  montantTotal  Float
+  statut        StatutDevis     @default(BROUILLON)
+  dateCreation  DateTime        @default(now())
+  dateEnvoi     DateTime?
+  dateAccept    DateTime?
+  dateRefus     DateTime?
+  notes         String?
+  dateModification DateTime      @updatedAt
+  
+  client        Client          @relation(fields: [clientId], references: [id])
+  services      DevisService[]
+  projets       Projet[]        @relation("DevisAuProjet")
+
+  @@index([clientId])
+  @@index([statut])
+  @@map("devis")
+}
+
+model DevisService {
+  id        String    @id @default(cuid())
+  devisId   String
+  serviceId String
+  quantite  Int       @default(1)
+  prix      Float?
+  dateAjout DateTime  @default(now())
+  
+  devis     Devis     @relation(fields: [devisId], references: [id], onDelete: Cascade)
+  service   Service   @relation("ServicesInDevis", fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@unique([devisId, serviceId])
+  @@map("devis_services")
+}
+
+model Charge {
+  id              String            @id @default(cuid())
+  montant         Float
+  categorie       CategorieCharge
+  description     String?
+  date            DateTime          @default(now())
+  projetId        String?
+  employeId       String?
+  justificatifUrl String?
+  notes           String?
+  dateCreation    DateTime          @default(now())
+  dateModification DateTime          @updatedAt
+  
+  projet          Projet?           @relation(fields: [projetId], references: [id], onDelete: SetNull)
+  employe         Utilisateur?      @relation("ChargesEmploye", fields: [employeId], references: [id], onDelete: SetNull)
+
+  @@index([categorie])
+  @@index([date])
+  @@index([projetId])
+  @@map("charges")
+}
+
+model TimeSheet {
+  id              String            @id @default(cuid())
+  date            DateTime
+  regularHrs      Int               // heures normales
+  overtimeHrs     Int?              // heures supplémentaires
+  sickHrs         Int?              // maladie
+  vacationHrs     Int?              // congés
+  description     String?
+  statut          StatutTimeSheet   @default(EN_ATTENTE)
+  employeeId      String
+  taskId          String
+  projectId       String
+  dateCreation    DateTime          @default(now())
+  dateModification DateTime          @updatedAt
+  validePar       String?           // ID du manager qui valide
+  
+  employee        Utilisateur       @relation("TimesheetEmploye", fields: [employeeId], references: [id])
+  task            Tache             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  project         Projet            @relation("TimesheetProjet", fields: [projectId], references: [id], onDelete: Cascade)
+  valideParUser   Utilisateur?      @relation("TimesheetValidatePar", fields: [validePar], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([employeeId])
+  @@index([date])
+  @@map("timesheets")
+}
+
 enum TypeClient {
   PARTICULIER
   ENTREPRISE
@@ -518,3 +622,32 @@ enum StatutAbonnement {
   ANNULE
   TERMINE
 }
+
+enum StatutDevis {
+  BROUILLON
+  ENVOYE
+  ACCEPTE
+  REFUSE
+  ANNULE
+}
+
+enum CategorieCharge {
+  SALAIRES_CHARGES_SOCIALES
+  LOYER_IMMOBILIER
+  UTILITIES
+  MATERIEL_EQUIPEMENT
+  TRANSPORT_DEPLACEMENT
+  FOURNITURES_BUREAUTIQUE
+  MARKETING_COMMUNICATION
+  ASSURANCES
+  TAXES_IMPOTS
+  AUTRES_CHARGES
+}
+
+enum StatutTimeSheet {
+  EN_ATTENTE
+  VALIDEE
+  REJETEE
+  CORRIGEE
+}
+

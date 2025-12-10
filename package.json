@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "billing:run": "tsx scripts/run-recurring-billing.ts",
+    "billing:dev": "set NODE_ENV=development && npm run billing:run",
+    "billing:prod": "set NODE_ENV=production && npm run billing:run",
+    "billing:build": "tsc -p tsconfig.scripts.json",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -48,7 +52,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@types/node": "^20.19.25",
+    "@types/node": "^20.19.26",
     "@types/nodemailer": "^7.0.4",
     "@types/pdfkit": "^0.17.4",
     "@types/react": "^18",

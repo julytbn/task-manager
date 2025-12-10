@@ -1,0 +1,81 @@
+name: Recurring Billing and Task Management
+
+on:
+  schedule:
+    # Exécution quotidienne à minuit UTC
+    - cron: '0 0 * * *'
+  # Permet aussi de déclencher manuellement depuis l'interface GitHub
+  workflow_dispatch:
+
+jobs:
+  process-billing:
+    name: Process Billing
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: |
+        npm ci
+        npm install -g prisma
+    
+    - name: Verify Prisma
+      run: npx prisma --version
+    
+    - name: Generate Prisma Client
+      run: npx prisma generate
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    
+    - name: Run database migrations
+      run: npx prisma migrate deploy
+      env:
+        NODE_ENV: production
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+    
+    - name: Run recurring billing
+      run: node scripts/run-recurring-billing.js
+      env:
+        NODE_ENV: production
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        # Configuration de Prisma
+        PRISMA_CLI_QUERY_ENGINE_TYPE: binary
+        PRISMA_CLIENT_ENGINE_TYPE: binary
+        # Configuration supplémentaire si nécessaire
+        # EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+        # EMAIL_SERVER: ${{ secrets.EMAIL_SERVER }}
+    
+    - name: Notify on failure
+      if: failure()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          try {
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '❌ Échec du job de facturation récurrente',
+              body: |
+                ### Le job de facturation récurrente a échoué
+                
+                **Détails de l'exécution:**
+                - [Voir les logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+                - Commit: ${{ github.sha }}
+                - Déclenché par: ${{ github.actor }}
+                
+                **Prochaines étapes:**
+                1. Vérifier les logs d'erreur
+                2. Vérifier la connexion à la base de données
+                3. Vérifier les variables d'environnement
+            });
+          } catch (error) {
+            console.error('Erreur lors de la création de l\'issue:', error);
+          }
