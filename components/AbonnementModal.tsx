@@ -2,6 +2,7 @@
 
 import { useState, useEffect, FormEvent } from 'react'
 import { X } from 'lucide-react'
+import NouveauServiceModal from './NouveauServiceModal'
 
 type Props = {
   isOpen: boolean
@@ -15,6 +16,45 @@ export default function AbonnementModal({ isOpen, onClose, onSaved, initialData 
   const [services, setServices] = useState<any[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showServiceModal, setShowServiceModal] = useState(false)
+  const [selectedService, setSelectedService] = useState('')
+  const [dateDebut, setDateDebut] = useState<string>('')
+  const [frequence, setFrequence] = useState<string>('MENSUEL')
+  const [dateProchainFacture, setDateProchainFacture] = useState<string>('')
+
+  // Calculer la date de prochaine facturation automatiquement
+  const calculateNextInvoiceDate = (debut: string, freq: string) => {
+    if (!debut) return ''
+    
+    const date = new Date(debut)
+    switch (freq) {
+      case 'MENSUEL':
+        date.setMonth(date.getMonth() + 1)
+        break
+      case 'TRIMESTRIEL':
+        date.setMonth(date.getMonth() + 3)
+        break
+      case 'SEMESTRIEL':
+        date.setMonth(date.getMonth() + 6)
+        break
+      case 'ANNUEL':
+        date.setFullYear(date.getFullYear() + 1)
+        break
+      case 'PONCTUEL':
+        date.setDate(date.getDate() + 7)
+        break
+      default:
+        return ''
+    }
+    
+    return date.toISOString().split('T')[0]
+  }
+
+  // Recalculer quand dateDebut ou frequence change
+  useEffect(() => {
+    const nextDate = calculateNextInvoiceDate(dateDebut, frequence)
+    setDateProchainFacture(nextDate)
+  }, [dateDebut, frequence])
 
   useEffect(() => {
     if (!isOpen) return
@@ -30,6 +70,17 @@ export default function AbonnementModal({ isOpen, onClose, onSaved, initialData 
       }
     }
     fetchData()
+    
+    // Initialiser les états si on édite un abonnement existant
+    if (initialData?.id) {
+      setDateDebut(initialData.dateDebut ? new Date(initialData.dateDebut).toISOString().split('T')[0] : '')
+      setFrequence(initialData.frequence || 'MENSUEL')
+      const nextDate = calculateNextInvoiceDate(
+        initialData.dateDebut ? new Date(initialData.dateDebut).toISOString().split('T')[0] : '',
+        initialData.frequence || 'MENSUEL'
+      )
+      setDateProchainFacture(nextDate)
+    }
   }, [isOpen])
 
   if (!isOpen) return null
@@ -42,35 +93,47 @@ export default function AbonnementModal({ isOpen, onClose, onSaved, initialData 
     const form = new FormData(e.currentTarget)
     const data: Record<string, any> = Object.fromEntries(form.entries())
 
-    // Conversion en types correctes
-    if (data.montant) data.montant = parseFloat(String(data.montant))
-    if (data.dateDebut) data.dateDebut = new Date(String(data.dateDebut)).toISOString()
-    if (data.dateFin) data.dateFin = new Date(String(data.dateFin)).toISOString()
-
     try {
+      if (!selectedService) {
+        throw new Error('Veuillez sélectionner un service')
+      }
+      data.serviceId = selectedService
+
+      // Conversion en types correctes
+      if (data.montant) data.montant = parseFloat(String(data.montant))
+      if (data.dateDebut) data.dateDebut = new Date(String(data.dateDebut)).toISOString()
+      if (data.dateFin) data.dateFin = new Date(String(data.dateFin)).toISOString()
+
       const url = initialData?.id ? `/api/abonnements/${initialData.id}` : '/api/abonnements'
       const method = initialData?.id ? 'PUT' : 'POST'
       
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          // Pour les nouveaux abonnements, indiquer qu'une facture doit être auto-générée
+          generateInitialFacture: !initialData?.id
+        }),
       })
+      
       if (!res.ok) {
         const err = await res.json()
         throw new Error(err.error || 'Erreur lors de la sauvegarde')
       }
+      
       onSaved()
       onClose()
     } catch (err: any) {
       setError(err.message)
+      console.error('Erreur:', err)
     } finally {
       setIsSubmitting(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-3 sm:p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold">
@@ -128,12 +191,25 @@ export default function AbonnementModal({ isOpen, onClose, onSaved, initialData 
                 <label className="block text-sm font-medium text-gray-700 mb-1">Service *</label>
                 <select 
                   name="serviceId" 
-                  defaultValue={initialData?.serviceId || ''} 
+                  value={selectedService}
+                  onChange={(e) => {
+                    if (e.target.value === '__add_new__') {
+                      setShowServiceModal(true)
+                      e.target.value = ''
+                    } else {
+                      setSelectedService(e.target.value)
+                    }
+                  }}
                   required 
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   <option value="">-- Sélectionner un service --</option>
-                  {services.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
+                  {services.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.nom}
+                    </option>
+                  ))}
+                  <option value="__add_new__" className="text-blue-600 font-semibold">+ Ajouter un nouveau service</option>
                 </select>
               </div>
               
@@ -154,7 +230,8 @@ export default function AbonnementModal({ isOpen, onClose, onSaved, initialData 
                 <label className="block text-sm font-medium text-gray-700 mb-1">Fréquence *</label>
                 <select 
                   name="frequence" 
-                  defaultValue={initialData?.frequence || 'MENSUEL'} 
+                  value={frequence}
+                  onChange={(e) => setFrequence(e.target.value)}
                   required 
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
@@ -187,10 +264,22 @@ export default function AbonnementModal({ isOpen, onClose, onSaved, initialData 
                 <input 
                   name="dateDebut" 
                   type="date" 
-                  defaultValue={initialData?.dateDebut ? new Date(initialData.dateDebut).toISOString().split('T')[0] : ''} 
+                  value={dateDebut}
+                  onChange={(e) => setDateDebut(e.target.value)}
                   required 
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
                 />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date prochaine facturation</label>
+                <input 
+                  type="date" 
+                  value={dateProchainFacture}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-200 rounded-md bg-gray-100 text-gray-600" 
+                />
+                <p className="text-xs text-gray-500 mt-1">Calculée automatiquement selon la fréquence</p>
               </div>
               
               <div>
@@ -207,14 +296,14 @@ export default function AbonnementModal({ isOpen, onClose, onSaved, initialData 
             <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
               <button 
                 type="button" 
-                onClick={onClose} 
+                onClick={onClose}
                 className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
               >
                 Annuler
               </button>
               <button 
                 type="submit" 
-                disabled={isSubmitting} 
+                disabled={isSubmitting}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300"
               >
                 {isSubmitting ? 'Enregistrement...' : (initialData?.id ? 'Modifier' : 'Créer')}
@@ -222,6 +311,29 @@ export default function AbonnementModal({ isOpen, onClose, onSaved, initialData 
             </div>
           </form>
         </div>
+
+        <NouveauServiceModal
+          isOpen={showServiceModal}
+          onClose={() => setShowServiceModal(false)}
+          onSave={async (newService) => {
+            // Ajouter le nouveau service à la liste des services
+            const response = await fetch('/api/services', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(newService)
+            })
+            
+            if (!response.ok) {
+              const err = await response.json()
+              throw new Error(err.error || 'Erreur lors de la création du service')
+            }
+            
+            const createdService = await response.json()
+            setServices([...services, createdService])
+            setSelectedService(createdService.id)
+            setShowServiceModal(false)
+          }}
+        />
       </div>
     </div>
   )

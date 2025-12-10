@@ -11,7 +11,10 @@ export async function GET() {
       include: {
         client: true,
         taches: true,
-        service: true
+        projetServices: {
+          include: { service: true },
+          orderBy: { ordre: 'asc' }
+        }
       },
       orderBy: {
         dateCreation: 'desc'
@@ -43,13 +46,20 @@ export async function GET() {
           email: projet.client.email || undefined,
           telephone: projet.client.telephone || undefined
         } : null,
-        service: projet.service ? {
-          id: projet.service.id,
-          nom: projet.service.nom
-        } : null,
+        // ✅ Inclure les services du projet
+        projetServices: projet.projetServices ? projet.projetServices.map(ps => ({
+          id: ps.id,
+          serviceId: ps.serviceId,
+          montant: ps.montant,
+          ordre: ps.ordre,
+          service: ps.service ? {
+            id: ps.service.id,
+            nom: ps.service.nom
+          } : null
+        })) : [],
+        montantTotal: projet.montantTotal || null,
         progress,
         budget: projet.budget || null,
-        frequencePaiement: projet.frequencePaiement,
         taches: projet.taches ? projet.taches.map(t => ({
           id: t.id,
           titre: t.titre,
@@ -81,9 +91,11 @@ export async function POST(request: Request) {
     const data = await request.json();
     
     // 1. Validation des champs obligatoires
-    if (!data.titre || !data.clientId || !data.serviceId) {
+    const serviceIds = Array.isArray(data.serviceIds) ? data.serviceIds : (data.serviceId ? [data.serviceId] : []);
+    
+    if (!data.titre || !data.clientId || serviceIds.length === 0) {
       return NextResponse.json(
-        { error: 'Les champs titre, clientId et serviceId sont obligatoires' },
+        { error: 'Les champs titre, clientId et au moins un serviceId sont obligatoires' },
         { status: 400 }
       );
     }
@@ -97,27 +109,63 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Création du projet
+    // 3. Vérifier que les services existent
+    const services = await prisma.service.findMany({
+      where: { id: { in: serviceIds } }
+    });
+
+    if (services.length !== serviceIds.length) {
+      return NextResponse.json(
+        { error: 'Un ou plusieurs services n\'existent pas' },
+        { status: 404 }
+      );
+    }
+
+    // 4. Créer le projet
     const nouveauProjet = await prisma.projet.create({
       data: {
         titre: data.titre,
         description: data.description || null,
         client: { connect: { id: data.clientId } },
-        service: { connect: { id: data.serviceId } },
         statut: data.statut || 'EN_COURS',
-        frequencePaiement: data.frequencePaiement || 'PONCTUEL',
         dateDebut: data.dateDebut ? new Date(data.dateDebut) : null,
         dateFin: data.dateFin ? new Date(data.dateFin) : null,
         dateEcheance: data.dateEcheance ? new Date(data.dateEcheance) : null,
         budget: data.budget ? parseFloat(data.budget) : null,
-      },
-      include: {
-        client: true,
-        service: true
       }
     });
 
-    return NextResponse.json(nouveauProjet, { status: 201 });
+    // 5. Créer les associations ProjetService
+    let montantTotal = 0;
+    for (const [idx, serviceId] of serviceIds.entries()) {
+      const service = services.find(s => s.id === serviceId)!;
+      const montant = service.prix || 0;
+      montantTotal += montant;
+
+      await prisma.projetService.create({
+        data: {
+          projetId: nouveauProjet.id,
+          serviceId,
+          montant,
+          ordre: idx + 1,
+        },
+      });
+    }
+
+    // 6. Mettre à jour montantTotal du projet
+    const projetFinal = await prisma.projet.update({
+      where: { id: nouveauProjet.id },
+      data: { montantTotal },
+      include: {
+        projetServices: {
+          include: { service: true },
+          orderBy: { ordre: 'asc' }
+        },
+        client: true,
+      }
+    });
+
+    return NextResponse.json(projetFinal, { status: 201 });
 
   } catch (error) {
   console.error('Erreur création projet:', error);
@@ -152,13 +200,20 @@ export async function POST(request: Request) {
 }
 
 export function OPTIONS() {
+  // Configuration CORS sécurisée - ne pas utiliser '*' en production
+  const origin = process.env.NODE_ENV === 'production' 
+    ? (process.env.FRONTEND_URL || '') 
+    : 'http://localhost:3001';
+  
   return new Response(null, {
     status: 204,
     headers: {
       'Allow': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': origin,
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Credentials': 'true',
+      'Access-Control-Max-Age': '86400',
     },
   });
 }

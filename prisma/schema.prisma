@@ -69,9 +69,8 @@ model Service {
   dateCreation     DateTime         @default(now())
   dateModification DateTime         @updatedAt
   abonnements      Abonnement[]
-  projets          Projet[]
   taches           Tache[]
-  factures         Facture[]
+  projetServices   ProjetService[]
 
   @@map("services")
 }
@@ -105,25 +104,38 @@ model Projet {
   titre             String
   description       String?
   clientId          String
-  serviceId         String
   statut            StatutProjet      @default(EN_COURS)
   budget            Float?
+  montantTotal      Float?            // Total réel = sum(projetServices.montant)
   dateDebut         DateTime?
   dateFin           DateTime?
   dateEcheance      DateTime?
   dateCreation      DateTime          @default(now())
   dateModification  DateTime          @updatedAt
   equipeId          String?
-  montantEstime     Float?
-  frequencePaiement FrequencePaiement @default(PONCTUEL)
   factures          Facture[]
   paiements         Paiement[]        @relation("PaiementsDuProjet")
   client            Client            @relation(fields: [clientId], references: [id])
   equipe            Equipe?           @relation("ProjetAEquipe", fields: [equipeId], references: [id])
-  service           Service           @relation(fields: [serviceId], references: [id])
+  projetServices    ProjetService[]
   taches            Tache[]
 
   @@map("projets")
+}
+
+model ProjetService {
+  id        String   @id @default(cuid())
+  projetId  String
+  serviceId String
+  montant   Float?   // Montant du service DANS ce projet (peut différer du prix catalogue)
+  ordre     Int      @default(0)
+  dateAjout DateTime @default(now())
+  
+  projet    Projet   @relation(fields: [projetId], references: [id], onDelete: Cascade)
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  @@unique([projetId, serviceId])
+  @@map("projet_services")
 }
 
 model Tache {
@@ -133,6 +145,7 @@ model Tache {
   projetId         String
   serviceId        String?
   assigneAId       String?
+  creeParId        String?
   statut           StatutTache     @default(A_FAIRE)
   priorite         Priorite        @default(MOYENNE)
   dateEcheance     DateTime?
@@ -148,7 +161,8 @@ model Tache {
   commentaire      String?
   DocumentTache    DocumentTache[]
   paiements        Paiement[]
-  assigneA         Utilisateur?    @relation(fields: [assigneAId], references: [id])
+  assigneA         Utilisateur?    @relation("TacheAssignee", fields: [assigneAId], references: [id])
+  creeePar         Utilisateur?    @relation("TacheCreatedBy", fields: [creeParId], references: [id])
   equipe           Equipe?         @relation("TacheEquipe", fields: [equipeId], references: [id])
   facture          Facture?        @relation(fields: [factureId], references: [id])
   projet           Projet          @relation(fields: [projetId], references: [id])
@@ -170,7 +184,6 @@ model Facture {
   numero           String        @unique
   clientId         String
   projetId         String?
-  serviceId        String?
   statut           StatutFacture @default(EN_ATTENTE)
   montant          Float
   tauxTVA          Float         @default(0.18)
@@ -185,7 +198,6 @@ model Facture {
   abonnement       Abonnement?   @relation(fields: [abonnementId], references: [id])
   client           Client        @relation(fields: [clientId], references: [id])
   projet           Projet?       @relation(fields: [projetId], references: [id])
-  service          Service?      @relation(fields: [serviceId], references: [id])
   paiements        Paiement[]
   taches           Tache[]
 
@@ -239,7 +251,8 @@ model Utilisateur {
   membresEquipes       MembreEquipe[]
   notifications        Notification[]
   souhaits             Souhait[]
-  taches               Tache[]
+  tachesAssignees      Tache[]         @relation("TacheAssignee")
+  tachesCreees         Tache[]         @relation("TacheCreatedBy")
 
   @@map("utilisateurs")
 }
@@ -430,6 +443,7 @@ enum StatutTache {
   A_FAIRE
   EN_COURS
   EN_REVISION
+  SOUMISE
   TERMINE
   ANNULE
 }

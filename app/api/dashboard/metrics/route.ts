@@ -26,7 +26,17 @@ export async function GET() {
       take: 5,
       include: {
         projet: { select: { titre: true } },
-        assigneA: { select: { prenom: true, nom: true } }
+        assigneA: { select: { prenom: true, nom: true, email: true } },
+        DocumentTache: {
+          select: {
+            id: true,
+            nom: true,
+            url: true,
+            type: true,
+            taille: true,
+            dateUpload: true
+          }
+        }
       }
     })
 

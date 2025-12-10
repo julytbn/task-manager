@@ -7,7 +7,6 @@ export async function GET(request: Request, { params }: { params: { id: string }
       where: { id: params.id },
       include: {
         client: true,
-        service: true,
         projet: true,
         abonnement: true,
         taches: {

@@ -1,0 +1,21 @@
+﻿
+> task-manager@0.1.0 dev
+> next dev
+
+  Ôû▓ Next.js 14.2.33
+  - Local:        http://localhost:3000
+  - Environments: .env.local, .env
+
+ Ô£ô Starting...
+ Ô£ô Ready in 2.5s
+ Ô£ô Compiled /api/notifications in 312ms (291 modules)
+node.exe : [next-auth][warn][DEBUG_ENABLED] 
+Au caractère C:\Program Files\nodejs\npm.ps1:29 : 3
++   & $NODE_EXE $NPM_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([next-auth][warn][DEBUG_ENABLED] :String) [], Remote 
+   Exception
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+https://next-auth.js.org/warnings#debug_enabled
+ GET /api/notifications 401 in 514ms

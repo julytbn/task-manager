@@ -8,18 +8,18 @@ export async function GET() {
       include: {
         _count: { select: { projets: true } },
         factures: { select: { montantTotal: true } },
-        projets: { select: { montantEstime: true, budget: true } }
+        projets: { select: { montantTotal: true, budget: true } }
       }
     })
 
     // Calculer un résumé allégé pour le frontend :
     // - projetsCount : nombre de projets
-    // - montantProjets : somme des montants estimés (ou budget) des projets
+    // - montantProjets : somme des montants totaux des projets
     // - montantFactures : somme des factures.montantTotal
     // Par compatibilité, `montantTotal` sera défini sur `montantProjets` (demande: montant total des projets)
     const result = clients.map((c) => {
       const montantFactures = (c.factures || []).reduce((sum, f) => sum + (f.montantTotal || 0), 0)
-      const montantProjets = (c.projets || []).reduce((sum, p) => sum + ((p.montantEstime ?? p.budget) || 0), 0)
+      const montantProjets = (c.projets || []).reduce((sum, p) => sum + ((p.montantTotal ?? p.budget) || 0), 0)
       return {
         id: c.id,
         nom: c.nom,

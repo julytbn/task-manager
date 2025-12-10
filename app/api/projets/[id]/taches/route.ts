@@ -34,6 +34,16 @@ export async function GET(
             id: true,
             nom: true
           }
+        },
+        DocumentTache: {
+          select: {
+            id: true,
+            nom: true,
+            url: true,
+            type: true,
+            taille: true,
+            dateUpload: true
+          }
         }
       },
       orderBy: {

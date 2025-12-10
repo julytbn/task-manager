@@ -140,68 +140,47 @@ export default function DashboardPerformance() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <div>
-        <h3 className="font-semibold text-lg text-[#1E1E1E]">Performance</h3>
-        <p className="text-sm text-[#5A6A80]">Tâches terminées (6 derniers mois)</p>
+        <h3 className="font-semibold text-md text-[#1E1E1E]">Performance</h3>
+        <p className="text-xs text-[#5A6A80]">Tâches terminées (6 derniers mois)</p>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Card className="p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs text-[#5A6A80] font-medium">Productivité</p>
-              <p className="text-2xl font-bold text-[#1E1E1E] mt-2">{kpis.productivity ?? '—'}%</p>
-              <p className="text-xs text-[#2ECC71] mt-2">↑ 12% vs mois dernier</p>
-            </div>
-            <div className="p-2 bg-[#F0F4F8] rounded-lg">
-              <TrendingUp size={20} className="text-[#0A66C2]" />
-            </div>
+      {/* KPI Cards - Version simplifiée */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm border border-gray-100">
+          <div className="p-2 bg-blue-50 rounded-lg">
+            <TrendingUp size={16} className="text-blue-500" />
           </div>
-        </Card>
+          <div>
+            <p className="text-xs text-gray-500">Productivité</p>
+            <p className="text-lg font-semibold text-gray-800">{kpis.productivity ?? '0'}%</p>
+          </div>
+        </div>
 
-        <Card className="p-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs text-[#5A6A80] font-medium">Temps moyen</p>
-              <p className="text-2xl font-bold text-[#1E1E1E] mt-2">{kpis.avgTime ?? '—'} j</p>
-              <p className="text-xs text-[#E74C3C] mt-2">↑ 2 jours vs cible</p>
-            </div>
-            <div className="p-2 bg-[#F0F4F8] rounded-lg">
-              <Clock size={20} className="text-[#F1C40F]" />
-            </div>
+        <div className="flex items-center gap-3 p-3 bg-white rounded-lg shadow-sm border border-gray-100">
+          <div className="p-2 bg-yellow-50 rounded-lg">
+            <Clock size={16} className="text-yellow-500" />
           </div>
-        </Card>
-
-        <Card className="p-4 border-l-4 border-l-[#2ECC71]">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs text-[#5A6A80] font-medium">Paiements cumulés</p>
-              <p className="text-2xl font-bold text-[#2ECC71] mt-2">
-                {kpis.paymentsTotal ? `€${kpis.paymentsTotal.toFixed(2)}` : '—'}
-              </p>
-              <p className="text-xs text-[#2ECC71] mt-2">↑ 25% vs mois dernier</p>
-            </div>
-            <div className="p-2 bg-[#F0FDF4] rounded-lg">
-              <DollarSign size={20} className="text-[#2ECC71]" />
-            </div>
+          <div>
+            <p className="text-xs text-gray-500">Temps moyen</p>
+            <p className="text-lg font-semibold text-gray-800">{kpis.avgTime ?? '0'} j</p>
           </div>
-        </Card>
+        </div>
       </div>
 
       {/* Chart */}
-      <Card className="p-6">
-        <div className="h-56">
+      <div className="mt-2">
+        <div className="h-40">
           {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-[#5A6A80]">Chargement…</p>
+            <div className="flex items-center justify-center h-full text-sm text-gray-500">
+              Chargement des données...
             </div>
           ) : (
             <Line data={chartData} options={chartOptions} />
           )}
         </div>
-      </Card>
+      </div>
     </div>
   )
 }

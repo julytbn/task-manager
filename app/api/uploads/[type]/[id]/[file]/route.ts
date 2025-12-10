@@ -4,10 +4,23 @@ import path from 'path'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getClientIp, checkRateLimit } from '@/lib/security'
 
 export async function GET(request: Request, { params }: { params: { type: string; id: string; file: string } }) {
   try {
     const { type, id, file } = params
+
+    // Vérifier l'authentification AVANT tout
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
+    }
+
+    // Rate limiting pour éviter les abus
+    const clientIp = getClientIp(request as any);
+    if (!checkRateLimit(clientIp, 30)) {
+      return NextResponse.json({ error: 'Trop de requêtes' }, { status: 429 })
+    }
 
     // Only allow known types for safety
     const allowedTypes = ['tasks', 'clients', 'projects']
@@ -15,7 +28,19 @@ export async function GET(request: Request, { params }: { params: { type: string
       return NextResponse.json({ error: 'Type de fichier non autorisé' }, { status: 400 })
     }
 
+    // Validation de l'ID (doit être un UUID valide)
+    if (!/^[a-z0-9-]+$/.test(id)) {
+      return NextResponse.json({ error: 'ID invalide' }, { status: 400 })
+    }
+
     const filePath = path.join(process.cwd(), 'storage', 'uploads', type, id, file)
+
+    // Vérifier que le chemin ne contient pas ".." pour éviter la traversée de répertoires
+    const normalizedPath = path.normalize(filePath);
+    const basePath = path.normalize(path.join(process.cwd(), 'storage', 'uploads'));
+    if (!normalizedPath.startsWith(basePath)) {
+      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+    }
 
     // check exists
     try {
@@ -24,46 +49,35 @@ export async function GET(request: Request, { params }: { params: { type: string
       return NextResponse.json({ error: 'Fichier introuvable' }, { status: 404 })
     }
 
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
-    }
-
-    // Allow admins and managers
-    const userRole = (session?.user as Record<string, any>)?.role as string | undefined
-    if (userRole === 'ADMIN' || userRole === 'MANAGER') {
-      // allowed
+    // Permission checks based on type
+    if (type === 'tasks') {
+      // Autoriser celui qui a créé la tâche ou les managers
+      if (session.user.role !== 'MANAGER' && session.user.role !== 'ADMIN') {
+        const taskDoc = await prisma.documentTache.findFirst({
+          where: { url: `/api/uploads/tasks/${id}/${file}` },
+          select: { uploadPar: true, tacheId: true }
+        })
+        if (!taskDoc || taskDoc.uploadPar !== session.user.id) {
+          return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+        }
+      }
+    } else if (type === 'clients') {
+      // Autoriser managers et client concerné (uploader ou propriétaire)
+      const docUrl = `/api/uploads/clients/${id}/${file}`
+      const doc = await prisma.documentClient.findFirst({ where: { url: docUrl }, select: { uploadPar: true, clientId: true } })
+      if (!doc) {
+        return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+      }
+      const userId = session.user.id as string
+      const uploadPar = doc.uploadPar as string | null
+      const clientId = doc.clientId as string | null
+      // Si user est uploader ou client concerné
+      if (uploadPar !== userId && clientId !== userId && session.user.role !== 'MANAGER') {
+        return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
+      }
     } else {
-      // For tasks, ensure the user is the uploader or the assignee of the task
-      if (type === 'tasks') {
-        // try to find document record
-        const docUrl = `/api/uploads/tasks/${id}/${file}`
-        const doc = await prisma.documentTache.findFirst({ where: { url: docUrl }, select: { uploadPar: true, tache: { select: { assigneAId: true } } } })
-        if (!doc) {
-          return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
-        }
-        const userId = session.user.id as string
-        const uploadPar = doc.uploadPar as string | null
-        const assigneeId = doc.tache?.assigneAId as string | null
-        if (uploadPar !== userId && assigneeId !== userId) {
-          return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
-        }
-      } else if (type === 'clients') {
-        // Autoriser managers et client concerné (uploader ou propriétaire)
-        const docUrl = `/api/uploads/clients/${id}/${file}`
-        const doc = await prisma.documentClient.findFirst({ where: { url: docUrl }, select: { uploadPar: true, clientId: true } })
-        if (!doc) {
-          return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
-        }
-        const userId = session.user.id as string
-        const uploadPar = doc.uploadPar as string | null
-        const clientId = doc.clientId as string | null
-        // Si user est uploader ou client concerné
-        if (uploadPar !== userId && clientId !== userId) {
-          return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
-        }
-      } else {
-        // Pour projects, managers/admins uniquement
+      // Pour projects, managers/admins uniquement
+      if (session.user.role !== 'MANAGER' && session.user.role !== 'ADMIN') {
         return NextResponse.json({ error: 'Accès refusé' }, { status: 403 })
       }
     }

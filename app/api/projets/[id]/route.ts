@@ -50,7 +50,10 @@ export async function GET(
       where: { id: projectId },
       include: {
         client: true,
-        service: true,
+        projetServices: {
+          include: { service: true },
+          orderBy: { ordre: 'asc' }
+        },
         taches: true
       }
     })
@@ -92,6 +95,43 @@ export async function PUT(
       )
     }
 
+    // Gérer les services si fournis
+    let montantTotal = project.montantTotal
+    if (data.serviceIds && Array.isArray(data.serviceIds)) {
+      // Vérifier que tous les services existent
+      const services = await prisma.service.findMany({
+        where: { id: { in: data.serviceIds } }
+      })
+
+      if (services.length !== data.serviceIds.length) {
+        return NextResponse.json(
+          { error: 'Certains services n\'existent pas' },
+          { status: 400 }
+        )
+      }
+
+      // Supprimer les anciennes relations
+      await prisma.projetService.deleteMany({
+        where: { projetId: projectId }
+      })
+
+      // Créer les nouvelles relations
+      for (const [index, serviceId] of data.serviceIds.entries()) {
+        const service = services.find(s => s.id === serviceId)
+        await prisma.projetService.create({
+          data: {
+            projetId: projectId,
+            serviceId: serviceId,
+            montant: service?.prix || 0,
+            ordre: index + 1
+          }
+        })
+      }
+
+      // Calculer le nouveau montantTotal
+      montantTotal = services.reduce((sum, s) => sum + (s.prix || 0), 0)
+    }
+
     // Mettre à jour le projet
     const updatedProject = await prisma.projet.update({
       where: { id: projectId },
@@ -99,18 +139,20 @@ export async function PUT(
         titre: data.titre || project.titre,
         description: data.description !== undefined ? data.description : project.description,
         clientId: data.clientId || project.clientId,
-        serviceId: data.serviceId || project.serviceId,
         statut: data.statut || project.statut,
         budget: data.budget !== undefined ? data.budget : project.budget,
         dateDebut: data.dateDebut ? new Date(data.dateDebut) : project.dateDebut,
         dateFin: data.dateFin ? new Date(data.dateFin) : project.dateFin,
         equipeId: data.equipeId || project.equipeId,
-        frequencePaiement: data.frequencePaiement || project.frequencePaiement,
+        montantTotal: montantTotal,
         dateModification: new Date()
       },
       include: {
         client: true,
-        service: true
+        projetServices: {
+          include: { service: true },
+          orderBy: { ordre: 'asc' }
+        }
       }
     })
 

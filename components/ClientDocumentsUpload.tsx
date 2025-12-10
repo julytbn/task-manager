@@ -359,9 +359,9 @@ export default function ClientDocumentsUpload({ clientId }: { clientId: string }
       </div>
       {/* Delete confirmation modal */}
       {deletingId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
           <div className="absolute inset-0 bg-black opacity-30" onClick={() => deletingLoading ? null : setDeletingId(null)} />
-          <div className="relative bg-white rounded-lg shadow-lg w-full max-w-md p-6 z-60">
+          <div className="relative bg-white rounded-lg shadow-lg w-full max-w-md p-4 sm:p-6 z-60">
             <h3 className="text-lg font-semibold mb-2">Confirmer la suppression</h3>
             <p className="text-sm text-gray-600 mb-4">Voulez-vous vraiment supprimer ce document ? Cette action est irréversible.</p>
             {deletingError && <div className="mb-3 p-2 bg-red-100 text-red-700 text-sm rounded">{deletingError}</div>}

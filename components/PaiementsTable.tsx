@@ -77,7 +77,7 @@ export default function PaiementsTable({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-100">
+    <div className="w-full bg-white rounded-lg shadow-sm border border-gray-100 overflow-x-auto">
       {/* Filtres */}
       <div className="p-6 border-b border-gray-100">
         <div className="flex flex-col gap-4">

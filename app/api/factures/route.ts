@@ -10,8 +10,8 @@ export async function GET() {
     const factures = await prisma.facture.findMany({
       include: {
         client: { select: { id: true, nom: true } },
-        service: { select: { id: true, nom: true } },
-        projet: { select: { id: true, titre: true } }
+        projet: { select: { id: true, titre: true } },
+        abonnement: { select: { id: true, nom: true } }
       },
       orderBy: { dateEmission: 'desc' }
     })
@@ -30,32 +30,44 @@ export async function POST(request: Request) {
   try {
     const data = await request.json()
 
-    if (!data.numero || !data.clientId || !data.serviceId || !data.montant) {
+    // ✅ Validation: au moins une source (abonnement ou projet)
+    const hasSource = data.abonnementId || data.projetId
+    if (!data.numero || !data.clientId || !data.montant || !hasSource) {
       return NextResponse.json(
-        { error: 'Champs obligatoires manquants (numero, clientId, serviceId, montant)' },
+        { error: 'Champs obligatoires manquants (numero, clientId, montant, et une source: abonnement ou projet)' },
         { status: 400 }
       )
     }
 
-    const montantTotal = data.montant * (1 + (data.tauxTVA || 0.18))
+    // ✅ Vérifier qu'une seule source est fournie
+    const sourceCount = [data.abonnementId, data.projetId].filter(Boolean).length
+    if (sourceCount > 1) {
+      return NextResponse.json(
+        { error: 'Une facture ne peut avoir qu\'UNE seule source (abonnement ou projet)' },
+        { status: 400 }
+      )
+    }
+
+    const taux = (typeof data.tauxTVA === "number" ? data.tauxTVA : 18) / 100;
+    const montantTotal = data.montant * (1 + taux)
 
     const facture = await prisma.facture.create({
       data: {
         numero: data.numero,
         client: { connect: { id: data.clientId } },
-        service: data.serviceId ? { connect: { id: data.serviceId } } : undefined,
         abonnement: data.abonnementId ? { connect: { id: data.abonnementId } } : undefined,
         projet: data.projetId ? { connect: { id: data.projetId } } : undefined,
         statut: data.statut || 'EN_ATTENTE',
         montant: data.montant,
         tauxTVA: data.tauxTVA || 0.18,
         montantTotal,
+        dateEmission: data.dateEmission ? new Date(data.dateEmission) : new Date(),
         dateEcheance: data.dateEcheance ? new Date(data.dateEcheance) : undefined,
         notes: data.notes || null
       },
       include: {
         client: { select: { id: true, nom: true } },
-        service: { select: { id: true, nom: true } },
+        abonnement: { select: { id: true, nom: true } },
         projet: { select: { id: true, titre: true } }
       }
     })

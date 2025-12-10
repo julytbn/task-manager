@@ -28,6 +28,13 @@ const getStatusBadge = (statut?: string): 'default' | 'success' | 'info' | 'warn
   return 'default'
 }
 
+const isTaskRecentlyUpdated = (taskId: string, lastUpdateTime: Record<string, number>): boolean => {
+  const updateTime = lastUpdateTime[taskId]
+  if (!updateTime) return false
+  // Afficher l'animation pendant 3 secondes après le changement
+  return Date.now() - updateTime < 3000
+}
+
 const getPriorityBadge = (priorite?: string): 'default' | 'success' | 'info' | 'warning' | 'danger' => {
   const p = (priorite || '').toLowerCase()
   if (p.includes('urgent') || p.includes('haute')) return 'danger'
@@ -40,6 +47,7 @@ export default function EmployeeTasksPage() {
   const [tasks, setTasks] = useState<Tache[]>([])
   const [projects, setProjects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [lastUpdateTime, setLastUpdateTime] = useState<Record<string, number>>({})
 
   // Filters
   const [query, setQuery] = useState('')
@@ -52,27 +60,52 @@ export default function EmployeeTasksPage() {
   const [showFilters, setShowFilters] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Tache | null>(null)
 
-  useEffect(() => {
-    let mounted = true
-    const load = async () => {
-      try {
-        const [tRes, pRes] = await Promise.all([fetch('/api/taches'), fetch('/api/projets')])
-        const tJson = await tRes.json()
-        const pJson = await pRes.json()
-        if (!mounted) return
-        setTasks(Array.isArray(tJson) ? tJson : [])
-        setProjects(Array.isArray(pJson) ? pJson : [])
-      } catch (err) {
-        console.error(err)
-      } finally {
-        if (mounted) setLoading(false)
+  // Fonction pour charger les tâches
+  const loadTasks = async () => {
+    try {
+      const [tRes, pRes] = await Promise.all([fetch('/api/taches'), fetch('/api/projets')])
+      const tJson = await tRes.json()
+      const pJson = await pRes.json()
+      
+      const newTasks = Array.isArray(tJson) ? tJson : []
+      
+      // Détecter les changements de statut
+      if (tasks.length > 0) {
+        newTasks.forEach((newTask: Tache) => {
+          const oldTask = tasks.find(t => t.id === newTask.id)
+          if (oldTask && oldTask.statut !== newTask.statut) {
+            // Marquer le timestamp du changement pour animation
+            setLastUpdateTime(prev => ({
+              ...prev,
+              [newTask.id]: Date.now()
+            }))
+            console.log(`📌 Changement détecté: ${newTask.titre} - ${oldTask.statut} → ${newTask.statut}`)
+          }
+        })
       }
+      
+      setTasks(newTasks)
+      setProjects(Array.isArray(pJson) ? pJson : [])
+    } catch (err) {
+      console.error('Erreur chargement tâches:', err)
+    } finally {
+      setLoading(false)
     }
-    load()
-    return () => {
-      mounted = false
-    }
+  }
+
+  // Charger les tâches initialement
+  useEffect(() => {
+    loadTasks()
   }, [])
+
+  // Polling automatique toutes les 5 secondes pour synchroniser les changements
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadTasks()
+    }, 5000) // Actualiser toutes les 5 secondes
+
+    return () => clearInterval(interval)
+  }, [tasks])
 
   const services = useMemo(() => {
     const setS = new Set<string>()
@@ -298,34 +331,45 @@ export default function EmployeeTasksPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(t => (
-                  <tr key={t.id} className="border-b border-[#DCE3EB] hover:bg-[#F4F7FA] transition-colors">
-                    <td className="p-4">
-                      <div className="font-medium text-[#1E1E1E]">{t.titre}</div>
-                      {t.description && <p className="text-xs text-[#5A6A80] truncate">{t.description}</p>}
-                    </td>
+                {filtered.map(t => {
+                  const isRecent = isTaskRecentlyUpdated(t.id, lastUpdateTime)
+                  return (
+                    <tr 
+                      key={t.id} 
+                      className={`border-b border-[#DCE3EB] hover:bg-[#F4F7FA] transition-all ${
+                        isRecent ? 'bg-green-50 animate-pulse' : ''
+                      }`}
+                    >
+                      <td className="p-4">
+                        <div className="font-medium text-[#1E1E1E]">{t.titre}</div>
+                        {t.description && <p className="text-xs text-[#5A6A80] truncate">{t.description}</p>}
+                      </td>
                       <td className="p-4 text-[#5A6A80]">{t.projet?.titre || t.projet?.nom || '—'}</td>
-                    <td className="p-4">
-                      <Badge variant={getPriorityBadge(t.priorite)}>{t.priorite || '—'}</Badge>
-                    </td>
-                    <td className="p-4 text-[#5A6A80]">
-                      {t.dateEcheance ? new Date(t.dateEcheance).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }) : '—'}
-                    </td>
-                    <td className="p-4">
-                      <Badge variant={getStatusBadge(t.statut)}>{t.statut || '—'}</Badge>
-                    </td>
-                    <td className="p-4">
-                      <Badge variant={t.estPayee ? 'success' : t.paiementPartiel ? 'warning' : 'danger'}>
-                        {t.estPayee ? 'Payée' : t.paiementPartiel ? 'Partielle' : 'Non payée'}
-                      </Badge>
-                    </td>
-                    <td className="p-4 text-center">
-                      <Button variant="ghost" size="sm" onClick={() => openDetails(t)}>
-                        Voir
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                      <td className="p-4">
+                        <Badge variant={getPriorityBadge(t.priorite)}>{t.priorite || '—'}</Badge>
+                      </td>
+                      <td className="p-4 text-[#5A6A80]">
+                        {t.dateEcheance ? new Date(t.dateEcheance).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }) : '—'}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <Badge variant={getStatusBadge(t.statut)}>{t.statut || '—'}</Badge>
+                          {isRecent && <span className="text-xs font-semibold text-green-600">✓ Mis à jour</span>}
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <Badge variant={t.estPayee ? 'success' : t.paiementPartiel ? 'warning' : 'danger'}>
+                          {t.estPayee ? 'Payée' : t.paiementPartiel ? 'Partielle' : 'Non payée'}
+                        </Badge>
+                      </td>
+                      <td className="p-4 text-center">
+                        <Button variant="ghost" size="sm" onClick={() => openDetails(t)}>
+                          Voir
+                        </Button>
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </Card>

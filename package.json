@@ -39,6 +39,7 @@
     "next-auth": "^4.24.11",
     "node-cron": "^4.2.1",
     "nodemailer": "^7.0.11",
+    "pdfkit": "^0.17.2",
     "react": "^18",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "^18",
@@ -49,6 +50,7 @@
   "devDependencies": {
     "@types/node": "^20.19.25",
     "@types/nodemailer": "^7.0.4",
+    "@types/pdfkit": "^0.17.4",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.4.22",

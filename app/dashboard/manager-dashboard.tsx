@@ -25,6 +25,7 @@ import DashboardTeamPerformance from '@/components/dashboard/DashboardTeamPerfor
 import DashboardLateIndicators from '@/components/dashboard/DashboardLateIndicators'
 import DashboardPaymentTimeline from '@/components/dashboard/DashboardPaymentTimeline'
 import { useProjectsStatistics } from '@/lib/useProjectsStatistics'
+import { useUserSession } from '@/hooks/useSession'
 
 ChartJS.register(
   CategoryScale,
@@ -38,11 +39,26 @@ ChartJS.register(
 )
 
 export default function ManagerDashboard() {
-  const { data: projStats, loading: projLoading, error: projError } = useProjectsStatistics()
+  const { user, isLoading: isSessionLoading } = useUserSession()
+  const { data: projStats, loading: projLoading, error: projError } = useProjectsStatistics(user?.id)
+  
+  // Afficher un indicateur de chargement pendant la vérification de l'authentification
+  if (isSessionLoading) {
+    return <div>Chargement de la session...</div>
+  }
 
-  const totalProjects = projStats?.totalProjets ?? 0
-  const projetsEnCours = projStats?.projetsEnCours ?? 0
-  const budgetTotalFormatted = projStats?.budgetTotalFormatted ?? '0 FCFA'
+  // Filtrer les statistiques en fonction des rôles
+  const totalProjects = user?.role === 'ADMIN' 
+    ? projStats?.totalProjets ?? 0
+    : projStats?.userProjects?.total ?? 0
+    
+  const projetsEnCours = user?.role === 'ADMIN'
+    ? projStats?.projetsEnCours ?? 0
+    : projStats?.userProjects?.enCours ?? 0
+    
+  const budgetTotalFormatted = user?.role === 'ADMIN'
+    ? projStats?.budgetTotalFormatted ?? '0 FCFA'
+    : projStats?.userProjects?.budgetTotalFormatted ?? '0 FCFA'
 
   const [tasks, setTasks] = useState<any[]>([])
   const [payments, setPayments] = useState<any[]>([])
@@ -50,16 +66,54 @@ export default function ManagerDashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (isSessionLoading) return
+    
     let mounted = true
     ;(async () => {
       try {
-        const [tRes, pRes] = await Promise.all([fetch('/api/taches'), fetch('/api/paiements?all=true')])
+        // Si l'utilisateur n'est pas admin, on filtre les tâches et paiements par son ID
+        const tasksUrl = user?.role === 'ADMIN' 
+          ? '/api/taches' 
+          : `/api/taches?userId=${user?.id}`
+          
+        const paymentsUrl = user?.role === 'ADMIN'
+          ? '/api/paiements?all=true'
+          : `/api/paiements?userId=${user?.id}`
+        
+        const [tRes, pRes] = await Promise.all([
+          fetch(tasksUrl),
+          fetch(paymentsUrl)
+        ])
+        
         const tData = tRes.ok ? await tRes.json() : []
-        const pData = pRes.ok ? await pRes.json() : { payments: [], totals: { total: 0, paid: 0, pending: 0 } }
+        const pData = pRes.ok 
+          ? await pRes.json() 
+          : { payments: [], totals: { total: 0, paid: 0, pending: 0 } }
+            
         if (!mounted) return
+        
         setTasks(tData || [])
         setPayments(pData.payments || [])
-        setPaymentsTotals(pData.totals || { total: 0, paid: 0, pending: 0 })
+        
+        // Si l'utilisateur n'est pas admin, on ajuste les totaux
+        if (user?.role !== 'ADMIN') {
+          const userPayments = pData.payments || []
+          const paid = userPayments
+            .filter((p: any) => p.statut?.toUpperCase().includes('CONFIRME'))
+            .reduce((sum: number, p: any) => sum + (p.montant || 0), 0)
+            
+          const pending = userPayments
+            .filter((p: any) => !p.statut?.toUpperCase().includes('CONFIRME'))
+            .reduce((sum: number, p: any) => sum + (p.montant || 0), 0)
+            
+          setPaymentsTotals({
+            total: paid + pending,
+            paid,
+            pending
+          })
+        } else {
+          setPaymentsTotals(pData.totals || { total: 0, paid: 0, pending: 0 })
+        }
       } catch (err) {
         console.error('Erreur récupération dashboard:', err)
       } finally {
@@ -67,23 +121,27 @@ export default function ManagerDashboard() {
       }
     })()
     return () => { mounted = false }
-  }, [])
+  }, [isSessionLoading, user])
 
+  // Calcul des statistiques basées sur les tâches et paiements déjà filtrés
   const totalTasks = tasks.length
   const tasksInProgress = tasks.filter(t => {
     const s = (t.statut || '').toString().toUpperCase()
     return s.includes('EN_COURS')
   }).length
+  
   const tasksInProgressOrTodo = tasks.filter(t => {
     const s = (t.statut || '').toString().toUpperCase()
     return s.includes('EN_COURS') || s.includes('A_FAIRE') || s.includes('TODO')
   }).length
+  
   const tasksPaid = payments.filter((p: any) => p.statut && p.statut.toUpperCase().includes('CONFIRME')).length
   const totalAmount = paymentsTotals.total || 0
   const tasksDone = tasks.filter(t => (t.statut || '').toString().toUpperCase().includes('TERMINE')).length
 
   const taskCounts = useMemo(() => {
     const counts = { todo: 0, inProgress: 0, review: 0, done: 0 }
+    // Les tâches sont déjà filtrées par utilisateur si nécessaire
     tasks.forEach(t => {
       const s = (t.statut || '').toString().toUpperCase()
       if (s.includes('TERMINE')) counts.done++

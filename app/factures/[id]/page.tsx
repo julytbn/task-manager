@@ -258,9 +258,7 @@ export default function FactureDetailPage() {
           isOpen={showPaiementModal}
           onClose={() => setShowPaiementModal(false)}
           onSave={handlePaiementSave}
-          prefilledClient={facture?.client}
-          prefilledService={facture?.service}
-          prefilledMontant={montantRestant}
+          prefilledFacture={facture}
         />
       </div>
     </UiLayout>

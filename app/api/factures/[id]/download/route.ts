@@ -17,8 +17,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       where: { id: params.id },
       include: {
         client: true,
-        projet: true,
-        service: true,
+        projet: true
       }
     })
 
@@ -392,8 +391,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
               </thead>
               <tbody>
                 <tr>
-                  <td><strong>${facture.service?.nom || facture.projet?.titre || 'Service'}</strong></td>
-                  <td>${facture.service?.description || facture.projet?.description || 'Service facturé'}</td>
+                  <td><strong>${facture.projet?.titre || 'Service facturé'}</strong></td>
+                  <td>${facture.projet?.description || 'Service facturé'}</td>
                   <td class="text-right">1</td>
                   <td class="text-right">${montantHT.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   <td class="text-right"><strong>${montantHT.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>

@@ -59,6 +59,27 @@ export default function PaiementDetailModal({ paiement, isOpen, onClose }: Paiem
     }
   }
 
+  const handleDownloadRecu = async () => {
+    try {
+      const response = await fetch(`/api/paiements/${paiement.id}/recu`, {
+        method: 'GET',
+      })
+      if (!response.ok) throw new Error('Erreur lors du téléchargement du reçu')
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `recu_paiement_${paiement.id}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(link)
+    } catch (error) {
+      console.error('Erreur:', error)
+      alert('Impossible de télécharger le reçu')
+    }
+  }
+
   const getStatutBadge = (statut: string) => {
     switch (statut) {
       case 'payé':
@@ -78,7 +99,7 @@ export default function PaiementDetailModal({ paiement, isOpen, onClose }: Paiem
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 sm:p-4">
       <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100 sticky top-0 bg-white">
@@ -191,13 +212,20 @@ export default function PaiementDetailModal({ paiement, isOpen, onClose }: Paiem
               Ajouter paiement partiel
             </button>
           )}
-          <button 
-            onClick={handleDownloadFacture}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium ml-auto"
-          >
-            <Download size={18} />
-            Télécharger facture
-          </button>
+          <div className="flex gap-4 mt-6">
+            <button
+              onClick={handleDownloadFacture}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-800 rounded hover:bg-gray-200"
+            >
+              <Download size={18} /> Télécharger la facture
+            </button>
+            <button
+              onClick={handleDownloadRecu}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-800 rounded hover:bg-blue-200"
+            >
+              <Download size={18} /> Télécharger le reçu
+            </button>
+          </div>
           <button
             onClick={onClose}
             className="px-4 py-2.5 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition font-medium"

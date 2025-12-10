@@ -9,7 +9,19 @@ export async function GET(request: Request, { params }: { params: { clientId: st
         abonnements: true,
         projets: {
           include: {
-            service: true,
+            projetServices: {
+              include: {
+                service: {
+                  select: {
+                    id: true,
+                    nom: true,
+                    prix: true,
+                    categorie: true,
+                    description: true,
+                  }
+                }
+              }
+            }
           },
         },
         factures: true,

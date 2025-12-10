@@ -9,7 +9,10 @@ export default async function ClientPage({ params }: { params: { id: string } })
       abonnements: true,
       projets: {
         include: {
-          service: true,
+          projetServices: {
+            include: { service: true },
+            orderBy: { ordre: 'asc' }
+          },
         },
       },
       factures: true,

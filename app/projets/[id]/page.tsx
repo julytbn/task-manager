@@ -38,7 +38,10 @@ async function fetchProject(id: string) {
       where: { id },
       include: {
         client: true,
-        service: true,
+        projetServices: {
+          include: { service: true },
+          orderBy: { ordre: 'asc' }
+        },
         taches: true,
         equipe: {
           include: {
@@ -58,7 +61,7 @@ async function fetchProject(id: string) {
       id: projet.id,
       title: projet.titre,
       client: projet.client ? { id: projet.client.id, nom: projet.client.nom } : null,
-      service: projet.service ? { id: projet.service.id, nom: projet.service.nom } : null,
+      services: projet.projetServices ? projet.projetServices.map(ps => ({ id: ps.service.id, nom: ps.service.nom, montant: ps.montant })) : [],
       status: (projet.statut === 'TERMINE' || projet.statut === 'ANNULE') ? 'termine' : (projet.statut === 'EN_RETARD' ? 'en_retard' : 'en_cours'),
       progress: projet.taches && projet.taches.length > 0 ? Math.round((projet.taches.filter(t => t.statut === 'TERMINE').length / projet.taches.length) * 100) : 0,
       budget: projet.budget || null,

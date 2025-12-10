@@ -88,8 +88,12 @@ export default function NouveauFactureModal({
 }: NouveauFactureModalProps) {
   const [formData, setFormData] = useState({
     numero: '',
-    client: '',
-    projet: '',
+    clientId: clientId || '',
+    client: clientName || '',
+    abonnementId: '',
+    projetId: '',
+    serviceId: '',
+    sourceType: '', // 'abonnement', 'projet', 'service'
     montant: '',
     tauxTVA: 18,
     dateEmission: new Date().toISOString().split('T')[0],
@@ -100,6 +104,30 @@ export default function NouveauFactureModal({
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [clients, setClients] = useState<any[]>([])
+  const [abonnements, setAbonnements] = useState<any[]>([])
+  const [services, setServices] = useState<any[]>([])
+
+  // Charger les clients, abonnements et services
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [clientsRes, abonnementsRes, servicesRes] = await Promise.all([
+          fetch('/api/clients').then(res => res.json()),
+          fetch('/api/abonnements').then(res => res.json()),
+          fetch('/api/services').then(res => res.json())
+        ])
+        setClients(clientsRes || [])
+        setAbonnements(abonnementsRes || [])
+        setServices(servicesRes || [])
+      } catch (err) {
+        console.error('Erreur chargement données:', err)
+      }
+    }
+    if (isOpen) {
+      fetchData()
+    }
+  }, [isOpen])
 
   // Générer le numéro de facture à l'ouverture du modal
   useEffect(() => {
@@ -124,16 +152,27 @@ export default function NouveauFactureModal({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     
-    // Si le projet change, calculer automatiquement la date d'échéance
-    if (name === 'projet' && value) {
-      const selectedProjet = clientProjets?.find((p) => p.id === value)
-      const newDueDate = calculateDueDate(selectedProjet?.frequencePaiement || 'PONCTUEL')
+    // Si le client change, récupérer l'ID et mettre à jour les projets
+    if (name === 'clientId') {
+      const selectedClient = clients.find((c) => c.id === value)
       setFormData((prev) => ({
         ...prev,
-        [name]: value,
-        dateEcheance: newDueDate,
+        clientId: value,
+        client: selectedClient?.nom || selectedClient?.prenom || '',
       }))
-    } else {
+    }
+    // Gestion des sources de facture (radio buttons simulations)
+    else if (name === 'sourceType') {
+      // Réinitialiser les IDs et garder le type
+      setFormData((prev) => ({
+        ...prev,
+        sourceType: value,
+        abonnementId: value === 'abonnement' ? prev.abonnementId : '',
+        projetId: value === 'projet' ? prev.projetId : '',
+        serviceId: value === 'service' ? prev.serviceId : '',
+      }))
+    }
+    else {
       setFormData((prev) => ({
         ...prev,
         [name]: name === 'montant' || name === 'tauxTVA' ? parseFloat(value) || '' : value,
@@ -145,9 +184,17 @@ export default function NouveauFactureModal({
     e.preventDefault()
     setError('')
 
-    // Validation
-    if (!formData.numero || !formData.client || !formData.montant) {
-      setError('Veuillez remplir tous les champs obligatoires')
+    // Validation: au moins une source (abonnement, projet ou service)
+    const hasSource = formData.abonnementId || formData.projetId || formData.serviceId
+    if (!formData.numero || !formData.clientId || !formData.montant || !hasSource) {
+      setError('Veuillez remplir tous les champs obligatoires (incluant une source)')
+      return
+    }
+
+    // Vérifier qu'une seule source est fournie
+    const sourceCount = [formData.abonnementId, formData.projetId, formData.serviceId].filter(Boolean).length
+    if (sourceCount > 1) {
+      setError('Une facture ne peut avoir qu\'UNE seule source (abonnement, projet ou service)')
       return
     }
 
@@ -160,10 +207,12 @@ export default function NouveauFactureModal({
       const montantTotal = montantSansTVA + montantTVA
 
       const newFacture = {
-        id: Math.random().toString(36).substr(2, 9),
         numero: formData.numero,
-        client: { id: '1', nom: formData.client },
-        projet: formData.projet ? { id: '1', titre: formData.projet } : undefined,
+        clientId: formData.clientId,
+        client: { id: formData.clientId, nom: formData.client },
+        abonnementId: formData.abonnementId || undefined,
+        projetId: formData.projetId || undefined,
+        serviceId: formData.serviceId || undefined,
         montant: montantSansTVA,
         montantTotal,
         tauxTVA,
@@ -178,8 +227,12 @@ export default function NouveauFactureModal({
       // Réinitialiser le formulaire
       setFormData({
         numero: '',
+        clientId: '',
         client: '',
-        projet: '',
+        abonnementId: '',
+        projetId: '',
+        serviceId: '',
+        sourceType: '',
         montant: '',
         tauxTVA: 18,
         dateEmission: new Date().toISOString().split('T')[0],
@@ -198,7 +251,7 @@ export default function NouveauFactureModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
       <div className="relative w-full max-w-3xl bg-[var(--color-offwhite)] rounded-lg shadow-lg overflow-auto border border-[var(--color-gold)]/20" style={{ maxHeight: '90vh' }}>
@@ -236,22 +289,118 @@ export default function NouveauFactureModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Client *</label>
-              <input type="text" name="client" value={formData.client} onChange={handleChange} placeholder="Ex: Entreprise ABC" className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white" readOnly={!!clientName} required />
+              {clients.length > 0 ? (
+                <select name="clientId" value={formData.clientId} onChange={handleChange} className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white" required disabled={!!clientId}>
+                  <option value="">Sélectionner un client</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nom || c.prenom || 'Client'}</option>
+                  ))}
+                </select>
+              ) : (
+                <input type="text" name="client" value={formData.client} onChange={handleChange} placeholder="Ex: Entreprise ABC" className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white" readOnly={!!clientName} required />
+              )}
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-2">Source de la facture *</label>
+            <div className="flex gap-4">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="sourceType"
+                  value="abonnement"
+                  checked={formData.sourceType === 'abonnement'}
+                  onChange={handleChange}
+                  className="mr-2"
+                />
+                <span className="text-sm">Abonnement (Récurrente)</span>
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="sourceType"
+                  value="projet"
+                  checked={formData.sourceType === 'projet'}
+                  onChange={handleChange}
+                  className="mr-2"
+                />
+                <span className="text-sm">Projet (Ponctuelle)</span>
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="sourceType"
+                  value="service"
+                  checked={formData.sourceType === 'service'}
+                  onChange={handleChange}
+                  className="mr-2"
+                />
+                <span className="text-sm">Service (Ponctuel)</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Afficher les sélecteurs selon le type choisi */}
+          {formData.sourceType === 'abonnement' && (
             <div>
-              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Projet</label>
+              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Abonnement *</label>
+              <select
+                name="abonnementId"
+                value={formData.abonnementId}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white"
+                required
+              >
+                <option value="">Sélectionner un abonnement</option>
+                {abonnements.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.nom} | {a.service?.nom || 'Service'} | {a.montant}€/{a.frequence}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {formData.sourceType === 'projet' && (
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Projet *</label>
               {clientProjets && clientProjets.length > 0 ? (
-                <select name="projet" value={formData.projet} onChange={handleChange} className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white">
+                <select
+                  name="projetId"
+                  value={formData.projetId}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white"
+                  required
+                >
                   <option value="">Sélectionner un projet</option>
                   {clientProjets.map((p) => (
                     <option key={p.id} value={p.id}>{p.nom || p.titre || 'Projet sans titre'}</option>
                   ))}
                 </select>
               ) : (
-                <input type="text" name="projet" value={formData.projet} onChange={handleChange} placeholder="Ex: App Mobile" className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white" />
+                <input type="text" placeholder="Pas de projets disponibles" className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white" readOnly />
               )}
             </div>
-          </div>
+          )}
+
+          {formData.sourceType === 'service' && (
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Service *</label>
+              <select
+                name="serviceId"
+                value={formData.serviceId}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white"
+                required
+              >
+                <option value="">Sélectionner un service</option>
+                {services.map((s) => (
+                  <option key={s.id} value={s.id}>{s.nom} | {s.prix}€</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>

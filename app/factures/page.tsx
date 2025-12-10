@@ -69,10 +69,43 @@ export default function FacturesPage() {
     }
   }
 
-  const handleSaveNewFacture = (newFacture: any) => {
-    setFactures([newFacture, ...factures])
-    setIsCreateOpen(false)
-    alert('✅ Facture créée avec succès')
+  const handleSaveNewFacture = async (newFacture: any) => {
+    try {
+      // Appeler l'API pour créer la facture en base de données
+      const payload: any = {
+        numero: newFacture.numero,
+        clientId: newFacture.client.id || newFacture.client,
+        montant: newFacture.montant,
+        tauxTVA: newFacture.tauxTVA || 18,
+        dateEmission: newFacture.dateEmission,
+        statut: newFacture.statut,
+      }
+
+      // Ajouter les champs optionnels seulement s'ils existent
+      if (newFacture.service?.id) payload.serviceId = newFacture.service.id
+      if (newFacture.projet?.id) payload.projetId = newFacture.projet.id
+      if (newFacture.dateEcheance) payload.dateEcheance = newFacture.dateEcheance
+      if (newFacture.notes) payload.notes = newFacture.notes
+
+      const res = await fetch('/api/factures', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || 'Erreur création facture')
+      }
+
+      const createdFacture = await res.json()
+      setFactures([createdFacture, ...factures])
+      setIsCreateOpen(false)
+      alert('✅ Facture créée avec succès')
+    } catch (err) {
+      console.error('Erreur création facture:', err)
+      alert('❌ Erreur: ' + (err as any).message)
+    }
   }
 
   const handlePreviewFacture = (facture: Facture) => {
@@ -99,6 +132,30 @@ export default function FacturesPage() {
   const handleOpenEdit = (facture: Facture) => {
     setEditingFacture(facture)
     setIsEditOpen(true)
+  }
+
+  const handleDeleteFacture = async (facture: Facture) => {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer la facture ${facture.numero} ?`)) {
+      return
+    }
+
+    try {
+      const res = await fetch(`/api/factures/${facture.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || 'Erreur suppression facture')
+      }
+
+      setFactures(factures.filter((f) => f.id !== facture.id))
+      alert('✅ Facture supprimée avec succès')
+    } catch (err) {
+      console.error('Erreur suppression facture:', err)
+      alert('❌ Erreur: ' + (err as any).message)
+    }
   }
 
   const handleSaveEditFacture = (updated: any) => {
@@ -143,9 +200,9 @@ export default function FacturesPage() {
       )}
 
       {!loading && !error && factures.length > 0 && (
-        <div className="bg-[var(--color-offwhite)] rounded-xl shadow-sm border border-[var(--color-border)] overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm whitespace-nowrap">
+        <div className="bg-[var(--color-offwhite)] rounded-xl shadow-sm border border-[var(--color-border)] overflow-x-auto">
+          <div className="inline-block w-full">
+            <table className="w-full min-w-max text-sm whitespace-nowrap">
               <thead className="bg-[var(--color-gold)]/10 border-b border-[var(--color-border)] sticky top-0">
                 <tr>
                   <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">N° Facture</th>
@@ -215,6 +272,13 @@ export default function FacturesPage() {
                             <Plus size={14} />
                           </button>
                         )}
+                        <button
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 transition text-xs"
+                          title="Supprimer la facture"
+                          onClick={() => handleDeleteFacture(facture)}
+                        >
+                          ✕
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -277,8 +341,7 @@ export default function FacturesPage() {
               alert('Erreur lors de la création du paiement');
             }
           }}
-          clientName={selectedFacture.client.nom}
-          projets={selectedFacture.projet ? [selectedFacture.projet] : []}
+          prefilledFacture={selectedFacture}
         />
       )}
     </div>

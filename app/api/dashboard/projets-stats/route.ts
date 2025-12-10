@@ -12,7 +12,10 @@ export async function GET() {
     const projets = await prisma.projet.findMany({
       include: {
         client: true,
-        service: true,
+        projetServices: {
+          include: { service: true },
+          orderBy: { ordre: 'asc' }
+        },
         taches: {
           include: {
             paiements: true
@@ -60,10 +63,11 @@ export async function GET() {
           email: projet.client.email,
           telephone: projet.client.telephone
         },
-        service: {
-          id: projet.service.id,
-          nom: projet.service.nom
-        },
+        services: projet.projetServices.map(ps => ({
+          id: ps.service.id,
+          nom: ps.service.nom,
+          montant: ps.montant
+        })),
         statut: {
           cle: projet.statut,
           label: statutLabel

@@ -10,6 +10,7 @@ declare module 'next-auth' {
       prenom: string
       role: RoleUtilisateur
     }
+    accessToken?: string
   }
 
   interface User {

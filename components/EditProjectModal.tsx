@@ -17,7 +17,6 @@ type Project = {
   dateDebut: string
   dateFin: string
   equipeId?: number
-  frequencePaiement?: string
 }
 
 type Props = {
@@ -44,7 +43,6 @@ export default function EditProjectModal({ isOpen, onClose, onSave, project }: P
     dateDebut: '',
     dateFin: '',
     equipeId: undefined,
-    frequencePaiement: 'PONCTUEL',
   })
 
   useEffect(() => {
@@ -72,7 +70,6 @@ export default function EditProjectModal({ isOpen, onClose, onSave, project }: P
         dateDebut: formatDateForInput(project.dateDebut),
         dateFin: formatDateForInput(project.dateFin),
         equipeId: project.equipeId,
-        frequencePaiement: project.frequencePaiement || 'PONCTUEL',
       })
     }
   }, [project])
@@ -117,7 +114,7 @@ export default function EditProjectModal({ isOpen, onClose, onSave, project }: P
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
       <div className="relative w-full max-w-3xl bg-[var(--color-offwhite)] rounded-lg shadow-lg overflow-auto border border-[var(--color-gold)]/20" style={{ maxHeight: '90vh' }}>
@@ -254,21 +251,6 @@ export default function EditProjectModal({ isOpen, onClose, onSave, project }: P
                     {team.name || team.nom}
                   </option>
                 ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Fréquence de paiement *</label>
-              <select
-                required
-                value={form.frequencePaiement || ''}
-                onChange={(e) => setForm({ ...form, frequencePaiement: e.target.value })}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white"
-              >
-                <option value="PONCTUEL">Ponctuel</option>
-                <option value="MENSUEL">Mensuel</option>
-                <option value="TRIMESTRIEL">Trimestriel</option>
-                <option value="SEMESTRIEL">Semestriel</option>
-                <option value="ANNUEL">Annuel</option>
               </select>
             </div>
           </div>

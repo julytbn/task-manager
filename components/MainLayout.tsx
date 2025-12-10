@@ -23,15 +23,16 @@ export default function MainLayout({ children, title }: MainLayoutProps) {
       <div className="flex-1 flex flex-col content-wrapper transition-all duration-300" style={{ minWidth: 0 }}>
         {/* Content Area */}
         <main
-          className="flex-1 overflow-y-auto transition-all duration-300 flex items-start justify-center"
+          className="flex-1 overflow-y-auto transition-all duration-300 flex items-start justify-center w-full"
           style={{
-            paddingTop: '32px',
-            paddingBottom: '32px',
+            paddingTop: '24px',
+            paddingBottom: '24px',
             width: '100%',
             boxSizing: 'border-box',
+            overflowX: 'hidden',
           }}
         >
-          <div className="w-full max-w-7xl px-4 sm:px-6 lg:px-8" style={{width: '100%', overflowX: 'auto'}}>
+        <div className="w-full max-w-7xl px-3 sm:px-4 md:px-6 lg:px-8" style={{boxSizing: 'border-box'}}>
             {children}
           </div>
         </main>

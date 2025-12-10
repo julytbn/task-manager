@@ -26,8 +26,8 @@ export default function TeamDetailModal({ team, isOpen, onClose, onRemoveMember,
   if (!isOpen || !team) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white w-[95%] md:w-3/4 lg:w-2/3 max-h-[90vh] overflow-auto rounded-lg shadow-xl p-8 relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
+      <div className="bg-white w-full max-w-4xl max-h-[90vh] overflow-auto rounded-lg shadow-xl p-6 sm:p-8 relative">
         {/* En-tête */}
         <div className="flex items-start justify-between mb-6">
           <div>

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import MainLayout from '../../components/MainLayout'
 import { NouvelleTacheModal } from '@/components/NouvelleTacheModal'
 
-type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done' | 'paid'
+type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done' | 'paid' | 'submitted'
 type Priority = 'high' | 'medium' | 'low' | 'urgent'
 
 interface Task {
@@ -18,6 +18,7 @@ interface Task {
   priority?: Priority
   dueDate?: string
   amount?: number
+  rawStatus?: string
 }
 
 const statusMap: Record<TaskStatus, { label: string; color: string }> = {
@@ -25,7 +26,8 @@ const statusMap: Record<TaskStatus, { label: string; color: string }> = {
   in_progress: { label: 'En cours', color: 'bg-blue-100 text-blue-800' },
   review: { label: 'En révision', color: 'bg-yellow-100 text-yellow-800' },
   done: { label: 'Terminé', color: 'bg-green-100 text-green-800' },
-  paid: { label: 'Payé', color: 'bg-purple-100 text-purple-800' }
+  paid: { label: 'Payé', color: 'bg-purple-100 text-purple-800' },
+  submitted: { label: 'Soumise', color: 'bg-orange-100 text-orange-800' }
 }
 
 const priorityMap = {
@@ -43,6 +45,8 @@ export default function KanbanPage() {
   const [editingTask, setEditingTask] = useState<any | null>(null)
   const [viewingTask, setViewingTask] = useState<any | null>(null)
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
+  const [validationComment, setValidationComment] = useState<string>('')
+  const [isValidating, setIsValidating] = useState(false)
   const router = useRouter()
   const [tasks, setTasks] = useState<Task[]>([])
   const [loading, setLoading] = useState(false)
@@ -52,6 +56,7 @@ export default function KanbanPage() {
       case 'A_FAIRE': return 'todo'
       case 'EN_COURS': return 'in_progress'
       case 'EN_REVISION': return 'review'
+      case 'SOUMISE': return 'submitted'
       case 'TERMINE': return 'done'
       default: return 'todo'
     }
@@ -73,6 +78,9 @@ export default function KanbanPage() {
       const res = await fetch('/api/taches')
       if (!res.ok) throw new Error('Erreur récupération tâches')
       const data = await res.json()
+      console.log('📊 [Kanban] Tâches récupérées:', data.length)
+      console.log('📊 [Kanban] Raw statuts:', data.map((t: any) => `${t.titre}(${t.statut})`).join(', '))
+      
       const mapped: Task[] = data.map((t: any) => ({
         id: t.id,
         title: t.titre || t.title || 'Sans titre',
@@ -84,9 +92,11 @@ export default function KanbanPage() {
         dueDate: t.dateEcheance ? new Date(t.dateEcheance).toLocaleDateString() : undefined,
         amount: t.montant ?? undefined
       }))
+      console.log('📊 [Kanban] Tâches mappées:', mapped.map(t => `${t.title}(${t.status})`).join(', '))
+      console.log('📊 [Kanban] Tasks with SOUMISE status:', mapped.filter(t => t.status === 'submitted').length)
       setTasks(mapped)
     } catch (err) {
-      console.error(err)
+      console.error('📊 [Kanban] Erreur:', err)
     } finally {
       setLoading(false)
     }
@@ -98,6 +108,7 @@ export default function KanbanPage() {
     { label: 'À faire', value: String(tasks.filter(t => t.status === 'todo').length), color: 'bg-gray-200' },
     { label: 'En cours', value: String(tasks.filter(t => t.status === 'in_progress').length), color: 'bg-blue-500' },
     { label: 'En révision', value: String(tasks.filter(t => t.status === 'review').length), color: 'bg-yellow-500' },
+    { label: 'Soumises', value: String(tasks.filter(t => t.status === 'submitted').length), color: 'bg-orange-500' },
     { label: 'Terminées', value: String(tasks.filter(t => t.status === 'done').length), color: 'bg-green-500' },
     { label: 'Payées', value: String(tasks.filter(t => t.status === 'paid').length), color: 'bg-purple-500' },
   ], [tasks])
@@ -112,6 +123,8 @@ export default function KanbanPage() {
       result = result.filter(t => t.status === 'in_progress')
     } else if (activeTab === 'terminées') {
       result = result.filter(t => t.status === 'done')
+    } else if (activeTab === 'tâches soumises') {
+      result = result.filter(t => t.status === 'submitted')
     }
 
     // Filtrer par priorité
@@ -188,7 +201,7 @@ export default function KanbanPage() {
       {/* Filters */}
       <div className="bg-[var(--color-offwhite)] p-4 rounded-xl shadow-sm border border-[var(--color-border)] mb-6">
         <div className="flex flex-wrap gap-2">
-          {['Tous', 'À faire', 'En cours', 'Terminées'].map((tab) => (
+          {['Tous', 'À faire', 'En cours', 'Tâches soumises', 'Terminées'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab.toLowerCase())}
@@ -506,32 +519,116 @@ export default function KanbanPage() {
 
             {/* Pied de page */}
             <div className="mt-8 pt-6 border-t border-[var(--color-border)] flex justify-end space-x-3">
+              {viewingTask.status === 'submitted' && (
+                <>
+                  <div className="flex-1 mr-auto">
+                    <label className="block text-sm font-semibold text-[var(--color-anthracite)] mb-2">
+                      Commentaire (optionnel)
+                    </label>
+                    <textarea
+                      value={validationComment}
+                      onChange={(e) => setValidationComment(e.target.value)}
+                      placeholder="Ajouter un commentaire pour l'employé..."
+                      className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      rows={3}
+                    />
+                  </div>
+                  <button
+                    onClick={async () => {
+                      setIsValidating(true)
+                      try {
+                        const res = await fetch('/api/taches', {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            id: viewingTask.id,
+                            statut: 'TERMINE',
+                            commentaire: validationComment || undefined
+                          })
+                        })
+                        if (!res.ok) {
+                          const error = await res.json()
+                          throw new Error(error.error || 'Erreur lors de la validation')
+                        }
+                        alert('Tâche validée avec succès!')
+                        setIsViewModalOpen(false)
+                        setViewingTask(null)
+                        setValidationComment('')
+                        await loadTasks()
+                      } catch (err: any) {
+                        alert(err.message || 'Erreur lors de la validation')
+                      } finally {
+                        setIsValidating(false)
+                      }
+                    }}
+                    disabled={isValidating}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold disabled:opacity-50"
+                  >
+                    {isValidating ? 'Validation...' : '✓ Valider'}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setIsValidating(true)
+                      try {
+                        const res = await fetch('/api/taches', {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            id: viewingTask.id,
+                            statut: 'ANNULE',
+                            commentaire: validationComment || undefined
+                          })
+                        })
+                        if (!res.ok) {
+                          const error = await res.json()
+                          throw new Error(error.error || 'Erreur lors du rejet')
+                        }
+                        alert('Tâche rejetée avec succès!')
+                        setIsViewModalOpen(false)
+                        setViewingTask(null)
+                        setValidationComment('')
+                        await loadTasks()
+                      } catch (err: any) {
+                        alert(err.message || 'Erreur lors du rejet')
+                      } finally {
+                        setIsValidating(false)
+                      }
+                    }}
+                    disabled={isValidating}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold disabled:opacity-50"
+                  >
+                    {isValidating ? 'Rejet...' : '✗ Rejeter'}
+                  </button>
+                </>
+              )}
               <button
                 className="px-4 py-2 text-[var(--color-anthracite)] border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-offwhite)]"
-                onClick={() => { setIsViewModalOpen(false); setViewingTask(null); }}
+                onClick={() => { setIsViewModalOpen(false); setViewingTask(null); setValidationComment('') }}
               >
                 Fermer
               </button>
-              <button
-                className="px-4 py-2 bg-[var(--color-gold)] text-[var(--color-black-deep)] rounded-lg hover:brightness-95 font-semibold"
-                onClick={async () => {
-                  try {
-                    const res = await fetch('/api/taches')
-                    if (!res.ok) throw new Error('Erreur récupération tâche')
-                    const data = await res.json()
-                    const found = data.find((d: any) => d.id === viewingTask.id)
-                    if (!found) throw new Error('Tâche introuvable')
-                    setEditingTask(found)
-                    setIsViewModalOpen(false)
-                    setIsModalOpen(true)
-                  } catch (err) {
-                    console.error(err)
-                    alert('Impossible de charger la tâche pour édition')
-                  }
-                }}
-              >
-                Éditer
-              </button>
+              {viewingTask.status !== 'submitted' && (
+                <button
+                  className="px-4 py-2 bg-[var(--color-gold)] text-[var(--color-black-deep)] rounded-lg hover:brightness-95 font-semibold"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch('/api/taches')
+                      if (!res.ok) throw new Error('Erreur récupération tâche')
+                      const data = await res.json()
+                      const found = data.find((d: any) => d.id === viewingTask.id)
+                      if (!found) throw new Error('Tâche introuvable')
+                      setEditingTask(found)
+                      setIsViewModalOpen(false)
+                      setIsModalOpen(true)
+                    } catch (err) {
+                      console.error(err)
+                      alert('Impossible de charger la tâche pour édition')
+                    }
+                  }}
+                >
+                  Éditer
+                </button>
+              )}
             </div>
           </div>
         </div>

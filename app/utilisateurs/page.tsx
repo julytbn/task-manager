@@ -75,8 +75,8 @@ export default function UtilisateursPage() {
         )}
 
         {!loading && !error && utilisateurs.length > 0 && (
-          <div className="bg-[var(--color-offwhite)] rounded-xl shadow-sm border border-[var(--color-border)] overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="bg-[var(--color-offwhite)] rounded-xl shadow-sm border border-[var(--color-border)] overflow-x-auto">
+            <table className="w-full min-w-max text-sm">
               <thead className="bg-[var(--color-gold)]/10 border-b border-[var(--color-border)]">
                 <tr>
                   <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">Nom</th>

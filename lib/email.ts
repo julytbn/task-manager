@@ -5,24 +5,33 @@ export async function sendEmail(options: { to: string; subject: string; html: st
 
   // If SMTP env is configured, use it
   if (process.env.SMTP_HOST) {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT || 587),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: process.env.SMTP_USER
-        ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-        : undefined
-    })
+    try {
+      console.log(`[EMAIL] Tentative envoi SMTP vers: ${to}`)
+      console.log(`[EMAIL] Host: ${process.env.SMTP_HOST}, Port: ${process.env.SMTP_PORT}, Secure: ${process.env.SMTP_SECURE}`)
+      
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT || 587),
+        secure: process.env.SMTP_SECURE === 'true',
+        auth: process.env.SMTP_USER
+          ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+          : undefined
+      })
 
-    const info = await transporter.sendMail({
-      from: from || process.env.SMTP_FROM || 'noreply@kekeligroup.com',
-      to,
-      subject,
-      html
-    })
+      const info = await transporter.sendMail({
+        from: from || process.env.SMTP_FROM || 'noreply@kekeligroup.com',
+        to,
+        subject,
+        html
+      })
 
-    console.log('✅ Email SMTP envoyé à:', to, '| Message ID:', info.messageId)
-    return { provider: 'smtp', info, success: true }
+      console.log('✅ Email SMTP envoyé à:', to, '| Message ID:', info.messageId)
+      return { provider: 'smtp', info, success: true }
+    } catch (smtpError) {
+      console.error('❌ ERREUR SMTP:', smtpError)
+      console.error('Stack:', (smtpError as any).stack)
+      throw smtpError
+    }
   }
 
   // Otherwise use Ethereal for dev/testing and return preview URL
@@ -49,6 +58,139 @@ export async function sendEmail(options: { to: string; subject: string; html: st
   } catch (error) {
     console.error('❌ Erreur envoi email:', error)
     return { success: false, error: String(error) }
+  }
+}
+
+export function generateTaskLateNotificationEmail(
+  taskTitle: string,
+  taskDescription?: string,
+  daysLate?: number,
+  projectName?: string,
+  taskUrl?: string
+) {
+  const daysText = daysLate ? `${daysLate} jour${daysLate > 1 ? 's' : ''}` : 'plusieurs jours'
+  
+  return {
+    subject: `⚠️ Tâche en retard: ${taskTitle} - KEKELI GROUP`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #1a1a1a; color: #d4af37; padding: 20px; text-align: center; }
+            .alert-banner { background-color: #ff4444; color: white; padding: 15px; text-align: center; font-weight: bold; font-size: 16px; }
+            .content { padding: 20px; background-color: #f9f9f9; }
+            .task-title { background-color: #ff6666; color: white; padding: 15px; font-weight: bold; font-size: 18px; border-radius: 5px; margin: 20px 0; }
+            .task-description { background-color: #f0f0f0; padding: 15px; border-left: 4px solid #ff4444; margin: 15px 0; }
+            .button { display: inline-block; padding: 12px 30px; background-color: #ff4444; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }
+            .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+            .critical { color: #ff4444; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>KEKELI GROUP</h1>
+            </div>
+            <div class="alert-banner">
+              ⚠️ TÂCHE EN RETARD: ${daysText}
+            </div>
+            <div class="content">
+              <p>Bonjour,</p>
+              <p>Une de vos tâches assignées est <span class="critical">EN RETARD</span>. Veuillez agir immédiatement:</p>
+              
+              <div class="task-title">${taskTitle}</div>
+              
+              ${taskDescription ? `
+              <div class="task-description">
+                <strong>Description:</strong><br>
+                ${taskDescription}
+              </div>
+              ` : ''}
+              
+              <div style="background-color: #fff; padding: 15px; border: 1px solid #ddd; margin: 15px 0;">
+                <p><strong>Jours de retard:</strong> <span class="critical">${daysText}</span></p>
+                ${projectName ? `<p><strong>Projet:</strong> ${projectName}</p>` : ''}
+              </div>
+              
+              <p>Veuillez consulter cette tâche et mettre à jour votre statut. Cliquez sur le bouton ci-dessous:</p>
+              <center>
+                <a href="${taskUrl || 'https://task-manager.kekeligroup.com/dashboard'}" class="button">Voir la tâche</a>
+              </center>
+
+              <p style="color: #ff4444; font-weight: bold;">⚠️ Cet email a été généré automatiquement par le système de suivi des tâches.</p>
+              <p>Cordialement,<br>L'équipe KEKELI GROUP</p>
+            </div>
+            <div class="footer">
+              <p>&copy; 2024 KEKELI GROUP. Tous droits réservés.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+    text: `⚠️ TÂCHE EN RETARD\n\nBonjour,\n\nVotre tâche est en retard de ${daysText}: ${taskTitle}\n${taskDescription ? `\nDescription: ${taskDescription}\n` : ''}${projectName ? `\nProjet: ${projectName}\n` : ''}\n\nConsultez votre tableau de bord immédiatement pour mettre à jour le statut.\n\nCordialement,\nL'équipe KEKELI GROUP`
+  }
+}
+
+export function generateTaskAssignmentEmail(taskTitle: string, taskDescription?: string, assignedByName?: string, taskUrl?: string) {
+  return {
+    subject: `Nouvelle tâche assignée: ${taskTitle} - KEKELI GROUP`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #1a1a1a; color: #d4af37; padding: 20px; text-align: center; }
+            .content { padding: 20px; background-color: #f9f9f9; }
+            .task-title { background-color: #d4af37; color: #1a1a1a; padding: 15px; font-weight: bold; font-size: 18px; border-radius: 5px; margin: 20px 0; }
+            .task-description { background-color: #f0f0f0; padding: 15px; border-left: 4px solid #d4af37; margin: 15px 0; }
+            .button { display: inline-block; padding: 12px 30px; background-color: #d4af37; color: #1a1a1a; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }
+            .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>KEKELI GROUP</h1>
+            </div>
+            <div class="content">
+              <p>Bonjour,</p>
+              <p>Vous avez reçu une nouvelle tâche à effectuer:</p>
+              
+              <div class="task-title">${taskTitle}</div>
+              
+              ${taskDescription ? `
+              <div class="task-description">
+                <strong>Description:</strong><br>
+                ${taskDescription}
+              </div>
+              ` : ''}
+              
+              ${assignedByName ? `
+              <p><strong>Assignée par:</strong> ${assignedByName}</p>
+              ` : ''}
+              
+              <p>Veuillez consulter cette tâche dès que possible. Cliquez sur le bouton ci-dessous pour accéder à votre tableau de bord:</p>
+              <center>
+                <a href="${taskUrl || 'https://task-manager.kekeligroup.com/dashboard'}" class="button">Voir ma tâche</a>
+              </center>
+
+              <p>Cordialement,<br>L'équipe KEKELI GROUP</p>
+            </div>
+            <div class="footer">
+              <p>&copy; 2024 KEKELI GROUP. Tous droits réservés.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+    text: `Bonjour,\n\nVous avez reçu une nouvelle tâche: ${taskTitle}\n${taskDescription ? `\nDescription: ${taskDescription}\n` : ''}${assignedByName ? `\nAssignée par: ${assignedByName}\n` : ''}\n\nConsultez votre tableau de bord pour plus de détails.\n\nCordialement,\nL'équipe KEKELI GROUP`
   }
 }
 

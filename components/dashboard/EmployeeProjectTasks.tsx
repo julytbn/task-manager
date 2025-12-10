@@ -91,6 +91,24 @@ export default function EmployeeProjectTasks() {
     return true
   })
 
+  const formatStatus = (statut: string): string => {
+    const s = statut?.toUpperCase() || ''
+    if (s.includes('TERMINE')) return 'Terminé'
+    if (s.includes('EN_COURS')) return 'En cours'
+    if (s.includes('EN_REVISION')) return 'En révision'
+    if (s.includes('A_FAIRE')) return 'À faire'
+    return statut || 'Non défini'
+  }
+
+  const formatDate = (dateString: string | null | undefined): string => {
+    if (!dateString) return ''
+    try {
+      return new Date(dateString).toLocaleDateString('fr-FR')
+    } catch (e) {
+      return dateString
+    }
+  }
+
   const getStatusColor = (statut: string): string => {
     const s = statut?.toUpperCase() || ''
     if (s.includes('TERMINE')) return 'bg-green-100 text-green-700 border-green-300'
@@ -123,19 +141,25 @@ export default function EmployeeProjectTasks() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-          <p className="text-gray-600">Chargement de vos tâches...</p>
-        </div>
+      <div className="flex items-center justify-center p-4">
+        <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <div className="text-sm text-red-700">{error}</div>
+      <div className="p-3 text-sm bg-red-50 text-red-700 rounded-md">
+        <p>{error}</p>
+      </div>
+    )
+  }
+
+  if (myTasks.length === 0) {
+    return (
+      <div className="p-4 text-center text-gray-500">
+        <p>Aucune tâche à afficher pour le moment.</p>
+        <p className="text-sm mt-1">Vos tâches apparaîtront ici.</p>
       </div>
     )
   }
@@ -148,7 +172,7 @@ export default function EmployeeProjectTasks() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
@@ -170,113 +194,82 @@ export default function EmployeeProjectTasks() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
-        <div className="flex flex-col md:flex-row gap-4">
-          {/* Search */}
-          <div className="flex-1">
-            <div className="flex items-center gap-2 bg-gray-50 rounded px-3 py-2 border border-gray-300">
-              <Search size={18} className="text-gray-400" />
-              <input
-                type="text"
-                placeholder="Rechercher une tâche..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 bg-transparent outline-none text-sm"
-              />
-            </div>
-          </div>
+      <div className="flex flex-col space-y-2">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Rechercher une tâche..."
+            className="text-sm pl-10 pr-4 py-2 w-full border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
 
-          {/* Project Filter */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2">
           <select
-            value={selectedProject || ''}
-            onChange={(e) => setSelectedProject(e.target.value || null)}
-            className="px-3 py-2 bg-gray-50 border border-gray-300 rounded text-sm"
-          >
-            <option value="">Tous les projets</option>
-            {userProjects.map(p => (
-              <option key={p.id} value={p.id}>{p.titre}</option>
-            ))}
-          </select>
-
-          {/* Status Filter */}
-          <select
+            className="flex-1 min-w-[120px] text-sm bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-2 bg-gray-50 border border-gray-300 rounded text-sm"
           >
-            <option value="">Tous les statuts</option>
-            <option value="TERMINE">Terminée</option>
-            <option value="EN_COURS">En cours</option>
-            <option value="EN_REVISION">En révision</option>
+            <option value="">Tous</option>
             <option value="A_FAIRE">À faire</option>
+            <option value="EN_COURS">En cours</option>
+            <option value="TERMINE">Terminé</option>
           </select>
 
-          {/* Priority Filter */}
-          <select
-            value={filterPriority}
-            onChange={(e) => setFilterPriority(e.target.value)}
-            className="px-3 py-2 bg-gray-50 border border-gray-300 rounded text-sm"
-          >
-            <option value="">Toutes les priorités</option>
-            <option value="URGENTE">Urgente</option>
-            <option value="HAUTE">Haute</option>
-            <option value="MOYENNE">Moyenne</option>
-            <option value="BASSE">Basse</option>
-          </select>
+          {userProjects.length > 1 && (
+            <select
+              className="flex-1 min-w-[120px] text-sm bg-white border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              value={selectedProject || ''}
+              onChange={(e) => setSelectedProject(e.target.value || null)}
+            >
+              <option value="">Tous les projets</option>
+              {userProjects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.titre.length > 15 ? `${project.titre.substring(0, 15)}...` : project.titre}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 
       {/* Tasks List */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      <div className="space-y-2">
         {filteredTasks.length > 0 ? (
-          <div className="divide-y divide-gray-200">
-            {filteredTasks.map((task) => (
-              <div key={task.id} className="p-4 hover:bg-gray-50 transition-colors">
-                <div className="flex items-start gap-4">
-                  <div className="mt-1">{getStatusIcon(task.statut)}</div>
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <h3 className="font-medium text-gray-900 text-sm md:text-base">{task.titre}</h3>
-                      <div className="flex gap-2 flex-shrink-0">
-                        <span className={`text-xs px-2 py-1 rounded border font-medium ${getStatusColor(task.statut)}`}>
-                          {task.statut}
-                        </span>
-                        <span className={`text-xs px-2 py-1 rounded font-medium ${getPriorityColor(task.priorite)}`}>
-                          {task.priorite}
-                        </span>
-                      </div>
-                    </div>
-
-                    {task.description && (
-                      <p className="text-sm text-gray-600 mb-2 line-clamp-2">{task.description}</p>
-                    )}
-
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600">
-                      {task.projetTitre && (
-                        <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-200">
-                          📁 {task.projetTitre}
-                        </span>
-                      )}
-                      {task.dateEcheance && (
-                        <span className={`px-2 py-1 rounded border ${
-                          isOverdue(task.dateEcheance) && !task.statut?.toUpperCase().includes('TERMINE')
-                            ? 'bg-red-50 text-red-700 border-red-200'
-                            : 'bg-gray-100 text-gray-700 border-gray-300'
-                        }`}>
-                          📅 {new Date(task.dateEcheance).toLocaleDateString('fr-FR')}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+          filteredTasks.map((task) => (
+            <div
+              key={task.id}
+              className="p-3 bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow transition-colors"
+            >
+              <div className="flex justify-between items-start gap-2">
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-gray-900 truncate">{task.titre}</h4>
+                  {task.projetTitre && (
+                    <p className="text-xs text-gray-500 mt-0.5 truncate">
+                      {task.projetTitre}
+                    </p>
+                  )}
                 </div>
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full ${getStatusColor(task.statut)}`}
+                >
+                  {formatStatus(task.statut)}
+                </span>
               </div>
-            ))}
-          </div>
+              
+              {task.dateEcheance && (
+                <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  <span>{formatDate(task.dateEcheance)}</span>
+                </div>
+              )}
+            </div>
+          ))
         ) : (
-          <div className="text-center py-12">
-            <Filter size={32} className="mx-auto text-gray-400 mb-2" />
-            <p className="text-gray-500 font-medium">Aucune tâche ne correspond aux critères</p>
-            <p className="text-gray-400 text-sm mt-1">Essayez de modifier vos filtres</p>
+          <div className="text-center py-6 text-sm text-gray-500 bg-gray-50 rounded-lg">
+            <p>Aucune tâche ne correspond à vos critères.</p>
           </div>
         )}
       </div>

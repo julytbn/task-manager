@@ -74,8 +74,8 @@ export default function DataTable({
   }
 
   return (
-    <div className="w-full overflow-x-auto">
-      <table className="w-full">
+    <div className="w-full overflow-x-auto rounded-lg">
+      <table className="w-full min-w-full">
         {/* Header */}
         <thead>
           <tr className="table-header border-b-2 border-[var(--color-gold)]/30">

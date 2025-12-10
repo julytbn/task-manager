@@ -28,7 +28,7 @@ export default function TaskDetailsModal({ task, onClose, onUpdate }:{ task:Tach
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center pt-20">
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center pt-20 p-3 sm:p-4">
       <div className="bg-white w-full max-w-2xl rounded shadow-lg">
         <div className="p-4 border-b flex items-center justify-between">
           <div>

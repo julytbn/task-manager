@@ -1,5 +1,8 @@
 "use client"
 import { useEffect, useMemo, useState } from 'react'
+import MainLayout from '@/components/MainLayout'
+import { DollarSign, CheckCircle, AlertCircle, TrendingUp } from 'lucide-react'
+import { useUserSession } from '@/hooks/useSession'
 
 type Paiement = {
   id: string
@@ -12,6 +15,7 @@ type Paiement = {
 }
 
 export default function EmployeePayments(){
+  const { user, isLoading: isSessionLoading } = useUserSession()
   const [summary, setSummary] = useState<any>(null)
   const [recent, setRecent] = useState<Paiement[]>([])
   const [all, setAll] = useState<Paiement[]>([])
@@ -20,17 +24,21 @@ export default function EmployeePayments(){
   const [period, setPeriod] = useState('this_month')
 
   useEffect(()=>{
+    if (isSessionLoading) return
+    
     let mounted = true
     ;(async ()=>{
       try{
-        const res = await fetch('/api/paiements')
+        // Fetch user's payments
+        const paymentsUrl = user?.id ? `/api/paiements?userId=${user.id}` : '/api/paiements'
+        const res = await fetch(paymentsUrl)
         const json = await res.json()
         if(!mounted) return
         setSummary(json.totals || null)
         setRecent(json.recent || [])
 
         // load all payments for table/history
-        const allRes = await fetch('/api/paiements?all=true')
+        const allRes = await fetch(paymentsUrl + (paymentsUrl.includes('?') ? '&all=true' : '?all=true'))
         const allJson = await allRes.json()
         if(!mounted) return
         setAll(allJson.payments || [])
@@ -38,7 +46,7 @@ export default function EmployeePayments(){
       finally{ if(mounted) setLoading(false) }
     })()
     return ()=>{ mounted = false }
-  },[])
+  },[isSessionLoading, user])
 
   const filtered = useMemo(()=>{
     return all.filter(p => {
@@ -51,83 +59,144 @@ export default function EmployeePayments(){
     })
   },[all, filterStatus])
 
+  if (isSessionLoading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center p-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[var(--color-gold)]"></div>
+        </div>
+      </MainLayout>
+    )
+  }
+
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="mb-4 flex items-center justify-between">
+    <MainLayout>
+      <div className="space-y-8">
+        {/* Page Title */}
         <div>
-          <h2 className="text-2xl font-bold">Paiements</h2>
-          <p className="text-sm text-gray-500">Suivez vos gains et historiques de paiement.</p>
+          <h1 className="text-4xl font-bold gold-gradient-text">Paiements</h1>
+          <p className="text-[var(--color-anthracite)]/70 mt-2">Suivez vos gains et historiques de paiement</p>
         </div>
-        <div className="flex gap-2">
-          <button className="px-3 py-2 border rounded">Exporter PDF</button>
-          <button className="px-3 py-2 border rounded">Exporter Excel</button>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white p-4 rounded shadow border">
-          <div className="text-sm text-gray-400">Montant total gagné</div>
-          <div className="text-lg font-semibold">{summary ? `${summary.total.toLocaleString()} FCFA` : '—'}</div>
-        </div>
-        <div className="bg-white p-4 rounded shadow border">
-          <div className="text-sm text-gray-400">Montant payé</div>
-          <div className="text-lg font-semibold text-green-600">{summary ? `${summary.paid.toLocaleString()} FCFA` : '—'}</div>
-        </div>
-        <div className="bg-white p-4 rounded shadow border">
-          <div className="text-sm text-gray-400">Montant restant</div>
-          <div className="text-lg font-semibold text-red-600">{summary ? `${(summary.total - summary.paid).toLocaleString()} FCFA` : '—'}</div>
-        </div>
-      </div>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="card">
+            <div className="flex items-start justify-between">
+              <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-[var(--color-gold)] to-[var(--color-gold-shadow)] flex items-center justify-center text-[var(--color-black-deep)]">
+                <DollarSign size={28} />
+              </div>
+            </div>
+            <div className="space-y-2 mt-4">
+              <p className="text-sm text-[var(--color-anthracite)] font-medium uppercase tracking-wide">
+                Total gagné
+              </p>
+              <p className="text-3xl font-bold gold-gradient-text">{summary ? `${summary.total.toLocaleString()}` : '—'}</p>
+              <p className="text-xs text-[var(--color-anthracite)]/60">FCFA</p>
+            </div>
+          </div>
 
-      <div className="bg-white p-4 rounded shadow border mb-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold">Historique des paiements</h3>
-          <div className="flex items-center gap-2">
-            <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} className="border rounded px-2 py-1">
-              <option value="">Tous statuts</option>
-              <option value="all">Tous</option>
-              <option value="paid">Payé</option>
-              <option value="pending">En attente</option>
-            </select>
-            <select value={period} onChange={e=>setPeriod(e.target.value)} className="border rounded px-2 py-1">
-              <option value="this_month">Ce mois</option>
-              <option value="quarter">Trimestre</option>
-              <option value="year">Année</option>
-            </select>
+          <div className="card">
+            <div className="flex items-start justify-between">
+              <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center text-white">
+                <CheckCircle size={28} />
+              </div>
+            </div>
+            <div className="space-y-2 mt-4">
+              <p className="text-sm text-[var(--color-anthracite)] font-medium uppercase tracking-wide">
+                Montant payé
+              </p>
+              <p className="text-3xl font-bold text-green-600">{summary ? `${summary.paid.toLocaleString()}` : '—'}</p>
+              <p className="text-xs text-[var(--color-anthracite)]/60">FCFA</p>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="flex items-start justify-between">
+              <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center text-white">
+                <AlertCircle size={28} />
+              </div>
+            </div>
+            <div className="space-y-2 mt-4">
+              <p className="text-sm text-[var(--color-anthracite)] font-medium uppercase tracking-wide">
+                Montant en attente
+              </p>
+              <p className="text-3xl font-bold text-red-600">{summary ? `${(summary.total - summary.paid).toLocaleString()}` : '—'}</p>
+              <p className="text-xs text-[var(--color-anthracite)]/60">FCFA</p>
+            </div>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="text-left text-gray-500 border-b">
-              <tr>
-                <th className="p-3">ID tâche</th>
-                <th className="p-3">Libellé</th>
-                <th className="p-3">Date d'achèvement</th>
-                <th className="p-3">Montant</th>
-                <th className="p-3">Statut</th>
-                <th className="p-3">Mode</th>
-                <th className="p-3">Date de paiement</th>
-                <th className="p-3">Preuve</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(p => (
-                <tr key={p.id} className="border-b hover:bg-gray-50">
-                  <td className="p-3">{p.tache?.id || '—'}</td>
-                  <td className="p-3">{p.tache?.titre || p.projet?.titre || '—'}</td>
-                  <td className="p-3">{p.datePaiement ? new Date(p.datePaiement).toLocaleDateString() : '—'}</td>
-                  <td className="p-3">{p.montant?.toLocaleString() || '—'} FCFA</td>
-                  <td className="p-3">{p.statut === 'CONFIRME' ? 'Payé' : 'En attente'}</td>
-                  <td className="p-3">{p.moyenPaiement || '—'}</td>
-                  <td className="p-3">{p.datePaiement ? new Date(p.datePaiement).toLocaleString() : '—'}</td>
-                  <td className="p-3"><button className="text-indigo-600">Voir / Télécharger</button></td>
+        {/* Payment History */}
+        <div className="card">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-[var(--color-black-deep)]">Historique des paiements</h2>
+            <div className="flex items-center gap-2">
+              <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)} className="border border-[var(--color-border)] rounded px-3 py-2 text-[var(--color-anthracite)] bg-white focus:ring-2 focus:ring-[var(--color-gold)] focus:border-transparent outline-none">
+                <option value="">Tous statuts</option>
+                <option value="all">Tous</option>
+                <option value="paid">Payé</option>
+                <option value="pending">En attente</option>
+              </select>
+              <select value={period} onChange={e=>setPeriod(e.target.value)} className="border border-[var(--color-border)] rounded px-3 py-2 text-[var(--color-anthracite)] bg-white focus:ring-2 focus:ring-[var(--color-gold)] focus:border-transparent outline-none">
+                <option value="this_month">Ce mois</option>
+                <option value="quarter">Trimestre</option>
+                <option value="year">Année</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--color-border)] bg-[var(--color-offwhite)]">
+                  <th className="text-left p-4 font-bold text-[var(--color-black-deep)]">ID Tâche</th>
+                  <th className="text-left p-4 font-bold text-[var(--color-black-deep)]">Libellé</th>
+                  <th className="text-left p-4 font-bold text-[var(--color-black-deep)]">Date d'achèvement</th>
+                  <th className="text-left p-4 font-bold text-[var(--color-black-deep)]">Montant</th>
+                  <th className="text-left p-4 font-bold text-[var(--color-black-deep)]">Statut</th>
+                  <th className="text-left p-4 font-bold text-[var(--color-black-deep)]">Mode paiement</th>
+                  <th className="text-left p-4 font-bold text-[var(--color-black-deep)]">Date de paiement</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={7} className="p-4 text-center text-[var(--color-anthracite)]/70">
+                      Chargement...
+                    </td>
+                  </tr>
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="p-4 text-center text-[var(--color-anthracite)]/70">
+                      Aucun paiement trouvé
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map(p => (
+                    <tr key={p.id} className="border-b border-[var(--color-border)] hover:bg-[var(--color-offwhite)] transition-colors">
+                      <td className="p-4 text-[var(--color-anthracite)]">{p.tache?.id || '—'}</td>
+                      <td className="p-4 text-[var(--color-anthracite)] font-medium">{p.tache?.titre || p.projet?.titre || '—'}</td>
+                      <td className="p-4 text-[var(--color-anthracite)]">{p.datePaiement ? new Date(p.datePaiement).toLocaleDateString('fr-FR') : '—'}</td>
+                      <td className="p-4 font-bold gold-gradient-text">{p.montant?.toLocaleString() || '—'} FCFA</td>
+                      <td className="p-4">
+                        <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
+                          p.statut === 'CONFIRME'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {p.statut === 'CONFIRME' ? '✓ Payé' : '⏳ En attente'}
+                        </span>
+                      </td>
+                      <td className="p-4 text-[var(--color-anthracite)]">{p.moyenPaiement || '—'}</td>
+                      <td className="p-4 text-[var(--color-anthracite)]">{p.datePaiement ? new Date(p.datePaiement).toLocaleString('fr-FR') : '—'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </div>
+    </MainLayout>
   )
 }

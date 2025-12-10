@@ -169,7 +169,7 @@ export default function ProjectDetailModal({ project, isOpen, onClose, onEdit, o
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-3 sm:p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative bg-[var(--color-offwhite)] w-full max-w-2xl max-h-[80vh] overflow-auto rounded-lg shadow-lg border border-[var(--color-gold)]/20 z-10">
         {/* Header */}

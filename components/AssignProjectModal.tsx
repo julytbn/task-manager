@@ -23,7 +23,7 @@ export default function AssignProjectModal({ isOpen, onClose, projects, onAssign
   const filtered = projects.filter(p => p.title.toLowerCase().includes(query.toLowerCase()))
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center pt-20">
+    <div className="fixed inset-0 z-50 flex items-center justify-center pt-20 p-3 sm:p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative bg-white w-[95%] md:w-3/4 lg:w-2/5 rounded-lg shadow-lg p-6 z-10">
         <div className="flex items-center justify-between mb-4">

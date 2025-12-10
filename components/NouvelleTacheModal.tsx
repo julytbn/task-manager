@@ -36,14 +36,10 @@ export function NouvelleTacheModal({ isOpen, onClose, onSave, initial }: Nouvell
     titre: '',
     description: '',
     projetId: '',
-    serviceId: '',
     assigneAId: '',
     statut: 'A_FAIRE',
     priorite: 'MOYENNE',
-    dateEcheance: '',
-    montant: '',
-    heuresEstimees: '',
-    facturable: true
+    dateEcheance: ''
   })
 
   // When editing, prefill form with `initial` data
@@ -53,14 +49,10 @@ export function NouvelleTacheModal({ isOpen, onClose, onSave, initial }: Nouvell
         titre: initial.titre || '',
         description: initial.description || '',
         projetId: initial.projetId || initial.projet?.id || '',
-        serviceId: initial.serviceId || initial.service?.id || '',
         assigneAId: initial.assigneAId || initial.assigneA?.id || '',
         statut: initial.statut || 'A_FAIRE',
         priorite: initial.priorite || 'MOYENNE',
-        dateEcheance: initial.dateEcheance ? new Date(initial.dateEcheance).toISOString().slice(0,10) : '',
-        montant: initial.montant ?? '',
-        heuresEstimees: initial.heuresEstimees ?? '',
-        facturable: initial.facturable ?? true
+        dateEcheance: initial.dateEcheance ? new Date(initial.dateEcheance).toISOString().slice(0,10) : ''
       })
     } else if (!isOpen) {
       // reset when closing
@@ -68,14 +60,10 @@ export function NouvelleTacheModal({ isOpen, onClose, onSave, initial }: Nouvell
         titre: '',
         description: '',
         projetId: '',
-        serviceId: '',
         assigneAId: '',
         statut: 'A_FAIRE',
         priorite: 'MOYENNE',
-        dateEcheance: '',
-        montant: '',
-        heuresEstimees: '',
-        facturable: true
+        dateEcheance: ''
       })
     }
   }, [isOpen, initial])
@@ -84,9 +72,8 @@ export function NouvelleTacheModal({ isOpen, onClose, onSave, initial }: Nouvell
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [projetsRes, servicesRes, employesRes] = await Promise.all([
+        const [projetsRes, employesRes] = await Promise.all([
           fetch('/api/projets').then(res => res.json()),
-          fetch('/api/services').then(res => res.json()),
           fetch('/api/utilisateurs').then(res => res.json())
         ])
         
@@ -94,7 +81,6 @@ export function NouvelleTacheModal({ isOpen, onClose, onSave, initial }: Nouvell
         setProjets(
           projetsRes.map((p: any) => ({ id: p.id, titre: p.titre || p.title || p.nom || '' }))
         )
-        setServices(servicesRes)
         setEmployes(employesRes.filter((u: any) => u.role === 'EMPLOYE'))
       } catch (error) {
         console.error('Erreur lors du chargement des données:', error)
@@ -122,19 +108,15 @@ export function NouvelleTacheModal({ isOpen, onClose, onSave, initial }: Nouvell
     if ((initial as any)?.readOnly) return
 
     // Convertir les chaînes vides en null pour les champs optionnels
-      const payload = {
-        titre: formData.titre,
-        description: formData.description || null,
-        projet: formData.projetId,
-        service: formData.serviceId || undefined,
-        assigneA: formData.assigneAId || undefined,
-        statut: formData.statut,
-        priorite: formData.priorite,
-        dateEcheance: formData.dateEcheance || null,
-        montant: formData.montant ? parseFloat(String(formData.montant)) : null,
-        heuresEstimees: formData.heuresEstimees ? parseFloat(String(formData.heuresEstimees)) : null,
-        facturable: !!formData.facturable
-      }
+    const payload = {
+      titre: formData.titre,
+      description: formData.description || null,
+      projetId: formData.projetId,
+      assigneAId: formData.assigneAId || null,
+      statut: formData.statut,
+      priorite: formData.priorite,
+      dateEcheance: formData.dateEcheance || null
+    }
 
     onSave(payload)
   }
@@ -142,18 +124,18 @@ export function NouvelleTacheModal({ isOpen, onClose, onSave, initial }: Nouvell
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
-      <div className="relative w-full max-w-3xl bg-[var(--color-offwhite)] rounded-lg shadow-lg overflow-auto border border-[var(--color-gold)]/20" style={{ maxHeight: '90vh' }}>
-        <div className="flex items-center justify-between p-4 rounded-t-lg bg-gradient-to-r from-[var(--color-black-deep)] to-[var(--color-black-900)]/90">
+      <div className="relative w-full max-w-3xl bg-[var(--color-offwhite)] rounded-lg shadow-lg overflow-y-auto border border-[var(--color-gold)]/20" style={{ maxHeight: '90vh', maxWidth: 'calc(100vw - 24px)' }}>
+        <div className="flex items-center justify-between p-3 sm:p-4 rounded-t-lg bg-gradient-to-r from-[var(--color-black-deep)] to-[var(--color-black-900)]/90">
           <h3 className="text-lg font-semibold text-[var(--color-gold)]">Nouvelle Tâche</h3>
           <button onClick={onClose} className="p-2 rounded hover:bg-[var(--color-black-900)]/20 text-[var(--color-offwhite)]">
             <X />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-3 sm:p-6 space-y-4">
           <div className="text-sm text-[var(--color-anthracite)] mb-4">Les champs avec * sont obligatoires</div>
           <div>
             <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Titre *</label>
@@ -198,36 +180,21 @@ export function NouvelleTacheModal({ isOpen, onClose, onSave, initial }: Nouvell
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Service (optionnel)</label>
+              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Assigné à</label>
               <select
-                name="serviceId"
-                value={formData.serviceId}
+                name="assigneAId"
+                value={formData.assigneAId}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white"
               >
-                <option value="">Aucun</option>
-                {services.map(s => (
-                  <option key={s.id} value={s.id}>{s.nom}</option>
+                <option value="">Non assigné</option>
+                {employes.map(employe => (
+                  <option key={employe.id} value={employe.id}>
+                    {employe.prenom} {employe.nom}
+                  </option>
                 ))}
               </select>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Assigné à</label>
-            <select
-              name="assigneAId"
-              value={formData.assigneAId}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white"
-            >
-              <option value="">Non assigné</option>
-              {employes.map(employe => (
-                <option key={employe.id} value={employe.id}>
-                  {employe.prenom} {employe.nom}
-                </option>
-              ))}
-            </select>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -272,49 +239,6 @@ export function NouvelleTacheModal({ isOpen, onClose, onSave, initial }: Nouvell
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white"
               />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Temps estimé (heures)</label>
-              <input
-                type="number"
-                name="heuresEstimees"
-                value={formData.heuresEstimees}
-                onChange={handleChange}
-                min="1"
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Montant (FCFA)</label>
-              <input
-                type="number"
-                name="montant"
-                value={formData.montant}
-                onChange={handleChange}
-                step="1"
-                min="0"
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white"
-              />
-            </div>
-
-            <div className="flex items-end">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="facturable"
-                  name="facturable"
-                  checked={formData.facturable}
-                  onChange={handleChange}
-                  className="h-4 w-4 rounded"
-                />
-                <label htmlFor="facturable" className="ml-2 block text-sm text-[var(--color-anthracite)]">
-                  Facturable
-                </label>
-              </div>
             </div>
           </div>
 

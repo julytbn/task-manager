@@ -2,7 +2,9 @@
 import { Search, CheckCircle2, AlertCircle, Clock, MoreHorizontal } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Card, Badge, Section, Button, Modal } from '@/components/ui'
-  const [rejectModalOpen, setRejectModalOpen] = useState<string|null>(null)
+import { useUserSession } from '@/hooks/useSession'
+
+const [rejectModalOpen, setRejectModalOpen] = useState<string|null>(null)
 
 type Tache = {
   id: string
@@ -12,33 +14,109 @@ type Tache = {
   dateEcheance?: string | null
   statut?: string
   estPayee?: boolean
-  projet?: { nom?: string }
-  service?: { nom?: string }
-  collaborateur?: { nom?: string, prenom?: string }
+  projet?: { 
+    id?: string
+    nom?: string 
+    titre?: string
+  }
+  service?: { 
+    id?: string
+    nom?: string 
+  }
+  collaborateur?: { 
+    id?: string
+    nom?: string 
+    prenom?: string 
+    email?: string
+  }
+  assigneA?: {
+    id?: string
+    nom?: string
+    prenom?: string
+    email?: string
+  }
   documents?: { id: string, nom: string, url: string }[]
 }
 
-  export default function DashboardTasks({ compact = false }: { compact?: boolean }) {
+export default function DashboardTasks({ compact = false }: { compact?: boolean }) {
+  const { user, isLoading: isSessionLoading } = useUserSession()
   const [tasks, setTasks] = useState<Tache[]>([])
+  const [filteredTasks, setFilteredTasks] = useState<Tache[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (isSessionLoading) {
+      console.log(' [DashboardTasks] Chargement de la session en cours...')
+      return
+    }
+    
+    console.log(' [DashboardTasks] Session chargée:', {
+      userId: user?.id,
+      userEmail: user?.email,
+      userRole: user?.role,
+      isAuthenticated: !!user
+    })
+    
     let mounted = true
     const load = async () => {
       try {
+        console.log(' [DashboardTasks] Récupération des tâches...')
         const res = await fetch('/api/taches')
         if (!res.ok) throw new Error('Erreur récupération tâches')
         const data = await res.json()
-        if (mounted) setTasks(data)
+        
+        console.log(' [DashboardTasks] Tâches récupérées:', {
+          totalTasks: data.length,
+          sampleTasks: data.slice(0, 3).map((t: any) => ({
+            id: t.id,
+            titre: t.titre,
+            statut: t.statut,
+            collaborateur: t.assigneA || t.collaborateur
+          }))
+        })
+        
+        if (mounted) {
+          setTasks(data)
+          // Filtrer les tâches pour ne montrer que celles de l'utilisateur connecté
+          if (user?.role !== 'ADMIN') {
+            const userTasks = data.filter((task: Tache) => {
+              const assigneAId = task.assigneA?.id || task.collaborateur?.id
+              const assigneAEmail = task.assigneA?.email || task.collaborateur?.email
+              
+              return (
+                assigneAId === user?.id || 
+                assigneAEmail === user?.email
+              )
+            })
+            
+            console.log(' [DashboardTasks] Tâches filtrées pour l\'utilisateur:', {
+              userId: user?.id,
+              userEmail: user?.email,
+              totalTasks: data.length,
+              userTasksCount: userTasks.length,
+              userTasks: userTasks.map((t: Tache) => ({
+                id: t.id,
+                titre: t.titre,
+                statut: t.statut,
+                assigneA: t.assigneA || t.collaborateur
+              }))
+            })
+            
+            setFilteredTasks(userTasks)
+          } else {
+            console.log(' [DashboardTasks] Mode ADMIN - Affichage de toutes les tâches:', data.length)
+            setFilteredTasks(data)
+          }
+        }
       } catch (err) {
-        console.error(err)
+        console.error('Erreur lors du chargement des tâches:', err)
       } finally {
         if (mounted) setLoading(false)
       }
     }
     load()
     return () => { mounted = false }
-  }, [])
+  }, [isSessionLoading, user])
 
   const statusVariant = (stat?: string): 'default' | 'success' | 'warning' | 'danger' | 'info' => {
     const s = (stat || '').toLowerCase()
@@ -90,7 +168,7 @@ type Tache = {
         </Card>
       ) : compact ? (
         <div className="space-y-2">
-          {tasks.slice(0, 8).map((t: any) => {
+          {filteredTasks.slice(0, 8).map((t: any) => {
             const statusBadgeVariant = statusVariant(t.statut)
             const statusLabelText = statusLabel(t.statut)
             return (

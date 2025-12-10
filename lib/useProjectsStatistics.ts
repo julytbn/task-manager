@@ -31,6 +31,14 @@ interface ProjectData {
   }
 }
 
+interface UserProjectsStats {
+  total: number
+  enCours: number
+  termines: number
+  budgetTotal: number
+  budgetTotalFormatted: string
+}
+
 interface ProjectsStatistics {
   totalProjets: number
   projetsEnCours: number
@@ -44,6 +52,8 @@ interface ProjectsStatistics {
     label: string
     ordre: number
   }>
+  // Statistiques spécifiques à l'utilisateur connecté
+  userProjects?: UserProjectsStats
 }
 
 // Cache at module level to prevent unnecessary API calls
@@ -51,10 +61,10 @@ let projectStatsCache: ProjectsStatistics | null = null
 let cacheTimestamp: number = 0
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
-export function useProjectsStatistics() {
-  const [data, setData] = useState<ProjectsStatistics | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+export function useProjectsStatistics(userId?: string) {
+  const [data, setData] = useState<ProjectsStatistics | null>(projectStatsCache)
+  const [loading, setLoading] = useState(!projectStatsCache)
+  const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
     const fetchStatistics = async () => {
@@ -66,58 +76,60 @@ export function useProjectsStatistics() {
           return
         }
 
-        const response = await fetch('/api/dashboard/projets-stats', {
-          cache: 'no-store'
-        })
-
+        // Ajout du paramètre userId à l'URL si fourni
+        const url = userId 
+          ? `/api/projets/statistiques?userId=${userId}`
+          : '/api/projets/statistiques'
+        
+        const response = await fetch(url)
         if (!response.ok) {
-          throw new Error(`Erreur: ${response.statusText}`)
+          throw new Error('Erreur lors de la récupération des statistiques')
         }
-
-        const jsonData: ProjectsStatistics = await response.json()
+        const stats = await response.json()
         
         // Update cache
-        projectStatsCache = jsonData
+        projectStatsCache = stats
         cacheTimestamp = Date.now()
 
-        setData(jsonData)
+        setData(stats)
         setError(null)
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Erreur inconnu'
-        setError(message)
-        console.error('Erreur récupération statistiques projets:', err)
+        const error = err instanceof Error ? err : new Error('Erreur inconnue')
+        setError(error)
+        console.error('Erreur récupération statistiques projets:', error)
       } finally {
         setLoading(false)
       }
     }
 
     fetchStatistics()
-  }, [])
+  }, [userId]) // Re-run when userId changes
 
   const refreshStatistics = async () => {
     setLoading(true)
     setError(null)
     
     try {
-      const response = await fetch('/api/dashboard/projets-stats', {
-        cache: 'no-store'
-      })
-
+      // Ajout du paramètre userId à l'URL si fourni
+      const url = userId 
+        ? `/api/projets/statistiques?userId=${userId}`
+        : '/api/projets/statistiques'
+        
+      const response = await fetch(url)
       if (!response.ok) {
-        throw new Error(`Erreur: ${response.statusText}`)
+        throw new Error('Erreur lors de la récupération des statistiques')
       }
-
-      const jsonData: ProjectsStatistics = await response.json()
+      const stats = await response.json()
       
       // Update cache
-      projectStatsCache = jsonData
+      projectStatsCache = stats
       cacheTimestamp = Date.now()
 
-      setData(jsonData)
+      setData(stats)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erreur inconnu'
-      setError(message)
-      console.error('Erreur rafraîchissement statistiques projets:', err)
+      const error = err instanceof Error ? err : new Error('Erreur inconnue')
+      setError(error)
+      console.error('Erreur rafraîchissement statistiques projets:', error)
     } finally {
       setLoading(false)
     }

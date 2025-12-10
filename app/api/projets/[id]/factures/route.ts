@@ -67,7 +67,7 @@ export async function POST(
     // Vérifier que le projet existe
     const project = await prisma.projet.findUnique({
       where: { id: projectId },
-      select: { serviceId: true, clientId: true }
+      select: { clientId: true }
     })
 
     if (!project) {
@@ -77,7 +77,7 @@ export async function POST(
       )
     }
 
-    // Créer la nouvelle facture
+    // Créer la nouvelle facture (sans service car un projet peut avoir plusieurs services)
     const newFacture = await prisma.facture.create({
       data: {
         numero: body.numero,
@@ -87,7 +87,6 @@ export async function POST(
         dateEcheance: body.dateEcheance ? new Date(body.dateEcheance) : null,
         notes: body.notes || null,
         client: { connect: { id: body.clientId || project.clientId } },
-        service: { connect: { id: project.serviceId } },
         projet: { connect: { id: projectId } },
         statut: 'EN_ATTENTE'
       }

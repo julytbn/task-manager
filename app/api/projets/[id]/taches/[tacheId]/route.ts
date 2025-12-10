@@ -50,7 +50,17 @@ export async function GET(
       where: { id: tacheId },
       include: {
         assigneA: true,
-        service: true
+        service: true,
+        DocumentTache: {
+          select: {
+            id: true,
+            nom: true,
+            url: true,
+            type: true,
+            taille: true,
+            dateUpload: true
+          }
+        }
       }
     })
 

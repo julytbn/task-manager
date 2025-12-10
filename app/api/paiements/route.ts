@@ -8,48 +8,63 @@ export const dynamic = 'force-dynamic'
 export async function POST(request: Request) {
   try {
     const data = await request.json();
-    // Vérifier les champs obligatoires
-    if (!data.montant || !data.clientId) {
-      return NextResponse.json({ error: 'Champs obligatoires manquants (montant, clientId)' }, { status: 400 });
+    // ✅ Validation: factureId OBLIGATOIRE (changement clé de la refactorisation)
+    if (!data.factureId || !data.montant) {
+      return NextResponse.json({ error: 'Champs obligatoires manquants: factureId et montant sont requis' }, { status: 400 });
     }
 
-    // Créer le paiement
-    const paiement = await prisma.paiement.create({
+    // ✅ Vérifier que la facture existe
+    const facture = await prisma.facture.findUnique({
+      where: { id: data.factureId }
+    })
+    if (!facture) {
+      return NextResponse.json({ error: 'Facture non trouvée' }, { status: 404 });
+    }
+
+    // Créer le paiement avec statut initial EN_ATTENTE
+    let paiement = await prisma.paiement.create({
       data: {
         montant: data.montant,
         moyenPaiement: data.moyenPaiement || 'VIREMENT_BANCAIRE',
         datePaiement: data.datePaiement ? new Date(data.datePaiement) : new Date(),
-        statut: data.statut || 'EN_ATTENTE',
-        factureId: data.factureId || undefined,
-        clientId: data.clientId,
-        tacheId: data.tacheId || undefined,
-        projetId: data.projetId || data.serviceId || undefined,
+        statut: 'EN_ATTENTE',
+        factureId: data.factureId,  // ✅ OBLIGATOIRE
+        clientId: facture.clientId, // ✅ Hérité de la facture
         notes: data.notes || null,
         reference: data.reference || null,
       },
-      include: { facture: true, client: true, projet: true }
+      include: { facture: true, client: true }
     });
 
-    // Si une facture est associée, mettre à jour son statut
-    if (data.factureId) {
-      const paiementsFacture = await prisma.paiement.findMany({
-        where: { factureId: data.factureId, statut: { in: ['EN_ATTENTE', 'CONFIRME'] } },
-      });
-      const totalPayé = paiementsFacture.reduce((sum, p) => sum + (p.montant || 0), 0);
+    // ✅ Mettre à jour le statut de la facture et du paiement
+    const paiementsFacture = await prisma.paiement.findMany({
+      where: { factureId: data.factureId },
+    });
+    const totalPayé = paiementsFacture.reduce((sum, p) => sum + (p.montant || 0), 0);
 
-      const facture = await prisma.facture.findUnique({ where: { id: data.factureId } });
-      let nouveauStatut: 'EN_ATTENTE' | 'PARTIELLEMENT_PAYEE' | 'PAYEE' = 'EN_ATTENTE';
-      if (totalPayé >= (facture?.montantTotal || facture?.montant || 0)) {
-        nouveauStatut = 'PAYEE';
-      } else if (totalPayé > 0) {
-        nouveauStatut = 'PARTIELLEMENT_PAYEE';
-      }
-
-      await prisma.facture.update({
-        where: { id: data.factureId },
-        data: { statut: nouveauStatut }
-      });
+    let nouveauStatutFacture: 'EN_ATTENTE' | 'PARTIELLEMENT_PAYEE' | 'PAYEE' = 'EN_ATTENTE';
+    let nouveauStatutPaiement: 'EN_ATTENTE' | 'CONFIRME' = 'EN_ATTENTE';
+    const montantFacture = facture.montantTotal || facture.montant || 0;
+    if (totalPayé >= montantFacture) {
+      nouveauStatutFacture = 'PAYEE';
+      nouveauStatutPaiement = 'CONFIRME';
+    } else if (totalPayé > 0) {
+      nouveauStatutFacture = 'PARTIELLEMENT_PAYEE';
+      nouveauStatutPaiement = 'EN_ATTENTE';
     }
+
+    // Mettre à jour la facture
+    await prisma.facture.update({
+      where: { id: data.factureId },
+      data: { statut: nouveauStatutFacture }
+    });
+
+    // Mettre à jour le paiement créé
+    paiement = await prisma.paiement.update({
+      where: { id: paiement.id },
+      data: { statut: nouveauStatutPaiement },
+      include: { facture: true, client: true }
+    });
 
     return NextResponse.json({ paiement });
   } catch (error) {

@@ -120,7 +120,6 @@ async function createSubscriptionInvoice(subscription: any): Promise<{
       data: {
         numero: invoiceNumber,
         clientId: subscription.clientId,
-        serviceId: subscription.serviceId,
         abonnementId: subscription.id,
         montant: subscription.montant,
         tauxTVA: tauxTVA,
@@ -246,7 +245,6 @@ export async function generateInitialInvoiceForSubscription(subscription: any): 
       data: {
         numero: invoiceNumber,
         clientId: subscription.clientId,
-        serviceId: subscription.serviceId,
         abonnementId: subscription.id,
         montant: subscription.montant,
         tauxTVA: tauxTVA,
