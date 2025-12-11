@@ -1,6 +1,7 @@
 "use client"
 import React, { useState, useMemo } from 'react'
 import { ChevronUp, ChevronDown } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 type Column<T> = {
   key: string
@@ -15,9 +16,16 @@ type TableProps<T> = {
   data: T[]
   className?: string
   rowsPerPage?: number
+  rowProps?: (row: T) => React.HTMLAttributes<HTMLTableRowElement>
 }
 
-export default function Table<T extends Record<string, any>>({ columns, data, className = '', rowsPerPage = 10 }: TableProps<T>) {
+export default function Table<T extends Record<string, any>>({ 
+  columns, 
+  data, 
+  className = '', 
+  rowsPerPage = 10,
+  rowProps 
+}: TableProps<T>) {
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
   const [currentPage, setCurrentPage] = useState(1)
@@ -73,15 +81,25 @@ export default function Table<T extends Record<string, any>>({ columns, data, cl
           </tr>
         </thead>
         <tbody className="bg-offwhite divide-y" style={{ borderTop: '1px solid #E0E0E0' }}>
-          {paginatedData.map((row, idx) => (
-            <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-offwhite'}>
-              {columns.map((col) => (
-                <td key={col.key} className="px-4 py-3 text-sm text-anthracite">
-                  {col.render ? col.render(row) : row[col.key]}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {paginatedData.map((row, idx) => {
+            const rowAttrs = rowProps ? rowProps(row) : {};
+            return (
+              <tr 
+                key={idx} 
+                className={cn(
+                  idx % 2 === 0 ? 'bg-white' : 'bg-offwhite',
+                  rowAttrs.className
+                )}
+                {...rowAttrs}
+              >
+                {columns.map((col) => (
+                  <td key={col.key} className="px-4 py-3 text-sm text-anthracite">
+                    {col.render ? col.render(row) : row[col.key]}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
       {/* Pagination */}

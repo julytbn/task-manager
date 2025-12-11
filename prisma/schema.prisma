@@ -24,7 +24,6 @@ model Client {
   factures         Facture[]
   paiements        Paiement[]
   projets          Projet[]
-  devis            Devis[]
   souhaits         Souhait[]
 
   @@map("clients")
@@ -72,7 +71,6 @@ model Service {
   abonnements      Abonnement[]
   taches           Tache[]
   projetServices   ProjetService[]
-  devisServices    DevisService[]   @relation("ServicesInDevis")
 
   @@map("services")
 }
@@ -112,7 +110,6 @@ model Projet {
   dateDebut         DateTime?
   dateFin           DateTime?
   dateEcheance      DateTime?
-  devisId           String?           // Optionnel : lié à un devis validé
   dateCreation      DateTime          @default(now())
   dateModification  DateTime          @updatedAt
   equipeId          String?
@@ -120,7 +117,6 @@ model Projet {
   paiements         Paiement[]        @relation("PaiementsDuProjet")
   client            Client            @relation(fields: [clientId], references: [id])
   equipe            Equipe?           @relation("ProjetAEquipe", fields: [equipeId], references: [id])
-  devis             Devis?            @relation("DevisAuProjet", fields: [devisId], references: [id], onDelete: SetNull)
   projetServices    ProjetService[]
   taches            Tache[]
   charges           Charge[]
@@ -199,16 +195,25 @@ model Facture {
   dateEcheance     DateTime?
   datePaiement     DateTime?
   notes            String?
+  description      String?       // Description générale de la facture
+  conditionsPaiement String?     // Ex: "Net 30 jours", "À la réception"
+  valideeParId     String?       // ID du manager/admin qui valide
+  dateValidation   DateTime?     // Date de validation de la facture
+  dateEnvoi        DateTime?     // Date d'envoi au client
+  reference        String?       // Référence client ou interne
   dateCreation     DateTime      @default(now())
   dateModification DateTime      @updatedAt
   abonnementId     String?
   abonnement       Abonnement?   @relation(fields: [abonnementId], references: [id])
   client           Client        @relation(fields: [clientId], references: [id])
   projet           Projet?       @relation(fields: [projetId], references: [id])
+  valideeParUser   Utilisateur?  @relation("FacturesValidees", fields: [valideeParId], references: [id], onDelete: SetNull)
   paiements        Paiement[]
   taches           Tache[]
 
   @@unique([abonnementId, dateEmission])
+  @@index([statut])
+  @@index([clientId])
   @@map("factures")
 }
 
@@ -263,6 +268,7 @@ model Utilisateur {
   timesheets           TimeSheet[]     @relation("TimesheetEmploye")
   timesheetsValidees   TimeSheet[]     @relation("TimesheetValidatePar")
   charges              Charge[]        @relation("ChargesEmploye")
+  facturesValidees     Facture[]       @relation("FacturesValidees")
 
   @@map("utilisateurs")
 }
@@ -421,49 +427,8 @@ model EnumTypeNotification {
 }
 
 // ============================================
-// NOUVEAUX MODÈLES : Devis, Charge, TimeSheet
+// MODÈLES : Charge, TimeSheet
 // ============================================
-
-model Devis {
-  id            String          @id @default(cuid())
-  numero        String          @unique
-  clientId      String
-  titre         String?
-  description   String?
-  montant       Float
-  tauxTVA       Float           @default(0.18)
-  montantTotal  Float
-  statut        StatutDevis     @default(BROUILLON)
-  dateCreation  DateTime        @default(now())
-  dateEnvoi     DateTime?
-  dateAccept    DateTime?
-  dateRefus     DateTime?
-  notes         String?
-  dateModification DateTime      @updatedAt
-  
-  client        Client          @relation(fields: [clientId], references: [id])
-  services      DevisService[]
-  projets       Projet[]        @relation("DevisAuProjet")
-
-  @@index([clientId])
-  @@index([statut])
-  @@map("devis")
-}
-
-model DevisService {
-  id        String    @id @default(cuid())
-  devisId   String
-  serviceId String
-  quantite  Int       @default(1)
-  prix      Float?
-  dateAjout DateTime  @default(now())
-  
-  devis     Devis     @relation(fields: [devisId], references: [id], onDelete: Cascade)
-  service   Service   @relation("ServicesInDevis", fields: [serviceId], references: [id], onDelete: Restrict)
-
-  @@unique([devisId, serviceId])
-  @@map("devis_services")
-}
 
 model Charge {
   id              String            @id @default(cuid())
@@ -562,6 +527,7 @@ enum Priorite {
 enum StatutFacture {
   BROUILLON
   EN_ATTENTE
+  VALIDEE
   PARTIELLEMENT_PAYEE
   PAYEE
   RETARD
@@ -621,14 +587,6 @@ enum StatutAbonnement {
   EN_RETARD
   ANNULE
   TERMINE
-}
-
-enum StatutDevis {
-  BROUILLON
-  ENVOYE
-  ACCEPTE
-  REFUSE
-  ANNULE
 }
 
 enum CategorieCharge {

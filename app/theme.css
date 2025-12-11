@@ -1,0 +1,103 @@
+/* Styles globaux pour les composants UI */
+
+/* Boutons */
+.btn {
+  @apply px-4 py-2 rounded-md font-medium transition-colors duration-200 flex items-center justify-center gap-2;
+}
+
+.btn-primary {
+  @apply bg-[var(--color-gold)] text-white hover:bg-[var(--color-gold-accent)];
+}
+
+.btn-secondary {
+  @apply bg-white text-[var(--color-anthracite)] border border-[var(--color-border)] hover:bg-gray-50;
+}
+
+/* Cartes */
+.card {
+  @apply bg-white rounded-lg shadow-sm border border-[var(--color-border)] p-6;
+}
+
+/* En-têtes de section */
+.section-header {
+  @apply flex justify-between items-center mb-6;
+}
+
+.section-title {
+  @apply text-2xl font-bold text-[var(--color-anthracite)];
+}
+
+/* Tableaux */
+.table-container {
+  @apply overflow-hidden rounded-lg border border-[var(--color-border)] shadow-sm;
+}
+
+table {
+  @apply w-full border-collapse;
+}
+
+th {
+  @apply bg-[var(--color-table-header)] text-white text-left px-4 py-3 font-medium;
+}
+
+td {
+  @apply border-t border-[var(--color-border)] px-4 py-3;
+}
+
+tbody tr:nth-child(odd) {
+  @apply bg-[var(--color-table-row)];
+}
+
+tbody tr:nth-child(even) {
+  @apply bg-[var(--color-table-row-alt)];
+}
+
+/* Champs de formulaire */
+.input-field {
+  @apply w-full px-3 py-2 border border-[var(--color-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-gold)] focus:border-transparent;
+}
+
+/* Badges */
+.badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+.badge-success {
+  @apply bg-green-100 text-green-800;
+}
+
+.badge-warning {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.badge-error {
+  @apply bg-red-100 text-red-800;
+}
+
+/* Alertes */
+.alert {
+  @apply p-4 rounded-md mb-4;
+}
+
+.alert-success {
+  @apply bg-green-50 text-green-700 border border-green-200;
+}
+
+.alert-error {
+  @apply bg-red-50 text-red-700 border border-red-200;
+}
+
+/* Loader/Spinner */
+.spinner {
+  @apply animate-spin h-5 w-5 text-[var(--color-gold)];
+}
+
+/* Utilitaires */
+.shadow-gold {
+  box-shadow: 0 4px 14px 0 rgba(212, 175, 55, 0.3);
+}
+
+/* Transitions */
+.transition-all {
+  transition: all 0.2s ease-in-out;
+}
