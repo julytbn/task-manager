@@ -1,3 +1,5 @@
+'use client'
+
 import React from 'react';
 
 type Row = {
@@ -31,31 +33,94 @@ const sampleRows: Row[] = [
 
 export default function TimesheetForm() {
   const [rows, setRows] = React.useState<Row[]>(sampleRows);
-  const [id] = React.useState('sample-1');
   const [saving, setSaving] = React.useState(false);
   const [validated, setValidated] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [success, setSuccess] = React.useState<string | null>(null);
+  
+  // Required fields for timesheet
+  const [employeeId, setEmployeeId] = React.useState('');
+  const [taskId, setTaskId] = React.useState('');
+  const [projectId, setProjectId] = React.useState('');
+  const [timesheetId, setTimesheetId] = React.useState('');
 
   const save = async () => {
+    // Validate required fields
+    if (!employeeId || !taskId || !projectId) {
+      setError('Veuillez remplir tous les champs requis: Employé, Tâche, Projet');
+      return;
+    }
+
     setSaving(true);
+    setError(null);
+    setSuccess(null);
+    
     try {
-      await fetch('/api/timesheets', {
+      // Calculate total regular hours from rows
+      const totalRegularHrs = rows.reduce((sum, row) => {
+        const hours = parseFloat(row.regular?.replace(',', '.') || '0');
+        return sum + (isNaN(hours) ? 0 : hours);
+      }, 0);
+
+      const payload = {
+        employeeId,
+        taskId,
+        projectId,
+        date: new Date().toISOString(),
+        regularHrs: Math.round(totalRegularHrs),
+        overtimeHrs: 0,
+        sickHrs: 0,
+        vacationHrs: 0,
+        description: `Timesheet pour la semaine du ${rows[0]?.date}`,
+      };
+
+      const response = await fetch('/api/timesheets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, rows, validated }),
+        body: JSON.stringify(payload),
       });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        setError(data.message || 'Erreur lors de la création du timesheet');
+        return;
+      }
+
+      setTimesheetId(data.data.id);
+      setSuccess('Timesheet créé avec succès!');
+      
     } catch (e) {
-      // ignore for now
+      setError(`Erreur: ${e instanceof Error ? e.message : 'Unknown error'}`);
     }
     setSaving(false);
   };
 
   const validate = async () => {
+    if (!timesheetId) {
+      setError('Veuillez créer le timesheet d\'abord');
+      return;
+    }
+
     setSaving(true);
+    setError(null);
+    
     try {
-      const res = await fetch(`/api/timesheets/${id}/validate`, { method: 'PATCH' });
-      if (res.ok) setValidated(true);
+      const res = await fetch(`/api/timesheets/${timesheetId}/validate`, { 
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'validate', validePar: 'manager-id' })
+      });
+      
+      if (res.ok) {
+        setValidated(true);
+        setSuccess('Timesheet validé!');
+      } else {
+        const data = await res.json();
+        setError(data.message || 'Erreur lors de la validation');
+      }
     } catch (e) {
-      // ignore
+      setError(`Erreur: ${e instanceof Error ? e.message : 'Unknown error'}`);
     }
     setSaving(false);
   };
@@ -76,10 +141,92 @@ export default function TimesheetForm() {
         .activity-col { width: 46%; }
         .center { text-align: center; }
         .small { font-size: 12px; color: #555; }
-        @media print { .ts-container { max-width: 100%; } }
+        .ts-form-section { 
+          background: #f9f9f9; 
+          padding: 15px; 
+          margin-bottom: 15px; 
+          border-radius: 5px;
+          border-left: 4px solid #8cbf43;
+        }
+        .ts-form-row { 
+          display: grid; 
+          grid-template-columns: 1fr 1fr 1fr; 
+          gap: 15px; 
+          margin-bottom: 12px;
+        }
+        .ts-form-group { 
+          display: flex; 
+          flex-direction: column;
+        }
+        .ts-form-group label { 
+          font-weight: 600; 
+          margin-bottom: 5px; 
+          font-size: 13px;
+        }
+        .ts-form-group input, .ts-form-group select { 
+          padding: 8px; 
+          border: 1px solid #ccc; 
+          border-radius: 4px;
+          font-size: 13px;
+        }
+        .ts-alert { 
+          padding: 12px; 
+          margin-bottom: 15px; 
+          border-radius: 4px;
+          font-size: 13px;
+        }
+        .ts-alert.error { 
+          background: #fee; 
+          color: #c00; 
+          border: 1px solid #fcc;
+        }
+        .ts-alert.success { 
+          background: #efe; 
+          color: #080; 
+          border: 1px solid #cfc;
+        }
+        @media print { .ts-container { max-width: 100%; } .ts-form-section { display: none; } }
       `}</style>
 
       <div className="ts-container">
+        {/* Required Fields Section */}
+        <div className="ts-form-section">
+          <h3 style={{ margin: '0 0 12px 0', color: '#333' }}>📋 Informations Requises</h3>
+          <div className="ts-form-row">
+            <div className="ts-form-group">
+              <label>Employé (ID) *</label>
+              <input 
+                type="text" 
+                value={employeeId} 
+                onChange={(e) => setEmployeeId(e.target.value)}
+                placeholder="ex: emp-123"
+              />
+            </div>
+            <div className="ts-form-group">
+              <label>Tâche (ID) *</label>
+              <input 
+                type="text" 
+                value={taskId} 
+                onChange={(e) => setTaskId(e.target.value)}
+                placeholder="ex: task-456"
+              />
+            </div>
+            <div className="ts-form-group">
+              <label>Projet (ID) *</label>
+              <input 
+                type="text" 
+                value={projectId} 
+                onChange={(e) => setProjectId(e.target.value)}
+                placeholder="ex: proj-789"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Messages d'erreur/succès */}
+        {error && <div className="ts-alert error">❌ {error}</div>}
+        {success && <div className="ts-alert success">✅ {success}</div>}
+
         <div className="ts-header">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h2 style={{ margin: 0, fontWeight: 600 }}>Association of African Universities</h2>
@@ -149,9 +296,53 @@ export default function TimesheetForm() {
         </table>
 
         <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-          <button onClick={save} disabled={saving} style={{ padding: '8px 12px' }}>{saving ? 'Saving...' : 'Save'}</button>
-          <button onClick={validate} disabled={saving || validated} style={{ padding: '8px 12px' }}>{validated ? 'Validated' : 'Validate'}</button>
-          <button onClick={() => window.print()} style={{ padding: '8px 12px' }}>Print</button>
+          <button 
+            onClick={save} 
+            disabled={saving || !employeeId || !taskId || !projectId} 
+            style={{ 
+              padding: '10px 16px',
+              backgroundColor: saving ? '#ccc' : '#8cbf43',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: saving || !employeeId || !taskId || !projectId ? 'not-allowed' : 'pointer',
+              fontWeight: 600,
+              fontSize: '13px'
+            }}
+          >
+            {saving ? '⏳ Enregistrement...' : '💾 Enregistrer Timesheet'}
+          </button>
+          <button 
+            onClick={validate} 
+            disabled={saving || validated || !timesheetId} 
+            style={{ 
+              padding: '10px 16px',
+              backgroundColor: validated ? '#4CAF50' : (!timesheetId ? '#ccc' : '#2196F3'),
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: validated || !timesheetId ? 'not-allowed' : 'pointer',
+              fontWeight: 600,
+              fontSize: '13px'
+            }}
+          >
+            {validated ? '✅ Validé' : '🔍 Valider'}
+          </button>
+          <button 
+            onClick={() => window.print()} 
+            style={{ 
+              padding: '10px 16px',
+              backgroundColor: '#666',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '13px'
+            }}
+          >
+            🖨️ Imprimer
+          </button>
         </div>
       </div>
     </div>

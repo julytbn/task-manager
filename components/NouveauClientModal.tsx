@@ -13,6 +13,7 @@ type Client = {
   telephone?: string
   type?: TypeClient
   entreprise?: string
+  gudefUrl?: string
   adresse?: string
   dateNaissance?: string
 }
@@ -25,7 +26,7 @@ type Props = {
 }
 
 export default function NouveauClientModal({ isOpen, onClose, onSave, initial }: Props) {
-  const [form, setForm] = useState<Client>({ nom: '', prenom: '', email: '', telephone: '', type: 'PARTICULIER', entreprise: '', adresse: '', dateNaissance: '' })
+  const [form, setForm] = useState<Client>({ nom: '', prenom: '', email: '', telephone: '', type: 'PARTICULIER', entreprise: '', gudefUrl: '', adresse: '', dateNaissance: '' })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -38,12 +39,13 @@ export default function NouveauClientModal({ isOpen, onClose, onSave, initial }:
         telephone: initial.telephone || '',
         type: initial.type || 'PARTICULIER',
         entreprise: initial.entreprise || '',
+        gudefUrl: initial.gudefUrl || '',
         adresse: initial.adresse || '',
         dateNaissance: initial.dateNaissance || '',
         id: initial.id,
       })
     } else {
-      setForm({ nom: '', prenom: '', email: '', telephone: '', type: 'PARTICULIER', entreprise: '', adresse: '', dateNaissance: '' })
+      setForm({ nom: '', prenom: '', email: '', telephone: '', type: 'PARTICULIER', entreprise: '', gudefUrl: '', adresse: '', dateNaissance: '' })
     }
   }, [initial, isOpen])
 
@@ -113,6 +115,10 @@ export default function NouveauClientModal({ isOpen, onClose, onSave, initial }:
             <div>
               <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Entreprise / Organisation</label>
               <input value={form.entreprise || ''} onChange={e => setForm(f => ({...f, entreprise: e.target.value}))} className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Lien GUDEF (optionnel)</label>
+              <input type="url" value={form.gudefUrl || ''} onChange={e => setForm(f => ({...f, gudefUrl: e.target.value}))} placeholder="https://gudef.gouv.tg/..." className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white" />
             </div>
           </div>
 

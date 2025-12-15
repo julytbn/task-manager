@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { StatutTimeSheet } from "@prisma/client";
 
 /**
  * PATCH /api/timesheets/:id/validate
@@ -38,7 +39,7 @@ export async function PATCH(
       );
     }
 
-    let newStatus = "EN_ATTENTE";
+    let newStatus: StatutTimeSheet = "EN_ATTENTE";
     if (action === "validate") {
       newStatus = "VALIDEE";
     } else if (action === "reject") {

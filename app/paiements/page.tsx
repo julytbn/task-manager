@@ -8,19 +8,45 @@ import NouveauPaiementModal from '@/components/NouveauPaiementModal'
 import { Plus } from 'lucide-react'
 import MainLayout from '../../components/MainLayout'
 
-type Paiement = {
+export type Paiement = {
   id: string
-  client?: string
-  projet?: string
-  montantTotal?: number
-  montantPayé?: number
-  soldeRestant?: number
-  methodePaiement?: string
-  statut: 'payé' | 'partiel' | 'impayé'
-  date?: string
-  montant?: number
-  factureId?: string
-  facture?: { numero?: string; client?: { nom?: string } }
+  montant: number
+  moyenPaiement: 'ESPECES' | 'CHEQUE' | 'VIREMENT_BANCAIRE' | 'CARTE_BANCAIRE' | 'MOBILE_MONEY' | 'PAYPAL' | 'AUTRE'
+  reference?: string | null
+  datePaiement: string | Date
+  statut: 'EN_ATTENTE' | 'CONFIRME' | 'REFUSE' | 'REMBOURSE'
+  notes?: string | null
+  clientId: string
+  factureId: string
+  client?: {
+    id: string
+    nom: string
+    prenom?: string | null
+  }
+  facture?: {
+    id: string
+    numero: string
+    montantTotal?: number
+    montant?: number
+    statut: string
+    paiements?: Array<{
+      id: string
+      montant: number
+    }>
+    client?: {
+      id: string
+      nom: string
+      prenom?: string | null
+    }
+  }
+  projet?: {
+    id: string
+    nom: string
+  } | null
+  tache?: {
+    id: string
+    titre: string
+  } | null
 }
 
 export default function PaiementsPage() {
@@ -32,27 +58,82 @@ export default function PaiementsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // ✅ NOUVELLE: Charger depuis API
+  // Charger les paiements avec les relations nécessaires
   useEffect(() => {
     const fetchPaiements = async () => {
       try {
         setLoading(true)
-        const res = await fetch('/api/paiements')
+        const res = await fetch('/api/paiements?all=true')
         if (!res.ok) throw new Error('Erreur API paiements')
         const data = await res.json()
-        // API returns either { payments: [...] } or { recent: [...] } or { totals, payments }.
-        const list = data?.payments ?? data?.recent ?? data ?? []
-        const items = Array.isArray(list) ? list : []
-        console.log('✅ Paiements chargés:', items.length, 'items')
-        setPaiements(items)
+        
+        // Vérifier la structure de la réponse
+        const paiementsData = data.payments || []
+        console.log('Paiements chargés (API):', JSON.stringify(paiementsData, null, 2))
+        
+        // Vérifier la structure d'une facture
+        if (paiementsData.length > 0 && paiementsData[0].facture) {
+          console.log('Structure de la facture du premier paiement:', JSON.stringify(paiementsData[0].facture, null, 2))
+        }
+        
+        // Mapper les données pour correspondre au type attendu
+        const formattedPaiements = paiementsData.map((p: any) => ({
+          id: p.id,
+          montant: p.montant,
+          moyenPaiement: p.moyenPaiement,
+          reference: p.reference,
+          datePaiement: p.datePaiement,
+          statut: p.statut,
+          notes: p.notes,
+          clientId: p.clientId,
+          factureId: p.factureId,
+          client: p.client ? {
+            id: p.client.id,
+            nom: p.client.nom,
+            prenom: p.client.prenom
+          } : undefined,
+          facture: p.facture ? {
+            id: p.facture.id,
+            numero: p.facture.numero,
+            montantTotal: p.facture.montantTotal || 0,
+            montant: p.facture.montant || 0,
+            statut: p.facture.statut,
+            paiements: p.facture.paiements ? p.facture.paiements.map((pmt: any) => ({
+              id: pmt.id,
+              montant: pmt.montant
+            })) : [],
+            client: p.facture.client ? {
+              id: p.facture.client.id,
+              nom: p.facture.client.nom,
+              prenom: p.facture.client.prenom
+            } : undefined
+          } : undefined,
+          projet: p.projet ? {
+            id: p.projet.id,
+            nom: p.projet.nom
+          } : (p.tache?.projet ? {
+            id: p.tache.projet.id,
+            nom: p.tache.projet.nom
+          } : (p.facture?.projet ? {
+            id: p.facture.projet.id,
+            nom: p.facture.projet.nom
+          } : null)),
+          tache: p.tache ? {
+            id: p.tache.id,
+            titre: p.tache.titre
+          } : null
+        }))
+        
+        setPaiements(formattedPaiements)
         setError(null)
       } catch (err) {
-        console.error('❌ Erreur fetch:', err)
-        setError((err as Error).message)
+        console.error('Erreur lors du chargement des paiements:', err)
+        setError('Erreur lors du chargement des paiements')
       } finally {
         setLoading(false)
       }
     }
+    
     fetchPaiements()
   }, [])
 
@@ -155,9 +236,25 @@ export default function PaiementsPage() {
 
       {/* Payments Table */}
       <div className="bg-[var(--color-offwhite)] rounded-xl shadow-sm border border-[var(--color-border)] p-6">
-        {paiements.length > 0 ? (
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-gray-600">Chargement des paiements...</p>
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto text-center">
+            <h3 className="text-red-900 font-semibold mb-2">Erreur</h3>
+            <p className="text-red-700 text-sm mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm"
+            >
+              Réessayer
+            </button>
+          </div>
+        ) : paiements.length > 0 ? (
           <PaiementsTable 
-            paiements={paiements} 
+            paiements={paiements}
             onViewDetails={handleViewDetails}
             onEdit={handleEdit}
             onDelete={handleDelete}

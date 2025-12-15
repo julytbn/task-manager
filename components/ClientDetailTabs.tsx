@@ -9,6 +9,8 @@ import ProjectTasksModal from './ProjectTasksModal'
 import ProjectInvoicesModal from './ProjectInvoicesModal'
 import NouveauFactureModal from './NouveauFactureModal'
 import NouveauPaiementModal from './NouveauPaiementModal'
+import ProFormaModal from './ProFormaModal'
+import ProFormaList from './ProFormaList'
 
 type TabKey =
   | 'infos'
@@ -52,6 +54,47 @@ function getStatutColor(statut?: string) {
 export default function ClientDetailTabs({ client }: Props) {
   const [active, setActive] = useState<TabKey>('infos')
   const [isPaiementModalOpen, setIsPaiementModalOpen] = useState(false)
+  const [isProFormaModalOpen, setIsProFormaModalOpen] = useState(false)
+  const [editingProForma, setEditingProForma] = useState<any>(null)
+  const [proFormas, setProFormas] = useState<any[]>([])
+  const [loadingProFormas, setLoadingProFormas] = useState(false)
+
+  // Charger les pro-formas du client
+  useEffect(() => {
+    if (active === 'factures') {
+      fetchProFormas()
+    }
+  }, [active])
+
+  const fetchProFormas = async () => {
+    try {
+      setLoadingProFormas(true)
+      const res = await fetch(`/api/pro-formas?clientId=${client.id}`)
+      if (!res.ok) throw new Error('Erreur')
+      const data = await res.json()
+      setProFormas(data)
+    } catch (err) {
+      console.error('Erreur chargement pro-formas:', err)
+    } finally {
+      setLoadingProFormas(false)
+    }
+  }
+
+  // Charger les pro-formas au montage pour les rendre visibles sans changer d'onglet
+  useEffect(() => {
+    if (client?.id) fetchProFormas()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client?.id])
+
+  const handleEditProForma = (proForma: any) => {
+    setEditingProForma(proForma)
+    setIsProFormaModalOpen(true)
+  }
+
+  const handleProFormaSuccess = () => {
+    setEditingProForma(null)
+    fetchProFormas()
+  }
 
   const tabs: { key: TabKey; title: string }[] = [
     { key: 'infos', title: 'Infos' },
@@ -183,6 +226,34 @@ export default function ClientDetailTabs({ client }: Props) {
                   </div>
                 </div>
               </div>
+
+              {/* Bloc Informations légales (pour entreprises) */}
+              {client?.type === 'ENTREPRISE' && (
+                <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3">📋 Informations légales</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {client?.entreprise && (
+                      <div>
+                        <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">Entreprise</p>
+                        <p className="text-sm text-gray-900 mt-1">{client.entreprise}</p>
+                      </div>
+                    )}
+                    {client?.gudefUrl && (
+                      <div>
+                        <p className="text-xs font-medium text-gray-600 uppercase tracking-wide">Vérification GUDEF</p>
+                        <a 
+                          href={client.gudefUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 underline mt-1"
+                        >
+                          🔗 Consulter la fiche
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -217,7 +288,19 @@ export default function ClientDetailTabs({ client }: Props) {
           {active === 'infos' && <TabInfos client={client} />}
           {active === 'abonnements' && <TabAbonnements abonnements={client.abonnements || []} clientId={client.id} clientName={client.nom} />}
           {active === 'projets' && <TabProjets projets={client.projets || []} clientId={client.id} />}
-          {active === 'factures' && <TabFactures factures={client.factures || []} clientId={client.id} clientName={client.nom} clientProjets={client.projets} />}
+          {active === 'factures' && (
+            <TabFactures 
+              factures={client.factures || []} 
+              clientId={client.id} 
+              clientName={client.nom} 
+              clientProjets={client.projets}
+              proFormas={proFormas}
+              loadingProFormas={loadingProFormas}
+              onOpenProFormaModal={() => setIsProFormaModalOpen(true)}
+              onRefreshProFormas={fetchProFormas}
+              onEditProForma={handleEditProForma}
+            />
+          )}
           {active === 'paiements' && <TabPaiements paiements={client.paiements || []} clientId={client.id} onOpenPaiementModal={() => setIsPaiementModalOpen(true)} />}
           {active === 'documents' && <TabDocuments clientId={client.id} />}
           {active === 'communications' && (
@@ -255,6 +338,19 @@ export default function ClientDetailTabs({ client }: Props) {
         }}
         clientName={client.nom}
         projets={client.projets || []}
+      />
+
+      {/* Modal Pro Forma */}
+      <ProFormaModal
+        clientId={client.id}
+        isOpen={isProFormaModalOpen}
+        onClose={() => {
+          setIsProFormaModalOpen(false)
+          setEditingProForma(null)
+        }}
+        onSuccess={handleProFormaSuccess}
+        projets={client.projets || []}
+        editingProForma={editingProForma}
       />
     </div>
   )
@@ -603,7 +699,27 @@ function TabProjets({ projets = [], clientId }: { projets?: any[]; clientId?: st
   )
 }
 
-function TabFactures({ factures, clientId, clientName, clientProjets }: { factures: any[]; clientId?: string | number; clientName?: string; clientProjets?: any[] }) {
+function TabFactures({ 
+  factures, 
+  clientId, 
+  clientName, 
+  clientProjets,
+  proFormas = [],
+  loadingProFormas = false,
+  onOpenProFormaModal,
+  onRefreshProFormas,
+  onEditProForma
+}: { 
+  factures: any[]
+  clientId?: string | number
+  clientName?: string
+  clientProjets?: any[]
+  proFormas?: any[]
+  loadingProFormas?: boolean
+  onOpenProFormaModal?: () => void
+  onRefreshProFormas?: () => void
+  onEditProForma?: (pf: any) => void
+}) {
   const [showModal, setShowModal] = useState(false)
   const [invoices, setInvoices] = useState(factures || [])
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -757,6 +873,39 @@ function TabFactures({ factures, clientId, clientName, clientProjets }: { factur
           </table>
         </div>
       )}
+
+      {/* Section Pro Formas */}
+      <div className="mt-8 pt-8 border-t-2 border-gray-200">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-slate-800">✨ Pro Formas</h3>
+          <button
+            onClick={onOpenProFormaModal}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-gold)] text-[var(--color-black-deep)] rounded-lg hover:bg-[var(--color-gold-accent)] font-medium text-sm transition"
+          >
+            <Plus size={16} />
+            Créer Pro Forma
+          </button>
+        </div>
+
+        {loadingProFormas ? (
+          <div className="text-center py-8">
+            <div className="inline-block animate-spin">⏳</div>
+            <p className="text-gray-600 mt-2">Chargement des pro-formas...</p>
+          </div>
+        ) : proFormas && proFormas.length > 0 ? (
+          <ProFormaList
+            proFormas={proFormas}
+            onEdit={onEditProForma}
+            onDelete={() => onRefreshProFormas?.()}
+            onRefresh={onRefreshProFormas}
+          />
+        ) : (
+          <div className="py-8 text-center bg-gray-50 rounded-lg border border-gray-200">
+            <p className="text-gray-600 font-medium">Aucune pro-forma</p>
+            <p className="text-gray-500 text-sm mt-1">Commencez par créer une nouvelle pro-forma</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -1,14 +1,23 @@
 "use client"
 import { useState, useEffect } from 'react'
 import { X, AlertCircle, Check } from 'lucide-react'
-import { generateTransactionReference } from '@/lib/paiementUtils'
+import { generateTransactionReference, formatMontant } from '@/lib/paiementUtils'
+
+interface PaiementFacture {
+  id: string
+  montant: number
+  datePaiement: string
+  statut: string
+}
 
 interface Facture {
   id: string
   numero: string
   montantTotal: number
+  montantRestant?: number
   client: { id: string; nom: string }
   statut: string
+  paiements?: PaiementFacture[]
 }
 
 interface NouveauPaiementModalProps {
@@ -36,6 +45,9 @@ export default function NouveauPaiementModal({
     reference: '',
     notes: '',
   })
+  
+  // État pour stocker le montant restant de la facture
+  const [montantRestant, setMontantRestant] = useState(0)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -43,7 +55,7 @@ export default function NouveauPaiementModal({
   const [selectedFacture, setSelectedFacture] = useState<Facture | null>(null)
   const [isLoadingFactures, setIsLoadingFactures] = useState(false)
 
-  // Charger les factures en attente
+  // Charger les factures en attente avec le montant restant
   useEffect(() => {
     if (!isOpen) return
 
@@ -51,20 +63,33 @@ export default function NouveauPaiementModal({
       setIsLoadingFactures(true)
       setError('')
       try {
-        const response = await fetch('/api/factures?status=EN_ATTENTE,PARTIELLEMENT_PAYEE')
+        const response = await fetch('/api/factures?status=EN_ATTENTE,PARTIELLEMENT_PAYEE&includePaiements=true')
         if (!response.ok) throw new Error('Erreur chargement factures')
         const data = await response.json()
-        setFactures(data || [])
+        
+        // Calculer le montant restant pour chaque facture
+        const facturesAvecMontantRestant = data.map((facture: any) => {
+          const totalPaiements = facture.paiements?.reduce((sum: number, p: any) => sum + (p.montant || 0), 0) || 0
+          const montantRestant = (facture.montantTotal || 0) - totalPaiements
+          return {
+            ...facture,
+            montantRestant: Math.max(0, montantRestant) // S'assurer que le montant n'est pas négatif
+          }
+        })
+        
+        setFactures(facturesAvecMontantRestant || [])
 
         // Pré-remplir si facture fournie
         if (prefilledFacture) {
+          const factureSelectionnee = facturesAvecMontantRestant.find((f: any) => f.id === prefilledFacture.id) || prefilledFacture
           setFormData((prev) => ({
             ...prev,
-            factureId: prefilledFacture.id,
-            montant: String(prefilledFacture.montantTotal),
+            factureId: factureSelectionnee.id,
+            montant: String(Math.max(0, factureSelectionnee.montantRestant || factureSelectionnee.montantTotal || 0)),
             reference: generateTransactionReference(),
           }))
-          setSelectedFacture(prefilledFacture)
+          setSelectedFacture(factureSelectionnee)
+          setMontantRestant(Math.max(0, factureSelectionnee.montantRestant || factureSelectionnee.montantTotal || 0))
         }
       } catch (err) {
         console.error('Erreur chargement factures:', err)
@@ -77,14 +102,36 @@ export default function NouveauPaiementModal({
     loadFactures()
   }, [isOpen, prefilledFacture])
 
-  const handleFactureChange = (factureId: string) => {
+  const handleFactureChange = async (factureId: string) => {
     const facture = factures.find((f) => f.id === factureId)
     setSelectedFacture(facture || null)
-    setFormData((prev) => ({
+    
+    // Récupérer le montant restant
+    if (factureId) {
+      try {
+        const response = await fetch(`/api/factures/${factureId}/montant-restant`)
+        if (response.ok) {
+          const data = await response.json()
+          setFormData(prev => ({
+            ...prev,
+            factureId,
+            montant: data.montantRestant > 0 ? String(data.montantRestant) : ''
+          }))
+          return
+        }
+      } catch (error) {
+        console.error('Erreur récupération montant restant:', error)
+      }
+    }
+    
+    // Si pas de facture ou erreur
+    setFormData(prev => ({
       ...prev,
       factureId,
-      montant: facture ? String(facture.montantTotal) : '',
+      montant: ''
     }))
+    setSelectedFacture(facture || null)
+    setMontantRestant(0)
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -106,7 +153,7 @@ export default function NouveauPaiementModal({
     e.preventDefault()
     setError('')
 
-    // ✅ Validation: factureId OBLIGATOIRE
+    // Validation: factureId OBLIGATOIRE
     if (!formData.factureId) {
       setError('Veuillez sélectionner une facture')
       return
@@ -118,19 +165,51 @@ export default function NouveauPaiementModal({
     }
 
     const montant = parseFloat(String(formData.montant))
-    if (montant <= 0 || montant > (selectedFacture?.montantTotal || 0)) {
-      setError('Le montant doit être entre 0 et ' + selectedFacture?.montantTotal)
+    
+    // Récupérer le montant restant actuel
+    try {
+      const response = await fetch(`/api/factures/${formData.factureId}/montant-restant`)
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Erreur lors de la vérification du montant restant')
+      }
+      
+      const { montantRestant } = await response.json()
+      
+      if (isNaN(montant) || montant <= 0) {
+        setError('Le montant doit être un nombre supérieur à 0 FCFA')
+        return
+      }
+
+      if (montant > montantRestant) {
+        setError(`Le montant ne peut pas dépasser ${formatMontant(montantRestant)} (montant restant de la facture)`)
+        return
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la vérification du montant')
       return
     }
 
     setLoading(true)
 
     try {
+      // Récupérer les détails de la facture pour obtenir le clientId
+      const factureResponse = await fetch(`/api/factures/${formData.factureId}`)
+      if (!factureResponse.ok) {
+        throw new Error('Impossible de récupérer les détails de la facture')
+      }
+      const factureData = await factureResponse.json()
+      
+      if (!factureData.clientId) {
+        throw new Error('Aucun client associé à cette facture')
+      }
+
       const response = await fetch('/api/paiements', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          factureId: formData.factureId,  // ✅ CLÉE PRINCIPALE
+          factureId: formData.factureId,
+          clientId: factureData.clientId, // Ajout du clientId obligatoire
           montant: montant,
           moyenPaiement: formData.moyenPaiement,
           datePaiement: formData.datePaiement,

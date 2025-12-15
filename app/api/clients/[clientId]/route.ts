@@ -43,3 +43,42 @@ export async function GET(request: Request, { params }: { params: { clientId: st
     )
   }
 }
+
+export async function PUT(request: Request, { params }: { params: { clientId: string } }) {
+  try {
+    const data = await request.json()
+
+    const updated = await prisma.client.update({
+      where: { id: params.clientId },
+      data: {
+        nom: data.nom,
+        prenom: data.prenom,
+        email: data.email || null,
+        telephone: data.telephone || null,
+        entreprise: data.entreprise || null,
+        adresse: data.adresse || null,
+        type: data.type,
+        dateNaissance: data.dateNaissance ? new Date(data.dateNaissance) : null,
+        gudefUrl: data.gudefUrl || null,
+      }
+    })
+
+    return NextResponse.json(updated)
+  } catch (error) {
+    console.error('PUT /api/clients/[clientId] error', error)
+    return NextResponse.json({ error: 'Failed to update client' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: Request, { params }: { params: { clientId: string } }) {
+  try {
+    await prisma.client.delete({
+      where: { id: params.clientId }
+    })
+
+    return NextResponse.json({ ok: true })
+  } catch (error) {
+    console.error('DELETE /api/clients/[clientId] error', error)
+    return NextResponse.json({ error: 'Failed to delete client' }, { status: 500 })
+  }
+}

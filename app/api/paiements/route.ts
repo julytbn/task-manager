@@ -95,7 +95,25 @@ export async function GET(request: Request) {
       try {
         const allPayments = await prisma.paiement.findMany({
           where,
-          include: { client: true, tache: true, projet: true, facture: true }
+          include: { 
+            client: true, 
+            tache: {
+              include: {
+                projet: true
+              }
+            },
+            projet: true, 
+            facture: {
+              include: {
+                paiements: true,
+                projet: true,
+                client: true
+              }
+            }
+          },
+          orderBy: {
+            datePaiement: 'desc'
+          }
         })
 
         // compute totals for this set

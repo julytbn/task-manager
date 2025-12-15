@@ -96,12 +96,18 @@ export default function NouveauFactureModal({
     sourceType: '', // 'abonnement', 'projet', 'service'
     montant: '',
     tauxTVA: 18,
+    description: '',
+    conditionsPaiement: '',
+    reference: '',
+    montantEnLettres: '',
     dateEmission: new Date().toISOString().split('T')[0],
     dateEcheance: '',
     statut: 'EN_ATTENTE',
     notes: '',
   })
 
+  const [lignes, setLignes] = useState<Array<any>>([])
+  const [documents, setDocuments] = useState<Array<any>>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [clients, setClients] = useState<any[]>([])
@@ -216,10 +222,16 @@ export default function NouveauFactureModal({
         montant: montantSansTVA,
         montantTotal,
         tauxTVA,
+        description: formData.description || undefined,
+        conditionsPaiement: formData.conditionsPaiement || undefined,
+        reference: formData.reference || undefined,
+        montantEnLettres: formData.montantEnLettres || undefined,
         dateEmission: formData.dateEmission,
         dateEcheance: formData.dateEcheance || undefined,
         statut: formData.statut,
         notes: formData.notes || undefined,
+        lignes: lignes.length ? lignes.map((l) => ({ designation: l.designation, intervenant: l.intervenant, montantAPayer: Number(l.montantAPayer) || 0, montantGlobal: Number(l.montantAPayer) || 0, ordre: l.ordre })) : undefined,
+        documentsRequis: documents.length ? documents.map((d) => ({ nom: d.nom, obligatoire: !!d.obligatoire, notes: d.notes || null })) : undefined,
       }
 
       onSave(newFacture)
@@ -235,11 +247,17 @@ export default function NouveauFactureModal({
         sourceType: '',
         montant: '',
         tauxTVA: 18,
+        description: '',
+        conditionsPaiement: '',
+        reference: '',
+        montantEnLettres: '',
         dateEmission: new Date().toISOString().split('T')[0],
         dateEcheance: '',
         statut: 'EN_ATTENTE',
         notes: '',
       })
+      setLignes([])
+      setDocuments([])
     } catch (err) {
       setError('Erreur lors de la création de la facture')
       console.error(err)
@@ -247,6 +265,16 @@ export default function NouveauFactureModal({
       setLoading(false)
     }
   }
+
+  const addLigne = () => {
+    setLignes((prev) => [...prev, { designation: '', intervenant: '', montantAPayer: 0, ordre: prev.length + 1 }])
+  }
+  const removeLigne = (idx: number) => setLignes((prev) => prev.filter((_, i) => i !== idx))
+  const updateLigne = (idx: number, key: string, value: any) => setLignes((prev) => prev.map((l, i) => i === idx ? { ...l, [key]: value } : l))
+
+  const addDocument = () => setDocuments((prev) => [...prev, { nom: '', obligatoire: false, notes: '' }])
+  const removeDocument = (idx: number) => setDocuments((prev) => prev.filter((_, i) => i !== idx))
+  const updateDocument = (idx: number, key: string, value: any) => setDocuments((prev) => prev.map((d, i) => i === idx ? { ...d, [key]: value } : d))
 
   if (!isOpen) return null
 
@@ -430,6 +458,89 @@ export default function NouveauFactureModal({
             <div>
               <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Notes</label>
               <textarea name="notes" value={formData.notes} onChange={handleChange} placeholder="Remarques ou conditions de paiement..." rows={3} className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white" />
+            </div>
+          </div>
+
+          {/* Pro Invoice Fields */}
+          <div className="border-t pt-4" style={{ borderColor: 'var(--color-border)' }}>
+            <h4 className="font-semibold text-[var(--color-anthracite)] mb-3">Informations professionnelles</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Description</label>
+                <textarea name="description" value={formData.description} onChange={handleChange} placeholder="Description générale de la facture..." rows={2} className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Conditions de paiement</label>
+                <input type="text" name="conditionsPaiement" value={formData.conditionsPaiement} onChange={handleChange} placeholder="Ex: Net 30 jours" className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white text-sm" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Référence</label>
+                <input type="text" name="reference" value={formData.reference} onChange={handleChange} placeholder="Référence client/interne" className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Montant en lettres</label>
+                <input type="text" name="montantEnLettres" value={formData.montantEnLettres} onChange={handleChange} placeholder="Ex: Quatre cent mille" className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white text-sm" />
+              </div>
+            </div>
+          </div>
+
+          {/* Invoice Lines */}
+          <div className="border-t pt-4" style={{ borderColor: 'var(--color-border)' }}>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-semibold text-[var(--color-anthracite)]">Lignes de facture</h4>
+              <button type="button" onClick={addLigne} className="flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition text-sm">
+                <Plus size={16} /> Ajouter ligne
+              </button>
+            </div>
+            <div className="space-y-2">
+              {lignes.length === 0 ? (
+                <p className="text-sm text-gray-500 italic">Aucune ligne. Cliquez sur "Ajouter ligne" pour en créer.</p>
+              ) : (
+                lignes.map((ligne, idx) => (
+                  <div key={idx} className="flex gap-2 items-end bg-gray-50 p-2 rounded">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-700">Désignation</label>
+                      <input type="text" value={ligne.designation} onChange={(e) => updateLigne(idx, 'designation', e.target.value)} placeholder="Ex: Service de..." className="w-full px-2 py-1 border border-gray-300 rounded bg-white text-sm" />
+                    </div>
+                    <div className="w-24">
+                      <label className="block text-xs font-medium text-gray-700">Montant HT</label>
+                      <input type="number" value={ligne.montantAPayer} onChange={(e) => updateLigne(idx, 'montantAPayer', parseFloat(e.target.value) || 0)} placeholder="0" step="100" className="w-full px-2 py-1 border border-gray-300 rounded bg-white text-sm" />
+                    </div>
+                    <button type="button" onClick={() => removeLigne(idx)} className="px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 transition text-sm">✕</button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Required Documents */}
+          <div className="border-t pt-4" style={{ borderColor: 'var(--color-border)' }}>
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-semibold text-[var(--color-anthracite)]">Documents à fournir</h4>
+              <button type="button" onClick={addDocument} className="flex items-center gap-1 px-3 py-1 bg-green-50 text-green-600 rounded hover:bg-green-100 transition text-sm">
+                <Plus size={16} /> Ajouter document
+              </button>
+            </div>
+            <div className="space-y-2">
+              {documents.length === 0 ? (
+                <p className="text-sm text-gray-500 italic">Aucun document requis. Cliquez sur "Ajouter document" pour en définir.</p>
+              ) : (
+                documents.map((doc, idx) => (
+                  <div key={idx} className="flex gap-2 items-end bg-gray-50 p-2 rounded">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-700">Nom du document</label>
+                      <input type="text" value={doc.nom} onChange={(e) => updateDocument(idx, 'nom', e.target.value)} placeholder="Ex: Passport, Facture..." className="w-full px-2 py-1 border border-gray-300 rounded bg-white text-sm" />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <input type="checkbox" checked={doc.obligatoire} onChange={(e) => updateDocument(idx, 'obligatoire', e.target.checked)} className="rounded" />
+                      <label className="text-xs text-gray-700">Obligatoire</label>
+                    </div>
+                    <button type="button" onClick={() => removeDocument(idx)} className="px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 transition text-sm">✕</button>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 

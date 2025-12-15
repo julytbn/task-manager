@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
@@ -12,7 +14,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
         taches: {
           include: { assigneA: { select: { nom: true, prenom: true } } }
         },
-        paiements: true
+        paiements: true,
+        lignes: true,
+        documentsRequis: true,
       }
     })
 
@@ -45,6 +49,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   try {
     const data = await request.json()
 
+    const session = await getServerSession(authOptions)
+
     const existing = await prisma.facture.findUnique({ where: { id: params.id } })
     if (!existing) {
       return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 })
@@ -57,16 +63,53 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     if (data.dateEcheance !== undefined) updateData.dateEcheance = data.dateEcheance ? new Date(data.dateEcheance) : null
     if (data.datePaiement !== undefined) updateData.datePaiement = data.datePaiement ? new Date(data.datePaiement) : null
     if (data.notes !== undefined) updateData.notes = data.notes
+    if (data.description !== undefined) updateData.description = data.description
+    if (data.conditionsPaiement !== undefined) updateData.conditionsPaiement = data.conditionsPaiement
+    if (data.reference !== undefined) updateData.reference = data.reference
+    if (data.montantEnLettres !== undefined) updateData.montantEnLettres = data.montantEnLettres
+    if (data.signatureUrl !== undefined) updateData.signatureUrl = data.signatureUrl
 
-    // Recalcul montantTotal si montant ou tauxTVA change (utiliser des réels et arrondir)
-    if (data.montant !== undefined || data.tauxTVA !== undefined) {
-      const montant = Number((data.montant ?? existing.montant) ?? 0)
-      const tva = Number((data.tauxTVA ?? existing.tauxTVA) ?? 0)
-      const montantTotal = montant * (1 + tva)
-      // arrondir à 2 décimales
-      updateData.montantTotal = Number(montantTotal.toFixed(2))
+    // Autorisation: Seuls ADMIN ou MANAGER peuvent valider une facture
+    if ((data.dateValidation !== undefined || data.valideeParId !== undefined || data.statut === 'VALIDEE')) {
+      if (!session || !session.user || (session.user.role !== 'ADMIN' && session.user.role !== 'MANAGER')) {
+        return NextResponse.json({ error: 'Accès refusé: droits insuffisants' }, { status: 403 })
+      }
+      if (data.dateValidation !== undefined) updateData.dateValidation = data.dateValidation ? new Date(data.dateValidation) : null
+      if (data.valideeParId !== undefined) updateData.valideeParId = data.valideeParId
+    }
+
+    // Mise à jour du montant total (sans TVA)
+    if (data.montant !== undefined) {
+      const montant = Number(data.montant) || 0
+      updateData.montantTotal = Number(montant.toFixed(2))
       updateData.montant = Number(montant.toFixed(2))
-      updateData.tauxTVA = Number(tva)
+      updateData.tauxTVA = 0
+    }
+
+    // Si lignes sont fournies, les remplacer (supprimer anciennes, créer nouvelles)
+    if (Array.isArray(data.lignes) && data.lignes.length) {
+      await prisma.factureLigne.deleteMany({ where: { factureId: params.id } })
+      updateData.lignes = {
+        create: data.lignes.map((l: any) => ({
+          designation: l.designation,
+          intervenant: l.intervenant || null,
+          montantAPayer: Number(l.montantAPayer) || 0,
+          montantGlobal: Number(l.montantGlobal) || (Number(l.montantAPayer) || 0),
+          ordre: typeof l.ordre === 'number' ? l.ordre : 0,
+        }))
+      }
+    }
+
+    // Si documentsRequis sont fournis, les remplacer
+    if (Array.isArray(data.documentsRequis) && data.documentsRequis.length) {
+      await prisma.factureDocument.deleteMany({ where: { factureId: params.id } })
+      updateData.documentsRequis = {
+        create: data.documentsRequis.map((d: any) => ({
+          nom: d.nom,
+          obligatoire: !!d.obligatoire,
+          notes: d.notes || null,
+        }))
+      }
     }
 
     const updated = await prisma.facture.update({
@@ -76,7 +119,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         client: true,
         projet: true,
         taches: true,
-        paiements: true
+        paiements: true,
+        lignes: true,
+        documentsRequis: true,
       }
     })
 

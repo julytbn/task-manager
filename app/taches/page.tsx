@@ -50,13 +50,61 @@ export default function TachesPage() {
     })
   }, [tasks, filters])
 
-  const handleEdit = (task: any) => {
-    console.log('Éditer tâche:', task)
-  }
+  const handleEdit = async (task: any) => {
+    try {
+      const response = await fetch(`/api/taches/${task.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          titre: task.titre,
+          description: task.description,
+          statut: task.statut,
+          priorite: task.priorite,
+          dateEcheance: task.dateEcheance,
+          assigneAId: task.assigneA?.id || null
+        })
+      });
 
-  const handleDelete = (task: any) => {
-    console.log('Supprimer tâche:', task)
-  }
+      if (response.ok) {
+        // Rafraîchir la liste des tâches
+        const updatedTasks = await fetch('/api/taches').then(res => res.json());
+        setTasks(updatedTasks);
+        alert('Tâche mise à jour avec succès');
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || 'Erreur lors de la mise à jour');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour de la tâche:', error);
+      alert(error.message || 'Erreur lors de la mise à jour de la tâche');
+    }
+  };
+
+  const handleDelete = async (task: any) => {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer la tâche "${task.titre}" ?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/taches/${task.id}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        // Mettre à jour l'état local en supprimant la tâche
+        setTasks(prevTasks => prevTasks.filter(t => t.id !== task.id));
+        alert('Tâche supprimée avec succès');
+      } else {
+        const error = await response.json();
+        throw new Error(error.error || 'Erreur lors de la suppression');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la tâche:', error);
+      alert(error.message || 'Erreur lors de la suppression de la tâche');
+    }
+  };
 
   const handleView = (task: any) => {
     console.log('Afficher tâche:', task)

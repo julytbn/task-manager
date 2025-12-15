@@ -1,33 +1,26 @@
 "use client"
 import { DollarSign, TrendingDown, CheckCircle2, Clock } from 'lucide-react'
+import useFormatage from '@/hooks/useFormatage'
 
-type Paiement = {
-  id: string
-  client?: string
-  projet?: string
-  montantTotal?: number
-  montantPayé?: number
-  soldeRestant?: number
-  methodePaiement?: string
-  statut: 'payé' | 'partiel' | 'impayé'
-  date?: string
-  montant?: number
-  factureId?: string
-  facture?: { numero?: string; client?: { nom?: string } }
-}
+import { Paiement as PaiementType } from '../app/paiements/page'
 
 interface PaiementsOverviewProps {
-  paiements: Paiement[]
+  paiements: PaiementType[]
 }
 
 export default function PaiementsOverview({
   paiements,
 }: PaiementsOverviewProps) {
+  const { formaterMontant } = useFormatage()
   // Calculate totals from paiements array
-  const totalEncaisse = paiements.reduce((sum, p) => sum + (p.montantPayé || 0), 0)
-  const totalRestant = paiements.reduce((sum, p) => sum + (p.soldeRestant || 0), 0)
-  const nombreConfirmes = paiements.filter(p => p.statut === 'payé').length
-  const nombreEnAttente = paiements.filter(p => p.statut === 'impayé').length
+  const totalEncaisse = paiements.reduce((sum, p) => sum + (p.montant || 0), 0)
+  const totalRestant = paiements.reduce((sum, p) => {
+    const montantFacture = p.facture?.montantTotal || p.facture?.montant || 0
+    const montantPaye = p.montant || 0
+    return sum + (montantFacture - montantPaye)
+  }, 0)
+  const nombreConfirmes = paiements.filter(p => p.statut === 'CONFIRME').length
+  const nombreEnAttente = paiements.filter(p => p.statut === 'EN_ATTENTE').length
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -40,7 +33,7 @@ export default function PaiementsOverview({
           </div>
         </div>
         <div className="text-3xl font-bold text-gray-900 mb-2">
-          {(totalEncaisse || 0).toLocaleString('fr-FR')} FCFA
+          {formaterMontant(totalEncaisse)}
         </div>
         <p className="text-xs text-green-600 font-medium">↑ +12% ce mois</p>
       </div>
@@ -54,7 +47,7 @@ export default function PaiementsOverview({
           </div>
         </div>
         <div className="text-3xl font-bold text-gray-900 mb-2">
-          {(totalRestant || 0).toLocaleString('fr-FR')} FCFA
+          {formaterMontant(totalRestant)}
         </div>
         <p className="text-xs text-orange-600 font-medium">À suivre</p>
       </div>

@@ -37,6 +37,11 @@ export default function PaiementDetailPage() {
   if (error) return <MainLayout><div className="bg-red-50 text-red-700 p-4 rounded">{error}</div></MainLayout>
   if (!paiement) return <MainLayout><div className="text-center py-8 text-gray-500">Paiement non trouvé</div></MainLayout>
 
+  // Calculs liés à la facture associée (montant TTC et restant)
+  const montantFacture = paiement.facture?.montantTotal ?? paiement.facture?.montant ?? 0
+  const totalFacturePayes = (paiement.facture?.paiements || []).reduce((s: number, p: any) => s + (p?.montant || 0), 0)
+  const restant = Math.max(montantFacture - totalFacturePayes, 0)
+
   return (
     <MainLayout>
       <div className="mb-6">
@@ -88,6 +93,23 @@ export default function PaiementDetailPage() {
             <span className="text-[var(--color-anthracite)]">Date de paiement</span>
             <span className="font-medium">{paiement.datePaiement ? new Date(paiement.datePaiement).toLocaleDateString('fr-FR') : '—'}</span>
           </div>
+
+          {paiement.facture && (
+            <>
+              <div className="flex justify-between">
+                <span className="text-[var(--color-anthracite)]">Montant facture (TTC)</span>
+                <span className="font-medium">{montantFacture.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--color-anthracite)]">Total payé (facture)</span>
+                <span className="font-medium">{totalFacturePayes.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--color-anthracite)]">Reste à payer</span>
+                <span className="font-bold text-xl text-[var(--color-gold)]">{restant.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}</span>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="flex gap-3 pt-4">

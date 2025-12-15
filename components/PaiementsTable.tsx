@@ -1,17 +1,19 @@
 "use client"
 import { useState } from 'react'
 import { Search, Filter, Eye, Edit2, Trash2 } from 'lucide-react'
+import { formatMontant } from '@/lib/paiementUtils'
+import { Paiement } from '../app/paiements/page'
 
-interface Paiement {
-  id: string
-  client?: any
-  projet?: any
+// Type pour les données de la table qui étend Paiement avec des champs supplémentaires pour l'affichage
+interface PaiementTableItem extends Paiement {
+  // Champs supplémentaires pour la table
+  displayClient?: string
+  displayProjet?: string
   montantTotal?: number
-  montantPayé?: number
+  montantPaye?: number
+  totalPaye?: number  // Total des paiements pour cette facture
   soldeRestant?: number
-  methodePaiement?: string
-  statut: 'payé' | 'partiel' | 'impayé'
-  date?: string
+  dateAffichage?: string
 }
 
 interface PaiementsTableProps {
@@ -28,25 +30,61 @@ export default function PaiementsTable({
   onDelete
 }: PaiementsTableProps) {
   const [searchQuery, setSearchQuery] = useState('')
-  const [filtreStatut, setFiltreStatut] = useState<'tous' | 'payé' | 'partiel' | 'impayé'>('tous')
+  const [filtreStatut, setFiltreStatut] = useState<'tous' | 'EN_ATTENTE' | 'CONFIRME' | 'REFUSE' | 'REMBOURSE'>('tous')
   const [filtreProjet, setFiltreProjet] = useState('tous')
 
-  // Helper to convert various client/projet shapes into a searchable/displayable string
-  const toText = (val: any) => {
-    if (!val) return ''
-    if (typeof val === 'string' || typeof val === 'number') return String(val)
-    if (typeof val === 'object') return (val.nom ?? val.titre ?? val.name ?? val.label ?? '')
-    return String(val)
-  }
 
   const lowerQuery = searchQuery.toLowerCase()
-  const paiementsFiltrés = paiements.filter((p) => {
-    const clientText = toText(p.client).toLowerCase()
-    const projetText = toText(p.projet).toLowerCase()
+  // Préparer les données pour l'affichage
+  const paiementsAvecAffichage = paiements.map(p => {
+    const clientText = p.client ? `${p.client.prenom || ''} ${p.client.nom}`.trim() : ''
+    const projetText = p.projet?.nom || ''
+    
+    // Récupérer le montant total de la facture (montantTotal est le TTC depuis le backend)
+    const montantTotalFacture = p.facture?.montantTotal || p.facture?.montant || 0
+    
+    // Calculer le total des paiements pour cette facture
+    // Si la facture a des paiements inclus, on les utilise, sinon on utilise le paiement actuel
+    let totalPaye = p.montant || 0
+    if (p.facture?.paiements?.length > 0) {
+      totalPaye = p.facture.paiements.reduce((sum, paie) => sum + (paie.montant || 0), 0)
+    }
+    
+    // Calculer le solde restant
+    const soldeRestant = Math.max(0, montantTotalFacture - totalPaye)
+    
+    // Formater les dates
+    let dateAffichage = 'N/A'
+    try {
+      dateAffichage = p.datePaiement 
+        ? new Date(p.datePaiement).toLocaleDateString('fr-FR') 
+        : 'N/A'
+    } catch (e) {
+      console.error('Erreur de format de date:', p.datePaiement, e)
+    }
+    
+    return {
+      ...p,
+      displayClient: clientText,
+      displayProjet: projetText,
+      montantTotal: montantTotalFacture,  // Montant total de la facture
+      montantPaye: p.montant || 0,        // Montant du paiement actuel
+      totalPaye,                          // Total des paiements pour cette facture
+      soldeRestant,                       // Solde restant après tous les paiements
+      dateAffichage
+    } as PaiementTableItem
+  })
 
-    const matchSearch = clientText.includes(lowerQuery) || projetText.includes(lowerQuery)
+  // Filtrer les paiements
+  const paiementsFiltrés = paiementsAvecAffichage.filter((p) => {
+    const matchSearch = 
+      p.displayClient?.toLowerCase().includes(lowerQuery) || 
+      p.displayProjet?.toLowerCase().includes(lowerQuery) ||
+      p.facture?.numero?.toLowerCase().includes(lowerQuery) ||
+      p.reference?.toLowerCase().includes(lowerQuery)
+      
     const matchStatut = filtreStatut === 'tous' || p.statut === filtreStatut
-    const matchProjet = filtreProjet === 'tous' || (toText(p.projet) === filtreProjet)
+    const matchProjet = filtreProjet === 'tous' || p.displayProjet === filtreProjet
 
     return matchSearch && matchStatut && matchProjet
   })
@@ -54,25 +92,38 @@ export default function PaiementsTable({
   const getStatutBadge = (statut: string) => {
     switch (statut) {
       case 'payé':
+      case 'CONFIRME':
         return (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
             🟢 Payé
           </span>
         )
       case 'partiel':
+      case 'EN_ATTENTE':
         return (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-            🟡 Partiel
+            🟡 En attente
           </span>
         )
       case 'impayé':
+      case 'REFUSE':
         return (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-            🔴 Impayé
+            🔴 Refusé
+          </span>
+        )
+      case 'REMBOURSE':
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+            🔄 Remboursé
           </span>
         )
       default:
-        return null
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+            ⚪ {statut}
+          </span>
+        )
     }
   }
 
@@ -137,20 +188,24 @@ export default function PaiementsTable({
             {paiementsFiltrés.map((p) => (
               <tr key={p.id} className="border-b border-gray-100 hover:bg-blue-50 transition">
                 <td className="px-6 py-4 text-sm text-gray-600">{p.id.slice(0, 8)}</td>
-                <td className="px-6 py-4 text-sm font-medium text-gray-900">{toText(p.client)}</td>
-                <td className="px-6 py-4 text-sm text-gray-700">{toText(p.projet)}</td>
-                <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                  {(p.montantTotal || 0).toLocaleString('fr-FR')} FCFA
+                <td className="px-6 py-4 text-sm font-medium text-gray-900">{p.displayClient || 'N/A'}</td>
+                <td className="px-6 py-4 text-sm text-gray-700">{p.displayProjet || 'N/A'}</td>
+                <td className="px-6 py-4 text-sm font-semibold text-gray-900 whitespace-nowrap">
+                  {formatMontant(p.montantTotal || 0)}
                 </td>
-                <td className="px-6 py-4 text-sm text-green-600 font-medium">
-                  {(p.montantPayé || 0).toLocaleString('fr-FR')} FCFA
+                <td className="px-6 py-4 text-sm text-green-600 font-medium whitespace-nowrap">
+                  {formatMontant(p.totalPaye || 0)}
                 </td>
-                <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                  {(p.soldeRestant || 0).toLocaleString('fr-FR')} FCFA
+                <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
+                  {formatMontant(p.soldeRestant || 0)}
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-600">{p.methodePaiement}</td>
+                <td className="px-6 py-4 text-sm text-gray-600">
+                  {p.moyenPaiement || 'Non spécifié'}
+                </td>
                 <td className="px-6 py-4">{getStatutBadge(p.statut)}</td>
-                <td className="px-6 py-4 text-sm text-gray-600">{p.date}</td>
+                <td className="px-6 py-4 text-sm text-gray-600">
+                  {p.dateAffichage}
+                </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
                     <button

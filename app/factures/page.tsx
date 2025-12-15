@@ -14,13 +14,25 @@ type Facture = {
   numero: string
   client: { id: string; nom: string }
   service?: { id: string; nom: string }
-  projet?: { id: string; titre: string }
+  projet?: { 
+    id: string; 
+    titre: string; 
+    montantTotal?: number; 
+    dateEcheance?: string | null 
+  }
   statut: string
   montant: number
   montantTotal: number
   montantPaye?: number
+  montantRestant?: number
   dateEmission: string
   dateEcheance?: string | null
+  paiements?: Array<{
+    id: string
+    montant: number
+    datePaiement: string
+    statut: string
+  }>
 }
 
 export default function FacturesPage() {
@@ -39,14 +51,16 @@ export default function FacturesPage() {
     const fetchFactures = async () => {
       setLoading(true)
       try {
+        console.log('Fetching factures...')
         const res = await fetch('/api/factures')
         if (!res.ok) throw new Error('Erreur récupération factures')
         const data = await res.json()
+        console.log('Factures reçues:', data)
         setFactures(data || [])
         setError(null)
       } catch (err) {
+        console.error('Erreur lors de la récupération des factures:', err)
         setError((err as any).message || 'Erreur')
-        console.error(err)
       } finally {
         setLoading(false)
       }
@@ -219,13 +233,16 @@ export default function FacturesPage() {
             <tbody>
               {factures.map((facture) => {
                 const badge = getStatusBadge(facture.statut)
+                console.log('Facture à afficher:', facture)
                 const montantTTC = facture.montantTotal ?? facture.montant
                 const montantPaye = facture.montantPaye ?? 0
-                const montantRestant = Math.max(0, montantTTC - montantPaye)
+                const montantRestant = facture.montantRestant ?? Math.max(0, montantTTC - montantPaye)
                 const dateEmission = new Date(facture.dateEmission).toLocaleDateString('fr-FR')
                 const dateEcheance = facture.dateEcheance 
                   ? new Date(facture.dateEcheance).toLocaleDateString('fr-FR')
-                  : '—'
+                  : (facture.projet?.dateEcheance 
+                      ? new Date(facture.projet.dateEcheance).toLocaleDateString('fr-FR')
+                      : '—')
                 
                 return (
                   <tr key={facture.id} className="border-b hover:bg-gray-50 transition">

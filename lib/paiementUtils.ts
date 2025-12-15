@@ -68,15 +68,21 @@ export function validateTransactionReference(reference: string): boolean {
 }
 
 /**
- * Formate un montant pour l'affichage
+ * Formate un montant pour l'affichage avec FCFA comme devise par défaut
  */
-export function formatMontant(montant: number, devise: string = 'CFA'): string {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR', // Utiliser EUR pour la mise en forme
+export function formatMontant(montant: number | string, devise: string = 'FCFA'): string {
+  // Convertir en nombre si c'est une chaîne
+  const montantNum = typeof montant === 'string' ? parseFloat(montant) : montant;
+  
+  if (isNaN(montantNum)) return '0 FCFA';
+  
+  // Formater le nombre avec des séparateurs de milliers
+  const formatted = new Intl.NumberFormat('fr-FR', {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(montant).replace('€', devise)
+    maximumFractionDigits: 0
+  }).format(montantNum);
+  
+  return `${formatted} ${devise}`;
 }
 
 /**

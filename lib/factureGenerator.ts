@@ -61,9 +61,9 @@ export function generateFactureHTML(facture: FactureData): string {
     siteWeb: 'www.kekeligroup.com',
   }
 
-  const tauxTVA = facture.tauxTVA || 18
-  const montantSansTVA = facture.montant || (facture.montantTotal / (1 + tauxTVA / 100))
-  const montantTVA = facture.montantTotal - montantSansTVA
+  // Pas de TVA
+  const montantSansTVA = facture.montant || facture.montantTotal
+  const montantTVA = 0
 
   // Calcul du montant payé et du restant à payer
   const montantPaye = typeof facture.montantPaye === 'number'
@@ -389,14 +389,6 @@ export function generateFactureHTML(facture: FactureData): string {
         <!-- Totaux -->
         <div class="total-section">
           <div class="total-box">
-            <div class="total-row">
-              <span>Sous-total</span>
-              <span>${formatDevise(montantSansTVA)}</span>
-            </div>
-            <div class="total-row">
-              <span>TVA (${tauxTVA}%)</span>
-              <span>${formatDevise(montantTVA)}</span>
-            </div>
             <div class="paid-row">
               <span>Montant payé</span>
               <span>${formatDevise(montantPaye)}</span>
@@ -406,7 +398,7 @@ export function generateFactureHTML(facture: FactureData): string {
               <span>${formatDevise(restantAPayer)}</span>
             </div>
             <div class="total-row total">
-              <span>TOTAL TTC</span>
+              <span>TOTAL</span>
               <span>${formatDevise(facture.montantTotal)}</span>
             </div>
           </div>

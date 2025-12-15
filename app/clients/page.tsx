@@ -35,13 +35,24 @@ export default function ClientsPage() {
 
   const fetchClients = async () => {
     try {
+      console.log('[CLIENTS PAGE] Fetching clients from API...')
       setIsLoading(true)
       const response = await fetch('/api/clients')
-      if (!response.ok) throw new Error('Erreur lors de la récupération')
+      console.log('[CLIENTS PAGE] API Response status:', response.status)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('[CLIENTS PAGE] API Error:', errorData)
+        throw new Error(`API Error: ${response.status} - ${JSON.stringify(errorData)}`)
+      }
+      
       const data = await response.json()
+      console.log('[CLIENTS PAGE] Received data:', data)
+      console.log('[CLIENTS PAGE] Data length:', Array.isArray(data) ? data.length : 'Not an array')
       setClients(data || [])
     } catch (error) {
-      console.error('Erreur:', error)
+      console.error('[CLIENTS PAGE] Erreur:', error)
+      alert(`Erreur lors du chargement des clients: ${error}`)
     } finally {
       setIsLoading(false)
     }

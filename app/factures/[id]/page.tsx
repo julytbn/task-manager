@@ -83,9 +83,9 @@ export default function FactureDetailPage() {
   if (error) return <UiLayout><div className="bg-red-50 text-red-700 p-4 rounded mb-4">{error}</div></UiLayout>
   if (!facture) return <UiLayout><div className="text-center py-8 text-[var(--color-anthracite)]">Facture non trouvée</div></UiLayout>
 
-  const montantHT = facture.montant
-  const tva = montantHT * facture.tauxTVA
-  const montantTTC = facture.montantTotal
+  const montantHT = facture.montant || 0
+  const tva = (montantHT * (facture.tauxTVA || 0)) || 0
+  const montantTTC = facture.montantTotal || (montantHT + tva) || 0
 
   const getStatutColor = (statut: string) => {
     switch (statut) {

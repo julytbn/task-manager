@@ -6,18 +6,30 @@ import { sendEmail, generateTaskAssignmentEmail } from '@/lib/email'
 import fs from 'fs'
 import path from 'path'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions)
+    const url = new URL(request.url)
+    const queryUserId = url.searchParams.get('userId')
     
     // Logs uniquement en développement pour éviter d'exposer les données sensibles
     if (process.env.NODE_ENV === 'development') {
       console.log('📋 [GET /api/taches] User authenticated:', !!session?.user?.id)
+      console.log('📋 [GET /api/taches] User role:', session?.user?.role)
+      console.log('📋 [GET /api/taches] Query userId:', queryUserId)
     }
 
     const where: any = {}
-    // If the user is an employee, return only tasks assigned to them
-    if (session?.user?.role === 'EMPLOYE' && session.user.id) {
+    
+    // Si un userId est spécifié en query, l'utiliser
+    if (queryUserId) {
+      where.assigneAId = queryUserId
+      if (process.env.NODE_ENV === 'development') {
+        console.log('📋 [GET /api/taches] Filtre par userId appliqué:', queryUserId)
+      }
+    }
+    // Sinon, si l'utilisateur est un employé, retourner ses tâches
+    else if (session?.user?.role === 'EMPLOYE' && session.user.id) {
       where.assigneAId = session.user.id
       if (process.env.NODE_ENV === 'development') {
         console.log('📋 [GET /api/taches] Filtre EMPLOYE appliqué')
@@ -162,7 +174,7 @@ export async function POST(request: Request) {
     })
 
     // Send email to assignee if a task is assigned
-    if (data.assigneA && nouvelleTache.assigneA?.email) {
+    if (data.assigneAId && nouvelleTache.assigneA?.email) {
       try {
         // Get assigner name (the user creating the task)
         let assignerName = 'Un manager'

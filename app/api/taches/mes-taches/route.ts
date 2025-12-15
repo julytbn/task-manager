@@ -53,7 +53,10 @@ export async function GET() {
 
     console.log(`📝 [GET /api/taches/mes-taches] Employé ${session.user.id} a ${mesTaches.length} tâche(s) assignée(s)`)
 
-    return NextResponse.json(mesTaches)
+    return NextResponse.json({
+      success: true,
+      data: mesTaches
+    })
   } catch (error) {
     console.error('Erreur récupération mes-taches:', error)
     return NextResponse.json(

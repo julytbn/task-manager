@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { StatutTimeSheet } from "@prisma/client";
+import { salaryForecastService } from "@/lib/services/salaryForecasting/salaryForecastService";
 
 /**
  * Service pour gérer les feuilles de temps (Timesheets)
@@ -235,7 +236,7 @@ class TimesheetService {
    * Valider une feuille de temps
    */
   async validateTimesheet(id: string, validateurId: string) {
-    return prisma.timeSheet.update({
+    const timesheet = await prisma.timeSheet.update({
       where: { id },
       data: {
         statut: 'VALIDEE',
@@ -266,6 +267,21 @@ class TimesheetService {
         } as any,
       },
     });
+
+    // Recalculer la prévision salariale après validation
+    try {
+      await salaryForecastService.recalculateSalaryForecast(
+        timesheet.employeeId,
+        timesheet.date
+      );
+    } catch (error) {
+      console.error(
+        `[TimesheetService] Erreur lors du recalcul de la prévision salariale: ${error}`
+      );
+      // On ne lance pas l'erreur pour ne pas bloquer la validation du timesheet
+    }
+
+    return timesheet;
   }
 
   /**

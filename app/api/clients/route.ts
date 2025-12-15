@@ -3,14 +3,17 @@ import { prisma } from '../../../lib/prisma'
 
 export async function GET() {
   try {
+    console.log('[API CLIENTS] Fetching clients...')
     const clients = await prisma.client.findMany({
       orderBy: { nom: 'asc' },
       include: {
         _count: { select: { projets: true } },
-        factures: { select: { montantTotal: true } },
+        factures: { select: { montant: true } },
         projets: { select: { montantTotal: true, budget: true } }
       }
     })
+
+    console.log(`[API CLIENTS] Found ${clients.length} clients`)
 
     // Calculer un résumé allégé pour le frontend :
     // - projetsCount : nombre de projets
@@ -18,7 +21,7 @@ export async function GET() {
     // - montantFactures : somme des factures.montantTotal
     // Par compatibilité, `montantTotal` sera défini sur `montantProjets` (demande: montant total des projets)
     const result = clients.map((c) => {
-      const montantFactures = (c.factures || []).reduce((sum, f) => sum + (f.montantTotal || 0), 0)
+      const montantFactures = (c.factures || []).reduce((sum, f) => sum + (f.montant || 0), 0)
       const montantProjets = (c.projets || []).reduce((sum, p) => sum + ((p.montantTotal ?? p.budget) || 0), 0)
       return {
         id: c.id,
@@ -37,10 +40,11 @@ export async function GET() {
       }
     })
 
+    console.log(`[API CLIENTS] Returning ${result.length} clients`)
     return NextResponse.json(result)
   } catch (error) {
     console.error('GET /api/clients error', error)
-    return NextResponse.json({ error: 'Failed to fetch clients' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to fetch clients', details: String(error) }, { status: 500 })
   }
 }
 
@@ -60,7 +64,8 @@ export async function POST(request: Request) {
         entreprise: data.entreprise || null,
         adresse: data.adresse || null,
         type: data.type || 'PARTICULIER',
-        dateNaissance: data.dateNaissance ? new Date(data.dateNaissance) : null
+        dateNaissance: data.dateNaissance ? new Date(data.dateNaissance) : null,
+        gudefUrl: data.gudefUrl || null
       }
     })
 
@@ -86,7 +91,8 @@ export async function PUT(request: Request) {
         entreprise: data.entreprise || null,
         adresse: data.adresse || null,
         type: data.type,
-        dateNaissance: data.dateNaissance ? new Date(data.dateNaissance) : null
+        dateNaissance: data.dateNaissance ? new Date(data.dateNaissance) : null,
+        gudefUrl: data.gudefUrl || null
       }
     })
 
