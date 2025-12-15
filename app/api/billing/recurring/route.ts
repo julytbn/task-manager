@@ -114,7 +114,7 @@ export async function GET() {
       select: {
         id: true,
         numero: true,
-        montantTotal: true,
+        montant: true,
         dateEmission: true,
         dateEcheance: true,
         client: {

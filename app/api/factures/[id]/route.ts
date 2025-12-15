@@ -34,7 +34,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     return NextResponse.json({
       ...facture,
       montantPaye,
-      montantRestant: Math.max(0, facture.montantTotal - montantPaye)
+      montantRestant: Math.max(0, (facture.montant || 0) - montantPaye)
     })
   } catch (error) {
     console.error('Erreur récupération facture:', error)
@@ -78,12 +78,10 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       if (data.valideeParId !== undefined) updateData.valideeParId = data.valideeParId
     }
 
-    // Mise à jour du montant total (sans TVA)
+    // Mise à jour du montant
     if (data.montant !== undefined) {
       const montant = Number(data.montant) || 0
-      updateData.montantTotal = Number(montant.toFixed(2))
       updateData.montant = Number(montant.toFixed(2))
-      updateData.tauxTVA = 0
     }
 
     // Si lignes sont fournies, les remplacer (supprimer anciennes, créer nouvelles)
@@ -131,7 +129,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       where: { factureId: params.id }
     })
     const totalPaid = Number((sumResult._sum.montant ?? 0))
-    const restantRaw = Number(updated.montantTotal) - totalPaid
+    const restantRaw = Number(updated.montant || 0) - totalPaid
     const restant = restantRaw > 0 ? Number(restantRaw.toFixed(2)) : 0
 
     // Retourner la facture mise à jour avec le champ calculé `restant`

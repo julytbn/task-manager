@@ -27,7 +27,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
     // Calculs des montants
     const montantHT = facture.montant || 0
-    const tauxTVA = facture.tauxTVA || 0.18
+    const tauxTVA = 0.18 // TVA par défaut
     const montantTVA = montantHT * tauxTVA
     const montantTTC = montantHT + montantTVA
 

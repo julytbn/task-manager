@@ -82,8 +82,6 @@ export async function POST(
       data: {
         numero: body.numero,
         montant: parseFloat(body.montant),
-        tauxTVA: parseFloat(body.tauxTVA) || 18,
-        montantTotal: parseFloat(body.montantTotal),
         dateEcheance: body.dateEcheance ? new Date(body.dateEcheance) : null,
         notes: body.notes || null,
         client: { connect: { id: body.clientId || project.clientId } },

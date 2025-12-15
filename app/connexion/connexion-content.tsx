@@ -17,7 +17,7 @@ function ConnexionContent() {
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    const message = searchParams.get('message')
+    const message = searchParams?.get('message')
     if (message) {
       setErreur('')
     }
@@ -90,10 +90,10 @@ function ConnexionContent() {
                 </div>
               )}
 
-              {searchParams.get('message') && (
+              {searchParams?.get('message') && (
                 <div className="p-4 rounded-lg border border-green-200 bg-green-50 flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-green-600"></div>
-                  <span className="text-green-800 text-sm font-medium">{searchParams.get('message')}</span>
+                  <span className="text-green-800 text-sm font-medium">{searchParams?.get('message')}</span>
                 </div>
               )}
 

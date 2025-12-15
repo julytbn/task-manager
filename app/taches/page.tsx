@@ -78,7 +78,8 @@ export default function TachesPage() {
       }
     } catch (error) {
       console.error('Erreur lors de la mise à jour de la tâche:', error);
-      alert(error.message || 'Erreur lors de la mise à jour de la tâche');
+      const message = error instanceof Error ? error.message : 'Étapes lors de la mise à jour de la tâche';
+      alert(message);
     }
   };
 
@@ -102,7 +103,8 @@ export default function TachesPage() {
       }
     } catch (error) {
       console.error('Erreur lors de la suppression de la tâche:', error);
-      alert(error.message || 'Erreur lors de la suppression de la tâche');
+      const message = error instanceof Error ? error.message : 'Étapes lors de la suppression de la tâche';
+      alert(message);
     }
   };
 
