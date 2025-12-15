@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/taches/mes-taches
  * Récupère toutes les tâches assignées à l'employé connecté

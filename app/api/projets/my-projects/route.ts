@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/lib/auth'
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/projets/my-projects
  * Récupère les projets de l'employé connecté

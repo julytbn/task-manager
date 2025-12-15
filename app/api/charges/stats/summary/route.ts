@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/charges/stats/summary
  * Obtenir un résumé des charges par catégorie, projet, etc.

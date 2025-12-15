@@ -1,12 +1,28 @@
 {
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
   "crons": [
     {
       "path": "/api/cron/generate-invoices",
-      "schedule": "0 8 * * *"
+      "schedule": "0 0 1 * *",
+      "description": "Generate monthly subscription invoices - 1st of month at midnight"
+    },
+    {
+      "path": "/api/cron/check-late-payments",
+      "schedule": "0 8 * * *",
+      "description": "Check late payments and send reminders - Daily at 8:00 AM"
     },
     {
       "path": "/api/cron/salary-notifications",
-      "schedule": "0 9 * * *"
+      "schedule": "0 9 * * *",
+      "description": "Send salary payment notifications - Daily at 9:00 AM"
+    },
+    {
+      "path": "/api/cron/check-late-tasks",
+      "schedule": "0 10 * * *",
+      "description": "Check late tasks and notify managers - Daily at 10:00 AM"
     }
   ]
 }

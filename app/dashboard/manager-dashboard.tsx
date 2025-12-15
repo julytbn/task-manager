@@ -4,6 +4,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 import { Line, Doughnut } from 'react-chartjs-2';
 import MainLayout from '@/components/MainLayout';
 import AnalyticsDashboard from './analytics-dashboard';
+import { useUserSession } from '@/hooks/useSession';
 
 // Types
 type Task = {
@@ -40,21 +41,57 @@ type User = {
 };
 
 export default function ManagerDashboard() {
-  // Simulation d'un utilisateur administrateur pour le test
-  const [user, setUser] = useState<User>({ role: 'ADMIN' });
-  const [loading, setLoading] = useState(false);
+  const { user: sessionUser, isLoading: isSessionLoading } = useUserSession();
+  const [user, setUser] = useState<User>({ role: 'MANAGER' });
+  const [loading, setLoading] = useState(true);
   
-  // Données simulées
-  const [tasks, setTasks] = useState<Task[]>([
-    { id: '1', title: 'Tâche 1', status: 'TODO', priority: 'HIGH', dueDate: '2023-12-15' },
-    { id: '2', title: 'Tâche 2', status: 'IN_PROGRESS', priority: 'MEDIUM', dueDate: '2023-12-20' },
-    { id: '3', title: 'Tâche 3', status: 'DONE', priority: 'LOW', dueDate: '2023-12-10' },
-  ]);
+  // Données récupérées de la base de données
+  const [tasks, setTasks] = useState<Task[]>([]);
 
-  const [payments, setPayments] = useState<Payment[]>([
-    { id: '1', amount: 1000, status: 'PAID', date: '2023-12-01', description: 'Paiement 1' },
-    { id: '2', amount: 500, status: 'PENDING', date: '2023-12-05', description: 'Paiement 2' },
-  ]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+
+  // Récupérer les données de la base de données
+  useEffect(() => {
+    if (isSessionLoading) return;
+    
+    let mounted = true;
+    
+    (async () => {
+      try {
+        setLoading(true);
+        
+        // Récupérer les tâches et les paiements
+        const [tasksRes, paymentsRes] = await Promise.all([
+          fetch('/api/taches'),
+          fetch('/api/paiements')
+        ]);
+        
+        if (tasksRes.ok && mounted) {
+          const tasksData = await tasksRes.json();
+          setTasks(tasksData || []);
+        }
+        
+        if (paymentsRes.ok && mounted) {
+          const paymentsData = await paymentsRes.json();
+          setPayments(paymentsData || []);
+        }
+
+        if (sessionUser && mounted) {
+          setUser({ id: sessionUser.id, role: sessionUser.role });
+        }
+      } catch (error) {
+        console.error('Erreur récupération dashboard manager:', error);
+        if (mounted) {
+          setTasks([]);
+          setPayments([]);
+        }
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    
+    return () => { mounted = false; };
+  }, [isSessionLoading, sessionUser]);
 
   const paymentsTotals = useMemo(() => {
     const paid = payments

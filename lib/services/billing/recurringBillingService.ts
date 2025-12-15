@@ -96,9 +96,7 @@ class RecurringBillingService {
           connect: { id: subscription.clientId }
         },
         statut: 'EN_ATTENTE',
-        montant: montantHT,
-        tauxTVA: tauxTVA,
-        montantTotal: montantTTC,
+        montant: montantTTC,
         dateEmission: new Date(),
         dateEcheance: this.calculateDueDate(30), // 30 jours pour payer
         abonnement: {

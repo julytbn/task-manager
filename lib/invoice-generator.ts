@@ -144,7 +144,7 @@ async function createSubscriptionInvoice(subscription: any): Promise<{
 
     return {
       invoiceNumber: facture.numero,
-      amount: facture.montantTotal,
+      amount: facture.montant,
       success: true,
       message: 'Facture créée avec succès'
     }

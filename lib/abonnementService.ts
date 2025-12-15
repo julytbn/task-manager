@@ -176,7 +176,7 @@ export async function generateDueInvoices() {
         numero: invoice.numero,
         abonnementNom: subscription.nom,
         clientNom: subscription.client.nom,
-        montant: invoice.montantTotal,
+        montant: invoice.montant,
         dateEmission: invoice.dateEmission,
       })
     } catch (error) {

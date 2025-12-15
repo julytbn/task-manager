@@ -38,7 +38,7 @@ class ChargeService {
     return prisma.charge.create({
       data: {
         montant: input.montant,
-        categorie: input.categorie,
+        categorie: input.categorie as any,
         description: input.description,
         date: input.date || new Date(),
         projetId: input.projetId,
@@ -86,7 +86,7 @@ class ChargeService {
   }) {
     return prisma.charge.findMany({
       where: {
-        categorie: filters?.categorie,
+        categorie: filters?.categorie ? (filters.categorie as any) : undefined,
         projetId: filters?.projetId,
         employeId: filters?.employeId,
         date: {
@@ -163,7 +163,7 @@ class ChargeService {
       where: { id },
       data: {
         montant: input.montant,
-        categorie: input.categorie,
+        categorie: input.categorie ? (input.categorie as any) : undefined,
         description: input.description,
         date: input.date,
         projetId: input.projetId,

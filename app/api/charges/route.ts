@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { chargeService } from "@/lib/services/accounting/chargeService";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/charges
  * Récupérer toutes les charges avec filtres optionnels

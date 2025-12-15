@@ -36,12 +36,13 @@ const Card = ({ children, className = '' }: { children: React.ReactNode; classNa
   </div>
 );
 
-const Label = ({ htmlFor, children, required = false }: { 
+const Label = ({ htmlFor, children, required = false, className = '' }: { 
   htmlFor: string; 
   children: React.ReactNode;
   required?: boolean;
+  className?: string;
 }) => (
-  <label htmlFor={htmlFor} className="block text-sm font-medium text-gray-700 mb-1">
+  <label htmlFor={htmlFor} className={`block text-sm font-medium text-gray-700 mb-1 ${className}`}>
     {children}
     {required && <span className="text-red-500">*</span>}
   </label>
@@ -480,7 +481,7 @@ export default function NewChargePage() {
                   <Label htmlFor="provider">Fournisseur</Label>
                   <Input
                     id="provider"
-                    value={formData.provider}
+                    value={formData.provider || ''}
                     onChange={handleInputChange}
                     placeholder="Nom du fournisseur"
                   />

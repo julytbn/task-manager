@@ -44,7 +44,7 @@ export async function POST(request: Request) {
 
     let nouveauStatutFacture: 'EN_ATTENTE' | 'PARTIELLEMENT_PAYEE' | 'PAYEE' = 'EN_ATTENTE';
     let nouveauStatutPaiement: 'EN_ATTENTE' | 'CONFIRME' = 'EN_ATTENTE';
-    const montantFacture = facture.montantTotal || facture.montant || 0;
+    const montantFacture = facture.montant || 0;
     if (totalPayé >= montantFacture) {
       nouveauStatutFacture = 'PAYEE';
       nouveauStatutPaiement = 'CONFIRME';

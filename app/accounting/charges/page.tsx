@@ -35,14 +35,14 @@ const TableRow = ({ children, ...props }: { children: React.ReactNode } & React.
   </tr>
 );
 
-const TableHead = ({ children }: { children: React.ReactNode }) => (
-  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0">
+const TableHead = ({ children = '', className = '' }: { children?: React.ReactNode, className?: string }) => (
+  <th className={`h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 ${className}`}>
     {children}
   </th>
 );
 
-const TableCell = ({ children, className = '' }: { children: React.ReactNode, className?: string }) => (
-  <td className={`p-4 align-middle ${className}`}>
+const TableCell = ({ children, className = '', colSpan, ...props }: { children: React.ReactNode, className?: string, colSpan?: number } & React.HTMLAttributes<HTMLTableCellElement>) => (
+  <td colSpan={colSpan} className={`p-4 align-middle ${className}`} {...props}>
     {children}
   </td>
 );

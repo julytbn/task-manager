@@ -41,12 +41,12 @@ export default function PaiementsTable({
     const projetText = p.projet?.nom || ''
     
     // Récupérer le montant total de la facture (montantTotal est le TTC depuis le backend)
-    const montantTotalFacture = p.facture?.montantTotal || p.facture?.montant || 0
+    const montantTotalFacture = p.facture?.montant || 0
     
     // Calculer le total des paiements pour cette facture
     // Si la facture a des paiements inclus, on les utilise, sinon on utilise le paiement actuel
     let totalPaye = p.montant || 0
-    if (p.facture?.paiements?.length > 0) {
+    if (p.facture?.paiements && p.facture.paiements.length > 0) {
       totalPaye = p.facture.paiements.reduce((sum, paie) => sum + (paie.montant || 0), 0)
     }
     

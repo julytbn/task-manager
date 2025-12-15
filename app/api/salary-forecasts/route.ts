@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { salaryForecastService } from "@/lib/services/salaryForecasting/salaryForecastService";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/salary-forecasts - Récupérer les prévisions salariales
  * Query params:

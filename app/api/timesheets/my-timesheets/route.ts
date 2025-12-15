@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth/next";
 import { prisma } from "@/lib/prisma";
 import { authOptions } from "@/lib/auth";
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/timesheets/my-timesheets
  * Récupérer les timesheets de l'employé connecté
