@@ -1,0 +1,46 @@
+name: 💰 Salary Forecast - Send Notifications
+
+on:
+  schedule:
+    # Exécute chaque jour à 9h (UTC)
+    # Syntaxe cron: minute heure jour mois jour_semaine
+    - cron: '0 9 * * *'
+  
+  # Permet de déclencher manuellement
+  workflow_dispatch:
+
+jobs:
+  send-notifications:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📋 Récupérer le code
+        uses: actions/checkout@v4
+      
+      - name: 🌐 Appeler l'endpoint du cron job
+        run: |
+          curl -X GET '${{ secrets.APP_URL }}/api/cron/salary-notifications' \
+            -H 'Authorization: Bearer ${{ secrets.CRON_SECRET }}' \
+            -H 'Content-Type: application/json' \
+            -w '\nStatus: %{http_code}\n'
+        env:
+          CURL_RETRIES: 3
+      
+      - name: ✅ Notification de succès
+        if: success()
+        run: echo "✅ Notifications de salaire envoyées avec succès"
+      
+      - name: ❌ Notification d'erreur
+        if: failure()
+        run: echo "❌ Erreur lors de l'envoi des notifications"
+
+  # Job optionnel: Vérifier la santé du système
+  health-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 🏥 Vérifier que l'API est accessible
+        run: |
+          curl -X GET '${{ secrets.APP_URL }}/api/employees' \
+            -w '\nStatus: %{http_code}\n'
+        continue-on-error: true

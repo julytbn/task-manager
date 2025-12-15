@@ -1,0 +1,126 @@
+name: 💰 Salary Forecast - Complete Cron Jobs
+
+on:
+  schedule:
+    # 9h UTC = 10h CET (hiver) ou 11h CEST (été)
+    - cron: '0 9 * * *'
+  
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'Quelle tâche exécuter?'
+        required: true
+        default: 'send-notifications'
+        type: choice
+        options:
+          - send-notifications
+          - health-check
+          - all
+
+jobs:
+  send-notifications:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.task == 'send-notifications' || github.event.inputs.task == 'all' || github.event_name == 'schedule'
+    
+    steps:
+      - name: 📋 Récupérer le code
+        uses: actions/checkout@v4
+      
+      - name: 💰 Envoyer les notifications de salaire
+        run: |
+          echo "🚀 Déclenchement du cron job..."
+          RESPONSE=$(curl -s -X GET '${{ secrets.APP_URL }}/api/cron/salary-notifications' \
+            -H 'Authorization: Bearer ${{ secrets.CRON_SECRET }}' \
+            -H 'Content-Type: application/json')
+          
+          echo "📊 Réponse:"
+          echo "$RESPONSE" | jq '.'
+          
+          # Extraire le nombre de notifications envoyées
+          SENT=$(echo "$RESPONSE" | jq '.result.sent // 0')
+          FAILED=$(echo "$RESPONSE" | jq '.result.failed // 0')
+          
+          echo "✅ Envoyées: $SENT"
+          echo "❌ Erreurs: $FAILED"
+          
+          if [ "$FAILED" -gt 0 ]; then
+            exit 1
+          fi
+      
+      - name: 📧 Envoyer un email en cas d'erreur
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_HOST }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USER }}
+          password: ${{ secrets.SMTP_PASS }}
+          subject: ❌ Erreur - Cron job Prévisions Salariales
+          to: ${{ secrets.ADMIN_EMAIL }}
+          from: ${{ secrets.SMTP_FROM }}
+          body: |
+            Erreur lors de l'exécution du cron job de prévisions salariales.
+            
+            Détails:
+            - Repo: ${{ github.repository }}
+            - Branch: ${{ github.ref }}
+            - Commit: ${{ github.sha }}
+            
+            Vérifiez les logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+  health-check:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.task == 'health-check' || github.event.inputs.task == 'all'
+    
+    steps:
+      - name: 🏥 Vérifier la santé de l'API
+        run: |
+          echo "🔍 Vérification de l'API..."
+          
+          # Vérifier que l'API répond
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" '${{ secrets.APP_URL }}/api/employees')
+          
+          echo "Status: $STATUS"
+          
+          if [ "$STATUS" = "200" ]; then
+            echo "✅ API accessible"
+          else
+            echo "❌ API non accessible (Status: $STATUS)"
+            exit 1
+          fi
+      
+      - name: 🗄️ Vérifier la base de données
+        run: |
+          echo "🔍 Vérification de la base de données..."
+          
+          RESPONSE=$(curl -s '${{ secrets.APP_URL }}/api/salary-forecasts/statistics/test' \
+            -H 'Authorization: Bearer ${{ secrets.CRON_SECRET }}')
+          
+          if echo "$RESPONSE" | jq . > /dev/null 2>&1; then
+            echo "✅ BD accessible"
+          else
+            echo "❌ Erreur BD"
+            exit 1
+          fi
+
+  notify-success:
+    runs-on: ubuntu-latest
+    needs: [send-notifications]
+    if: success()
+    
+    steps:
+      - name: 🎉 Succès
+        run: |
+          echo "✅ Cron job exécuté avec succès"
+          echo "Les notifications de salaire ont été envoyées"
+
+  notify-failure:
+    runs-on: ubuntu-latest
+    needs: [send-notifications]
+    if: failure()
+    
+    steps:
+      - name: 📢 Alerte
+        run: |
+          echo "❌ Le cron job a échoué"
+          echo "Veuillez vérifier les logs"
