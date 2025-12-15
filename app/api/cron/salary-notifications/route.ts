@@ -13,24 +13,36 @@ import { salaryForecastService } from "@/lib/services/salaryForecasting/salaryFo
  *   }]
  * }
  */
-export async function GET(request: Request) {
+async function handleSalaryNotifications(request: Request) {
   try {
     // Vérifier la clé secrète pour sécuriser l'endpoint
-    const authHeader = request.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
 
-    // Pour Vercel Cron, vérifier le header spécifique
+    // Vérifier le header X-Cron-Secret (GitHub Actions)
+    const xCronSecret = request.headers.get("x-cron-secret");
+    // Pour Vercel Cron
     const vercelCronSecret = request.headers.get("x-vercel-cron-secret");
+    // Pour Bearer token (legacy)
+    const authHeader = request.headers.get("authorization");
 
-    if (vercelCronSecret && vercelCronSecret === cronSecret) {
-      console.log("[CRON] Exécution via Vercel Cron");
-    } else if (authHeader && authHeader === `Bearer ${cronSecret}`) {
-      console.log("[CRON] Exécution via Bearer token");
-    } else {
+    const isAuthorized =
+      (xCronSecret && xCronSecret === cronSecret) ||
+      (vercelCronSecret && vercelCronSecret === cronSecret) ||
+      (authHeader && authHeader === `Bearer ${cronSecret}`);
+
+    if (!isAuthorized) {
       return NextResponse.json(
         { error: "Non autorisé" },
         { status: 401 }
       );
+    }
+
+    if (xCronSecret) {
+      console.log("[CRON] Exécution via GitHub Actions");
+    } else if (vercelCronSecret) {
+      console.log("[CRON] Exécution via Vercel Cron");
+    } else if (authHeader) {
+      console.log("[CRON] Exécution via Bearer token");
     }
 
     console.log("[CRON] Début de l'envoi des notifications de paiement");
@@ -57,4 +69,12 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
+}
+
+export async function GET(request: Request) {
+  return handleSalaryNotifications(request);
+}
+
+export async function POST(request: Request) {
+  return handleSalaryNotifications(request);
 }

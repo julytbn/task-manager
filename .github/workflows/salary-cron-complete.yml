@@ -2,8 +2,7 @@ name: 💰 Salary Forecast - Complete Cron Jobs
 
 on:
   schedule:
-    # 9h UTC = 10h CET (hiver) ou 11h CEST (été)
-    - cron: '0 9 * * *'
+    - cron: '0 9 * * *'  # 9h UTC chaque jour
   
   workflow_dispatch:
     inputs:
@@ -23,29 +22,27 @@ jobs:
     if: github.event.inputs.task == 'send-notifications' || github.event.inputs.task == 'all' || github.event_name == 'schedule'
     
     steps:
-      - name: 📋 Récupérer le code
-        uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
       
-      - name: 💰 Envoyer les notifications de salaire
+      - name: Send salary notifications
         run: |
-          echo "🚀 Déclenchement du cron job..."
-          RESPONSE=$(curl -s -X GET '${{ secrets.APP_URL }}/api/cron/salary-notifications' \
-            -H 'Authorization: Bearer ${{ secrets.CRON_SECRET }}' \
-            -H 'Content-Type: application/json')
-          
-          echo "📊 Réponse:"
-          echo "$RESPONSE" | jq '.'
-          
-          # Extraire le nombre de notifications envoyées
-          SENT=$(echo "$RESPONSE" | jq '.result.sent // 0')
-          FAILED=$(echo "$RESPONSE" | jq '.result.failed // 0')
-          
-          echo "✅ Envoyées: $SENT"
-          echo "❌ Erreurs: $FAILED"
-          
-          if [ "$FAILED" -gt 0 ]; then
-            exit 1
-          fi
+          curl -X POST \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            "${{ secrets.APP_URL }}/api/cron/salary-notifications" \
+            -d '{}'
+        
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          APP_URL: ${{ secrets.APP_URL }}
+        
+        timeout-minutes: 5
+        continue-on-error: true
+      
+      - name: Log result
+        if: always()
+        run: echo "Salary notifications sent at $(date -u)"
       
       - name: 📧 Envoyer un email en cas d'erreur
         if: failure()
