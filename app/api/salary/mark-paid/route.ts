@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { montant, moyenPaiement, reference } = body;
+    const { montant, moyenPaiement, reference, clientId, factureId } = body;
 
     // Valider les données
     if (!montant || montant <= 0) {
@@ -47,17 +47,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!clientId || !factureId) {
+      return NextResponse.json(
+        { error: 'Client ID et Facture ID requis' },
+        { status: 400 }
+      );
+    }
+
     // Créer le paiement
     const payment = await prisma.paiement.create({
       data: {
         montant,
         moyenPaiement,
         reference,
-        statut: 'EFFECTUE',
+        clientId,
+        factureId,
+        statut: 'CONFIRME',
         datePaiement: new Date(),
         notes: 'Paiement des salaires',
-        // Note: À adapter selon votre schema - peut nécessiter un factureId ou autre
-        // Vous pouvez ajouter une facture fictive ou modifier le schema
       },
     });
 

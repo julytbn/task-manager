@@ -31,7 +31,7 @@ export async function notifySalaryForecastCalculated() {
         annee,
         dateGeneration: {
           gte: new Date(annee, mois - 1, now.getDate()),
-          lt: new Date(annea, mois - 1, now.getDate() + 1),
+          lt: new Date(annee, mois - 1, now.getDate() + 1),
         },
       },
       include: {
@@ -107,11 +107,11 @@ export async function notifySalaryPaymentDue() {
   try {
     const now = new Date();
     const mois = now.getMonth() + 1;
-    const annea = now.getFullYear();
+    const annee = now.getFullYear();
 
     // Récupérer les prévisions du mois précédent
     const prevMonth = mois === 1 ? 12 : mois - 1;
-    const prevYear = mois === 1 ? annee - 1 : annea;
+    const prevYear = mois === 1 ? annee - 1 : annee;
 
     const forecasts = await prisma.previsionSalaire.aggregate({
       where: {
@@ -209,7 +209,7 @@ export async function alertSalaryPaymentLate() {
           gte: new Date(prevYear, prevMonth - 1, 1),
           lte: new Date(prevYear, prevMonth, 0),
         },
-        statut: 'EFFECTUE',
+        statut: 'CONFIRME',
       },
       _sum: {
         montant: true,

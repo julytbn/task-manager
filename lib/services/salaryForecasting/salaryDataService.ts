@@ -68,7 +68,7 @@ export async function getSalaryForecastCurrentMonth(): Promise<SalaryForecastDat
         employeId: p.employeId,
         nomEmploye: `${p.employe.prenom} ${p.employe.nom}`,
         montantPrevu: p.montantPrevu,
-        dateNotification: p.dateNotification,
+        dateNotification: p.dateNotification || undefined,
       })),
     };
   } catch (error) {
@@ -99,8 +99,7 @@ export async function getSalaryCoverageAnalysis() {
     });
 
     // Récupérer les recettes (factures payées)
-    const revenues = await prisma.paiement.groupBy({
-      by: [],
+    const revenues = await prisma.paiement.aggregate({
       _sum: {
         montant: true,
       },
@@ -108,7 +107,7 @@ export async function getSalaryCoverageAnalysis() {
         datePaiement: {
           gte: startDate,
         },
-        statut: 'EFFECTUE',
+        statut: 'CONFIRME',
       },
     });
 
@@ -119,14 +118,15 @@ export async function getSalaryCoverageAnalysis() {
         year: 'numeric',
       });
 
+      const revenueAmount = revenues._sum.montant || 0;
       return {
         mois: sf.mois,
         annee: sf.annee,
         label: monthLabel,
         salaires: sf._sum.montantPrevu || 0,
-        recettes: revenues[0]?._sum.montant || 0, // Simplification: même montant pour tous les mois
-        couverture: revenues[0]?._sum.montant
-          ? Math.round(((revenues[0]?._sum.montant || 0) / (sf._sum.montantPrevu || 1)) * 100)
+        recettes: revenueAmount,
+        couverture: revenueAmount
+          ? Math.round((revenueAmount / (sf._sum.montantPrevu || 1)) * 100)
           : 0,
       };
     });
@@ -168,7 +168,7 @@ export async function getSalaryPaymentStatus(): Promise<{
           gte: new Date(annee, mois - 1, 1),
           lte: new Date(annee, mois, 0),
         },
-        statut: 'EFFECTUE',
+        statut: 'CONFIRME',
       },
       _sum: { montant: true },
     });

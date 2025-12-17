@@ -152,7 +152,8 @@ export default function DashboardSalaryCoverageChart() {
                 border: '1px solid #e5e7eb',
                 borderRadius: '8px',
               }}
-              formatter={(value: number, name: string) => {
+              formatter={(value: number | undefined, name: string | undefined) => {
+                if (!value) return '';
                 if (name === 'couverture') return `${value}%`;
                 return new Intl.NumberFormat('fr-FR', {
                   style: 'currency',

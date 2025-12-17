@@ -45,6 +45,44 @@ export default function DashboardSalaryWidget() {
     fetchSalaryData();
   }, []);
 
+  const handleMarkPaid = async (formData: {
+    montant: number;
+    moyenPaiement: string;
+    reference: string;
+  }) => {
+    try {
+      setIsSaving(true);
+      const response = await fetch('/api/salary/mark-paid', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          clientId: 'system', // À adapter selon votre logique
+          factureId: 'system', // À adapter selon votre logique
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to mark salary as paid');
+      }
+
+      setIsModalOpen(false);
+      // Recharger les données
+      const res = await fetch('/api/dashboard/salary-widget');
+      if (res.ok) {
+        const result = await res.json();
+        setData(result);
+      }
+    } catch (error) {
+      console.error('Error marking salary as paid:', error);
+      alert('Erreur lors de l\'enregistrement du paiement');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-md p-6 animate-pulse">
