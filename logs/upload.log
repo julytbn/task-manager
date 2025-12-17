@@ -1,6 +1,0 @@
-✅ Upload server listening on http://localhost:4000
-📁 Max file size: 10MB
-🔐 CORS origin: *
-🔑 API Key required: No
-File: file, filename=test-upload.txt, mimetype="undefined"
-Field: clientId = cli-test
