@@ -76,7 +76,11 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json(projetsAvecStatut);
+    return NextResponse.json({
+      success: true,
+      data: projetsAvecStatut,
+      count: projetsAvecStatut.length
+    });
   } catch (error) {
     console.error('Erreur lors de la récupération des projets:', error);
     return NextResponse.json(

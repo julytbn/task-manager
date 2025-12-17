@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Check, X, AlertCircle } from 'lucide-react'
-import MainLayout from '@/components/MainLayout'
+import MainLayout from '@/components/layouts/MainLayout'
 
 type TimeSheet = {
   id: string

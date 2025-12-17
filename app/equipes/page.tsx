@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useState } from 'react'
-import MainLayout from '../../components/MainLayout'
+import MainLayout from '@/components/layouts/MainLayout'
 import EquipesList from '@/components/EquipesList'
 import TeamDetailModal from '@/components/TeamDetailModal'
 import CreateTeamModal from '@/components/CreateTeamModal'

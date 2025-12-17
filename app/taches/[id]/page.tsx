@@ -1,4 +1,4 @@
-import MainLayout from "../../../components/MainLayout"
+import MainLayout from '@/components/layouts/MainLayout'
 import fs from 'fs'
 import path from 'path'
 

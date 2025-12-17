@@ -6,7 +6,7 @@ import PaiementDetailModal from '@/components/PaiementDetailModal'
 import PaiementEditModal from '@/components/PaiementEditModal'
 import NouveauPaiementModal from '@/components/NouveauPaiementModal'
 import { Plus } from 'lucide-react'
-import MainLayout from '../../components/MainLayout'
+import MainLayout from '@/components/layouts/MainLayout'
 
 export type Paiement = {
   id: string
@@ -212,14 +212,14 @@ export default function PaiementsPage() {
   return (
     <MainLayout>
       <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold gold-gradient-text">💵 Paiements</h1>
-          <p className="text-[var(--color-anthracite)] mt-2">
-            {paiements.length} paiement{paiements.length > 1 ? 's' : ''} au total
-          </p>
-        </div>
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold gold-gradient-text">💵 Paiements</h1>
+            <p className="text-[var(--color-anthracite)] mt-2">
+              {paiements.length} paiement{paiements.length > 1 ? 's' : ''} au total
+            </p>
+          </div>
         <button 
           onClick={() => setIsCreateOpen(true)}
           className="flex items-center gap-2 px-6 py-3 bg-[var(--color-gold)] text-[var(--color-black-deep)] rounded-lg hover:bg-[var(--color-gold-accent)] transition font-medium shadow-lg"
@@ -285,12 +285,12 @@ export default function PaiementsPage() {
         />
       )}
 
-      {/* Create Modal */}
-      <NouveauPaiementModal
-        isOpen={isCreateOpen}
-        onClose={() => setIsCreateOpen(false)}
-        onSave={handleSaveNewPaiement}
-      />
+        {/* Create Modal */}
+        <NouveauPaiementModal
+          isOpen={isCreateOpen}
+          onClose={() => setIsCreateOpen(false)}
+          onSave={handleSaveNewPaiement}
+        />
       </div>
     </MainLayout>
   )

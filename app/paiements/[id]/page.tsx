@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import MainLayout from '../../../components/MainLayout'
+import MainLayout from '@/components/layouts/MainLayout'
 import { useParams } from 'next/navigation'
 
 export default function PaiementDetailPage() {

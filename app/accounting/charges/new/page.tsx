@@ -234,16 +234,16 @@ const paymentMethodOptions = [
 ];
 
 const categoryOptions = [
-  { value: 'FOURNITURE', label: 'Fournitures de bureau' },
-  { value: 'EQUIPEMENT', label: 'Équipement informatique' },
-  { value: 'LOGICIEL', label: 'Logiciels et abonnements' },
-  { value: 'DEPLACEMENT', label: 'Frais de déplacement' },
-  { value: 'FORMATION', label: 'Formation' },
-  { value: 'PUBLICITE', label: 'Publicité et marketing' },
-  { value: 'ENTRETIEN', label: 'Entretien et réparation' },
-  { value: 'LOYER', label: 'Loyer et charges' },
-  { value: 'SALAIRE', label: 'Salaires et charges sociales' },
-  { value: 'AUTRE', label: 'Autres charges' },
+  { value: 'SALAIRES_CHARGES_SOCIALES', label: 'Salaires & Charges Sociales' },
+  { value: 'LOYER_IMMOBILIER', label: 'Loyer & Immobilier' },
+  { value: 'UTILITIES', label: 'Électricité & Gaz' },
+  { value: 'MATERIEL_EQUIPEMENT', label: 'Matériel & Équipement' },
+  { value: 'TRANSPORT_DEPLACEMENT', label: 'Transport & Déplacement' },
+  { value: 'FOURNITURES_BUREAUTIQUE', label: 'Fournitures Bureautiques' },
+  { value: 'MARKETING_COMMUNICATION', label: 'Marketing & Communication' },
+  { value: 'ASSURANCES', label: 'Assurances' },
+  { value: 'TAXES_IMPOTS', label: 'Taxes & Impôts' },
+  { value: 'AUTRES_CHARGES', label: 'Autres Charges' },
 ];
 
 export default function NewChargePage() {
@@ -330,6 +330,10 @@ export default function NewChargePage() {
     if (!formData.date) {
       newErrors.date = 'La date est requise';
     }
+
+    if (!formData.category) {
+      newErrors.category = 'La catégorie est requise';
+    }
     
     if (formData.status === 'VALIDEE' && !formData.paymentDate) {
       newErrors.paymentDate = 'La date de paiement est requise pour une charge validée';
@@ -350,11 +354,34 @@ export default function NewChargePage() {
     setIsSubmitting(true);
     
     try {
-      // Simuler un appel API
-      console.log('Envoi des données de la charge :', formData);
+      // Envoyer les données en JSON (pas FormData)
+      const response = await fetch('/api/charges', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          montant: formData.amount,
+          categorie: formData.category,
+          description: formData.description,
+          date: formData.date,
+          notes: formData.notes || '',
+          projetId: formData.projectId || undefined,
+        }),
+      });
       
-      // Simuler un délai de requête
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      if (!response.ok) {
+        let errorMessage = 'Erreur lors de la création';
+        try {
+          const error = await response.json();
+          errorMessage = error.message || error.error || errorMessage;
+        } catch (e) {
+          // Si la réponse n'est pas JSON, utiliser le texte du statut
+          errorMessage = `Erreur ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
+      
+      const result = await response.json();
+      console.log('Charge créée avec succès:', result);
       
       // Rediriger vers la liste des charges après création réussie
       router.push('/accounting/charges');
@@ -362,7 +389,7 @@ export default function NewChargePage() {
     } catch (error) {
       console.error('Erreur lors de la création de la charge :', error);
       setErrors({
-        submit: 'Une erreur est survenue lors de la création de la charge. Veuillez réessayer.'
+        submit: error instanceof Error ? error.message : 'Une erreur est survenue lors de la création de la charge. Veuillez réessayer.'
       });
     } finally {
       setIsSubmitting(false);
@@ -465,7 +492,7 @@ export default function NewChargePage() {
                   <div className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
                     <span className="text-sm font-medium text-gray-700">Montant TTC :</span>
                     <span className="text-lg font-semibold">
-                      {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(calculateTotalWithTax())}
+                      {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(calculateTotalWithTax())}
                     </span>
                   </div>
                 </div>
@@ -661,19 +688,19 @@ export default function NewChargePage() {
                   <div className="flex justify-between mb-2">
                     <span className="text-sm text-gray-600">Montant HT :</span>
                     <span className="text-sm font-medium">
-                      {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(formData.amount || 0)}
+                      {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(formData.amount || 0)}
                     </span>
                   </div>
                   <div className="flex justify-between mb-2">
                     <span className="text-sm text-gray-600">TVA ({formData.tva}%) :</span>
                     <span className="text-sm font-medium">
-                      {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format((formData.amount || 0) * (formData.tva / 100))}
+                      {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format((formData.amount || 0) * (formData.tva / 100))}
                     </span>
                   </div>
                   <div className="flex justify-between pt-2 mt-2 border-t border-gray-200 font-medium">
                     <span>Total TTC :</span>
                     <span className="text-lg">
-                      {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(calculateTotalWithTax())}
+                      {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(calculateTotalWithTax())}
                     </span>
                   </div>
                 </div>

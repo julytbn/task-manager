@@ -111,9 +111,8 @@ async function createSubscriptionInvoice(subscription: any): Promise<{
       ? new Date(subscription.dernierPaiement)
       : new Date(subscription.dateDebut)
 
-    // Montant avec TVA
-    const tauxTVA = 0.18 // 18% par défaut
-    const montantTotal = subscription.montant * (1 + tauxTVA)
+    // Montant sans TVA
+    const montant = subscription.montant
 
     // Créer la facture
     const facture = await prisma.facture.create({
@@ -121,9 +120,7 @@ async function createSubscriptionInvoice(subscription: any): Promise<{
         numero: invoiceNumber,
         clientId: subscription.clientId,
         abonnementId: subscription.id,
-        montant: subscription.montant,
-        tauxTVA: tauxTVA,
-        montantTotal: montantTotal,
+        montant: montant,
         statut: 'EN_ATTENTE',
         dateEmission: now,
         dateEcheance: dueDate,
@@ -238,17 +235,14 @@ export async function generateInitialInvoiceForSubscription(subscription: any): 
   try {
     const invoiceNumber = await generateInvoiceNumber()
 
-    const tauxTVA = 0.18
-    const montantTotal = subscription.montant * (1 + tauxTVA)
+    const montant = subscription.montant
 
     await prisma.facture.create({
       data: {
         numero: invoiceNumber,
         clientId: subscription.clientId,
         abonnementId: subscription.id,
-        montant: subscription.montant,
-        tauxTVA: tauxTVA,
-        montantTotal: montantTotal,
+        montant: montant,
         statut: 'EN_ATTENTE',
         dateEmission: new Date(),
         dateEcheance: calculateNextDueDate(subscription.frequence),

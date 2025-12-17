@@ -2,9 +2,9 @@
 
 import React, { useState, useMemo, useEffect } from 'react'
 import { Plus } from 'lucide-react'
-import MainLayout from '@/components/MainLayout'
 import DataTable from '@/components/DataTable'
 import { FormField, Select, Button } from '@/components/FormField'
+import MainLayout from '@/components/layouts/MainLayout'
 
 interface TacheItem {
   id: string

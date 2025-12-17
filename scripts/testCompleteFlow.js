@@ -204,7 +204,6 @@ ${colors.reset}`)
       projetId: state.projectId,
       statut: 'EN_ATTENTE',
       montant: 5000,
-      tauxTVA: 0.18,
       dateEcheance: new Date(Date.now() - 5*24*60*60*1000).toISOString() // EN RETARD
     })
     state.invoiceId = invoiceRes.id

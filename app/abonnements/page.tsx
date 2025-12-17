@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { Plus, Grid, List } from 'lucide-react'
-import MainLayout from '@/components/MainLayout'
 import { FormField, Button } from '@/components/FormField'
 import StatCard from '@/components/StatCard'
 import AbonnementsList from '@/components/AbonnementsList'
 import AbonnementModal from '@/components/AbonnementModal'
+import MainLayout from '@/components/layouts/MainLayout'
 
 type Abonnement = {
   id: string

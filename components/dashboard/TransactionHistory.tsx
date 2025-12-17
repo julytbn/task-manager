@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useState } from 'react'
-import MainLayout from '@/components/MainLayout'
+import MainLayout from '@/components/layouts/MainLayout'
 import { TrendingUp, Download, Filter } from 'lucide-react'
 import { useUserSession } from '@/hooks/useSession'
 

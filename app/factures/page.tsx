@@ -2,12 +2,12 @@
 import { useEffect, useState } from 'react'
 import Link from "next/link"
 import { Plus, Eye, Download } from 'lucide-react'
-import MainLayout from "@/components/MainLayout"
 import NouveauFactureModal from "@/components/NouveauFactureModal"
 import NouveauPaiementModal from "@/components/NouveauPaiementModal"
 import EditFactureModal from "@/components/EditFactureModal"
 import { downloadFacturePDF, previewFacturePDF } from '@/lib/factureGenerator'
 import { useEnums } from '@/lib/useEnums'
+import MainLayout from "@/components/layouts/MainLayout"
 
 type Facture = {
   id: string

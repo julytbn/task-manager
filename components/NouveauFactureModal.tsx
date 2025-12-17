@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { X, Download, Eye, Plus, RefreshCw } from 'lucide-react'
 import { downloadFacturePDF, previewFacturePDF } from '@/lib/factureGenerator'
 import { generateFactureNumber } from '@/lib/paiementUtils'
+import FacturePreview from './FacturePreview'
 
 // Fonction pour calculer la date d'échéance basée sur la fréquence de paiement
 function calculateDueDate(frequencePaiement: string): string {
@@ -46,7 +47,6 @@ interface FactureData {
   statut: string
   montant: number
   montantTotal: number
-  tauxTVA?: number
   client: {
     id: string
     nom: string
@@ -95,7 +95,6 @@ export default function NouveauFactureModal({
     serviceId: '',
     sourceType: '', // 'abonnement', 'projet', 'service'
     montant: '',
-    tauxTVA: 18,
     description: '',
     conditionsPaiement: '',
     reference: '',
@@ -113,6 +112,8 @@ export default function NouveauFactureModal({
   const [clients, setClients] = useState<any[]>([])
   const [abonnements, setAbonnements] = useState<any[]>([])
   const [services, setServices] = useState<any[]>([])
+  const [showPreview, setShowPreview] = useState(false)
+  const [clientData, setClientData] = useState<any>(null)
 
   // Charger les clients, abonnements et services
   useEffect(() => {
@@ -146,6 +147,16 @@ export default function NouveauFactureModal({
       }))
     }
   }, [isOpen, clientName])
+
+  // Charger les données du client pour l'aperçu
+  useEffect(() => {
+    if (isOpen && formData.clientId) {
+      fetch(`/api/clients/${formData.clientId}`)
+        .then(res => res.json())
+        .then(data => setClientData(data))
+        .catch(err => console.error(err))
+    }
+  }, [isOpen, formData.clientId])
 
   const handleGenerateNumber = () => {
     const newNumber = generateFactureNumber()
@@ -181,7 +192,7 @@ export default function NouveauFactureModal({
     else {
       setFormData((prev) => ({
         ...prev,
-        [name]: name === 'montant' || name === 'tauxTVA' ? parseFloat(value) || '' : value,
+        [name]: name === 'montant' ? parseFloat(value) || '' : value,
       }))
     }
   }
@@ -207,10 +218,7 @@ export default function NouveauFactureModal({
     setLoading(true)
 
     try {
-      const tauxTVA = formData.tauxTVA || 18
-      const montantSansTVA = parseFloat(String(formData.montant))
-      const montantTVA = montantSansTVA * (tauxTVA / 100)
-      const montantTotal = montantSansTVA + montantTVA
+      const montantTotal = parseFloat(String(formData.montant))
 
       const newFacture = {
         numero: formData.numero,
@@ -219,9 +227,8 @@ export default function NouveauFactureModal({
         abonnementId: formData.abonnementId || undefined,
         projetId: formData.projetId || undefined,
         serviceId: formData.serviceId || undefined,
-        montant: montantSansTVA,
+        montant: montantTotal,
         montantTotal,
-        tauxTVA,
         description: formData.description || undefined,
         conditionsPaiement: formData.conditionsPaiement || undefined,
         reference: formData.reference || undefined,
@@ -246,7 +253,6 @@ export default function NouveauFactureModal({
         serviceId: '',
         sourceType: '',
         montant: '',
-        tauxTVA: 18,
         description: '',
         conditionsPaiement: '',
         reference: '',
@@ -278,11 +284,64 @@ export default function NouveauFactureModal({
 
   if (!isOpen) return null
 
+  // Rendu de l'aperçu
+  if (showPreview) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="sticky top-0 bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4 flex justify-between items-center">
+            <h2 className="text-2xl font-bold text-white">📄 Aperçu Facture</h2>
+            <button
+              onClick={() => setShowPreview(false)}
+              className="text-white hover:bg-white/20 p-2 rounded"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Preview */}
+          <div className="p-8 bg-gray-100">
+            <div className="bg-white">
+              <FacturePreview
+                clientName={clientData ? `${clientData.prenom || ''} ${clientData.nom || ''}`.trim() : formData.client}
+                clientAddress={clientData?.adresse || 'Adresse du client'}
+                numeroFacture={formData.numero}
+                dateEmission={formData.dateEmission}
+                dateEcheance={formData.dateEcheance}
+                description={formData.description}
+                lignes={lignes.filter(l => l.designation).map(l => ({
+                  designation: l.designation,
+                  intervenant: l.intervenant,
+                  montant: parseFloat(l.montantAPayer) || 0
+                }))}
+                montant={parseFloat(formData.montant) || 0}
+                tauxTVA={18}
+                notes={formData.notes}
+                statut={formData.statut}
+              />
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 justify-end p-6 border-t bg-white">
+            <button
+              onClick={() => setShowPreview(false)}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
+            >
+              Retour à l'édition
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
-      <div className="relative w-full max-w-3xl bg-[var(--color-offwhite)] rounded-lg shadow-lg overflow-auto border border-[var(--color-gold)]/20" style={{ maxHeight: '90vh' }}>
+      <div className="relative w-full max-w-2xl bg-[var(--color-offwhite)] rounded-lg shadow-lg overflow-auto border border-[var(--color-gold)]/20" style={{ maxHeight: '90vh' }}>
         <div className="flex items-center justify-between p-4 rounded-t-lg bg-gradient-to-r from-[var(--color-black-deep)] to-[var(--color-black-900)]/90">
           <h3 className="text-lg font-semibold text-[var(--color-gold)]">Nouvelle Facture</h3>
           <button onClick={onClose} className="p-2 rounded hover:bg-[var(--color-black-900)]/20 text-[var(--color-offwhite)]" disabled={loading}>
@@ -432,19 +491,10 @@ export default function NouveauFactureModal({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Montant HT *</label>
+              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Montant *</label>
               <input type="number" name="montant" value={formData.montant} onChange={handleChange} placeholder="0" step="1000" className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white" required />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Taux TVA (%)</label>
-              <input type="number" name="tauxTVA" value={formData.tauxTVA} onChange={handleChange} placeholder="18" step="0.01" className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white" />
-            </div>
           </div>
-          {formData.montant && (
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <p className="text-sm text-gray-700"><strong>Montant TTC:</strong> {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF', minimumFractionDigits: 0 }).format(parseFloat(String(formData.montant)) * (1 + (formData.tauxTVA || 18) / 100))}</p>
-            </div>
-          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -546,6 +596,9 @@ export default function NouveauFactureModal({
 
           <div className="flex justify-end gap-3 pt-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
             <button type="button" onClick={onClose} className="px-4 py-2 bg-white border border-[var(--color-border)] rounded text-[var(--color-anthracite)]">Annuler</button>
+            <button type="button" onClick={() => setShowPreview(true)} className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded hover:bg-blue-100 transition">
+              <Eye size={16} /> Aperçu
+            </button>
             <button type="submit" disabled={loading} className="px-4 py-2 bg-[var(--color-gold)] text-[var(--color-black-deep)] rounded font-semibold">{loading ? 'Création en cours...' : 'Créer la facture'}</button>
           </div>
         </form>

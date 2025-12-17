@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { chargeService } from "@/lib/services/accounting/chargeService";
 import { prisma } from "@/lib/prisma";
-
-export const dynamic = 'force-dynamic';
+import { CategorieCharge } from "@prisma/client";
 
 /**
  * GET /api/charges
@@ -12,8 +11,11 @@ export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
 
+    const categorie = searchParams.get("categorie");
     const filters = {
-      categorie: searchParams.get("categorie") || undefined,
+      categorie: (categorie && Object.values(CategorieCharge).includes(categorie as CategorieCharge)) 
+        ? (categorie as CategorieCharge)
+        : undefined,
       projetId: searchParams.get("projetId") || undefined,
       employeId: searchParams.get("employeId") || undefined,
       dateDebut: searchParams.get("dateDebut")

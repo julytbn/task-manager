@@ -1,5 +1,5 @@
 import SubmitTaskForm from '../../../../components/dashboard/SubmitTaskForm'
-import MainLayout from '@/components/MainLayout'
+import MainLayout from '@/components/layouts/MainLayout'
 
 export const metadata = { title: 'Soumettre une tâche' }
 

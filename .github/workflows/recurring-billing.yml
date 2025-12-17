@@ -2,29 +2,23 @@ name: Recurring Billing
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # Tous les jours à minuit UTC
-  workflow_dispatch:      # Permet le déclenchement manuel
+    - cron: '0 0 * * *'
+  workflow_dispatch:
 
 jobs:
   process-billing:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
       - name: Process Recurring Billing
-        run: |
-          curl -X POST \
-            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
-            -H "Content-Type: application/json" \
-            "${{ secrets.BASE_URL }}/api/cron/process-recurring-billing" \
-            -d '{}'
-        
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           BASE_URL: ${{ secrets.BASE_URL }}
-        
+        run: |
+          curl -X POST \
+            -H "X-Cron-Secret: ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            "${BASE_URL}/api/cron/process-recurring-billing" \
+            -d '{}'
         timeout-minutes: 10
         continue-on-error: true
 

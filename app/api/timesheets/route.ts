@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export const dynamic = 'force-dynamic';
-
 /**
  * GET /api/timesheets
  * Récupérer tous les timesheets avec filtres optionnels
@@ -11,19 +9,12 @@ export async function GET(req: NextRequest) {
   try {
     const searchParams = req.nextUrl.searchParams;
 
-    const where: any = {
-      projectId: searchParams.get("projectId") || undefined,
-      employeeId: searchParams.get("employeeId") || undefined,
-    };
-
-    // Valider le statut s'il est fourni
-    const statutParam = searchParams.get("statut");
-    if (statutParam && ["EN_ATTENTE", "VALIDEE", "REJETEE", "CORRIGEE"].includes(statutParam)) {
-      where.statut = statutParam;
-    }
-
     const timesheets = await prisma.timeSheet.findMany({
-      where,
+      where: {
+        projectId: searchParams.get("projectId") || undefined,
+        employeeId: searchParams.get("employeeId") || undefined,
+        statut: searchParams.get("statut") as any || undefined,
+      },
       include: {
         employee: {
           select: {
@@ -84,20 +75,12 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // Validation des champs requis
-    const missingFields: string[] = [];
-    if (!body.employeeId) missingFields.push('employeeId');
-    if (!body.taskId) missingFields.push('taskId');
-    if (!body.projectId) missingFields.push('projectId');
-    if (!body.date) missingFields.push('date');
-    if (body.regularHrs === undefined || body.regularHrs === null) missingFields.push('regularHrs');
-
-    if (missingFields.length > 0) {
+    if (!body.employeeId || !body.taskId || !body.projectId) {
       return NextResponse.json(
         {
           success: false,
-          message: `Missing required fields: ${missingFields.join(', ')}`,
-          missingFields,
+          message:
+            "Missing required fields: employeeId, taskId, projectId, date, regularHrs",
         },
         { status: 400 }
       );
@@ -105,12 +88,12 @@ export async function POST(req: NextRequest) {
 
     const timesheet = await prisma.timeSheet.create({
       data: {
-        date: new Date(body.date),
-        regularHrs: Math.round(body.regularHrs),
-        overtimeHrs: body.overtimeHrs ? Math.round(body.overtimeHrs) : 0,
-        sickHrs: body.sickHrs ? Math.round(body.sickHrs) : 0,
-        vacationHrs: body.vacationHrs ? Math.round(body.vacationHrs) : 0,
-        description: body.description || null,
+        date: body.date ? new Date(body.date) : new Date(),
+        regularHrs: body.regularHrs || 0,
+        overtimeHrs: body.overtimeHrs,
+        sickHrs: body.sickHrs,
+        vacationHrs: body.vacationHrs,
+        description: body.description,
         statut: "EN_ATTENTE",
         employeeId: body.employeeId,
         taskId: body.taskId,
@@ -135,36 +118,38 @@ export async function POST(req: NextRequest) {
           select: {
             id: true,
             titre: true,
+            equipeId: true,
           },
         },
       },
     });
 
-    // Créer une notification pour les admins/managers
-    try {
-      const admins = await prisma.utilisateur.findMany({
-        where: {
-          OR: [
-            { role: "ADMIN" },
-            { role: "MANAGER" }
-          ]
-        }
+    // Envoyer une notification au manager
+    if (timesheet.project.equipeId) {
+      const equipe = await prisma.equipe.findUnique({
+        where: { id: timesheet.project.equipeId },
+        select: { leadId: true, nom: true },
       });
 
-      for (const admin of admins) {
+      if (equipe?.leadId) {
+        const totalHours = 
+          (timesheet.regularHrs || 0) + 
+          (timesheet.overtimeHrs || 0) + 
+          (timesheet.sickHrs || 0) + 
+          (timesheet.vacationHrs || 0);
+
         await prisma.notification.create({
           data: {
-            titre: "Nouveau TimeSheet soumis",
-            message: `${timesheet.employee.prenom} ${timesheet.employee.nom} a soumis un timesheet pour la tâche "${timesheet.task.titre}" du projet "${timesheet.project.titre}"`,
-            type: "TACHE",
-            utilisateurId: admin.id,
+            utilisateurId: equipe.leadId,
+            titre: "Nouveau Timesheet à valider",
+            message: `${timesheet.employee.prenom} ${timesheet.employee.nom} a soumis un timesheet de ${totalHours}h pour le projet "${timesheet.project.titre}" (${new Date(timesheet.date).toLocaleDateString('fr-FR')})`,
+            type: "ALERTE",
+            lien: `/timesheets/validation?filter=EN_ATTENTE`,
             sourceId: timesheet.id,
+            sourceType: "TIMESHEET",
           },
-        }).catch(err => console.error("Erreur création notification:", err));
+        });
       }
-    } catch (notifError) {
-      console.error("Erreur lors de la création des notifications:", notifError);
-      // Ne pas bloquer la création du timesheet si les notifications échouent
     }
 
     return NextResponse.json(

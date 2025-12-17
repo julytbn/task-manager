@@ -1,4 +1,4 @@
-import MainLayout from '../../../components/MainLayout'
+import MainLayout from '@/components/layouts/MainLayout'
 import ClientDetailTabs from '../../../components/ClientDetailTabs'
 import { prisma } from '../../../lib/prisma'
 

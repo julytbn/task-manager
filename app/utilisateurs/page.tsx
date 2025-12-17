@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useState } from 'react'
-import MainLayout from "@/components/MainLayout"
 import { Plus, Edit2, Trash2 } from 'lucide-react'
+import MainLayout from '@/components/layouts/MainLayout'
 
 type Utilisateur = {
   id: string

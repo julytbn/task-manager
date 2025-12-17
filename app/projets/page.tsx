@@ -2,33 +2,40 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import { Plus, Grid, List } from 'lucide-react'
-import { MainLayout, StatCard, DataTable, ProgressBar } from '../../components'
+import { StatCard, DataTable, ProgressBar } from '../../components'
 import { FormField } from '../../components/FormField'
 import { Button } from '../../components/ui'
 import ProjectModal from '../../components/ProjectModal'
 import ProjectDetailModal from '../../components/ProjectDetailModal'
 import EditProjectModal from '../../components/EditProjectModal'
+import MainLayout from '../../components/layouts/MainLayout'
 
 const fetchProjects = async () => {
   const response = await fetch('/api/projets')
   if (response.ok) {
     const json = await response.json()
+    // L'API retourne { success: true, data: [...], count: ... }
+    // Extraire les données
+    let data = Array.isArray(json) ? json : (json.data || [])
+    
     // Normaliser les clés retournées par l'API afin d'assurer une compatibilité
     // avec le reste de l'application (certaines routes renvoient `title`/`status`).
-    if (Array.isArray(json)) {
-      return json.map((p: any) => ({
+    if (Array.isArray(data)) {
+      return data.map((p: any) => ({
         // garder les valeurs existantes mais fournir des alias attendus
         ...p,
         titre: p.titre || p.title || p.nom || '',
         statut: p.statut || p.status || p.statut || '',
       }))
     }
-    // cas où l'API renvoie un objet unique
-    return {
-      ...json,
-      titre: json.titre || json.title || json.nom || '',
-      statut: json.statut || json.status || json.statut || '',
-    }
+    // cas où l'API renvoie un objet unique, le convertir en array
+    return [
+      {
+        ...data,
+        titre: data.titre || data.title || data.nom || '',
+        statut: data.statut || data.status || data.statut || '',
+      }
+    ]
   }
   return []
 }

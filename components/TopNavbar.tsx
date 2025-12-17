@@ -53,9 +53,11 @@ export default function TopNavbar() {
   return (
     <header className="fixed top-0 left-0 right-0 z-40 bg-gradient-to-r from-[var(--color-black-deep)] to-[var(--color-black-900)]" style={{ 
       height: '4rem',
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+      left: 'var(--sidebar-width, 250px)',
+      width: 'calc(100% - var(--sidebar-width, 250px))'
     }}>
-      <div className="h-full flex items-center px-4 md:px-6 lg:px-8" style={{ marginLeft: '250px' }}>
+      <div className="h-full flex items-center px-4 md:px-6 lg:px-8">
         {/* Mobile menu button */}
         <button
           aria-label="open menu"
@@ -67,9 +69,15 @@ export default function TopNavbar() {
 
         {/* Logo */}
         <div className="flex items-center mr-6">
-          <img src="/kekeli-logo-or.svg" alt="Kekeli Group" className="w-9 h-9 object-contain" />
+          <img 
+            src="/kekeli-logo.svg" 
+            alt="Kekeli Group" 
+            className="h-9 w-auto object-contain" 
+            style={{ filter: 'brightness(0) invert(1)' }}
+          />
           <div className="ml-3 hidden sm:block">
-            <div className="text-sm font-semibold text-[var(--color-gold)]">Kekeli Group</div>
+            <div className="text-lg font-bold text-[var(--color-gold)]">KEKELI</div>
+            <div className="text-xs text-white opacity-80 -mt-1">GROUP</div>
           </div>
         </div>
 

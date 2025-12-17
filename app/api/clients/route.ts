@@ -105,10 +105,12 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const data = await request.json()
-    if (!data.id) return NextResponse.json({ error: 'id requis' }, { status: 400 })
+    const url = new URL(request.url)
+    const clientId = url.pathname.split('/').pop()
+    
+    if (!clientId) return NextResponse.json({ error: 'id requis' }, { status: 400 })
 
-    await prisma.client.delete({ where: { id: data.id } })
+    await prisma.client.delete({ where: { id: clientId } })
     return NextResponse.json({ ok: true })
   } catch (error) {
     console.error('DELETE /api/clients error', error)

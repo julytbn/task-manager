@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { salaryForecastService } from "@/lib/services/salaryForecasting/salaryForecastService";
 
-export const dynamic = 'force-dynamic';
-
 /**
  * GET /api/salary-forecasts/statistics/[employeeId] - Récupérer les statistiques salariales
  * Query params:

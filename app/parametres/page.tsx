@@ -1,10 +1,10 @@
 "use client"
 
 import React, { useEffect, useState } from 'react'
-import MainLayout from '@/components/MainLayout'
 import { useSession } from 'next-auth/react'
 import { Eye, EyeOff, Check, AlertCircle } from 'lucide-react'
 import { useLanguage } from '@/lib/LanguageContext'
+import MainLayout from '@/components/layouts/MainLayout'
 
 export default function ParametresPage() {
   const { data: session, update } = useSession()
@@ -147,13 +147,13 @@ export default function ParametresPage() {
           <p className="text-gray-600 mt-2">{t('settingsDescription')}</p>
         </div>
 
-        {/* Messages */}
-        {message && (
-          <div className={`p-4 rounded-lg flex items-center gap-3 ${
-            message.type === 'success' 
-              ? 'bg-green-50 border border-green-200' 
-              : 'bg-red-50 border border-red-200'
-          }`}>
+      {/* Messages */}
+      {message && (
+        <div className={`p-4 rounded-lg flex items-center gap-3 ${
+          message.type === 'success' 
+            ? 'bg-green-50 border border-green-200' 
+            : 'bg-red-50 border border-red-200'
+        }`}>
             {message.type === 'success' ? (
               <Check className="text-green-600" size={20} />
             ) : (

@@ -759,14 +759,11 @@ function TabFactures({
   const handleModalSave = async (facture: any) => {
     try {
       const montant = parseFloat(String(facture.montant)) || 0
-      const tauxTVA = parseFloat(String(facture.tauxTVA)) || 18
-      const montantTVA = montant * (tauxTVA / 100)
-      const montantTotal = montant + montantTVA
+      const montantTotal = parseFloat(String(facture.montantTotal)) || montant
 
       const payload = {
         numero: facture.numero,
         montant: montant,
-        tauxTVA: tauxTVA,
         montantTotal: montantTotal,
         dateEmission: facture.dateEmission || new Date().toISOString().split('T')[0],
         dateEcheance: facture.dateEcheance || null,
@@ -840,9 +837,7 @@ function TabFactures({
               <tr>
                 <th className="py-3 px-4 text-left font-medium text-gray-700">NUMÉRO</th>
                 <th className="py-3 px-4 text-left font-medium text-gray-700">PROJET</th>
-                <th className="py-3 px-4 text-left font-medium text-gray-700">MONTANT HT</th>
-                <th className="py-3 px-4 text-left font-medium text-gray-700">TVA</th>
-                <th className="py-3 px-4 text-left font-medium text-gray-700">TOTAL</th>
+                <th className="py-3 px-4 text-left font-medium text-gray-700">MONTANT</th>
                 <th className="py-3 px-4 text-left font-medium text-gray-700">STATUT</th>
                 <th className="py-3 px-4 text-left font-medium text-gray-700">DATE ÉMISSION</th>
                 <th className="py-3 px-4 text-left font-medium text-gray-700">DATE PAIEMENT</th>
@@ -854,12 +849,6 @@ function TabFactures({
                   <td className="py-3 px-4 font-medium text-slate-800">{f.numero || f.reference || f.id}</td>
                   <td className="py-3 px-4 text-gray-700">{f.projet?.titre || '—'}</td>
                   <td className="py-3 px-4 font-semibold">{f.montant ? `${Number(f.montant).toLocaleString('fr-FR')} FCFA` : '—'}</td>
-                  <td className="py-3 px-4">
-                    {f.tauxTVA ? `${Number(f.tauxTVA).toLocaleString('fr-FR')}%` : '—'}
-                  </td>
-                  <td className="py-3 px-4 font-bold text-slate-800">
-                    {f.montantTotal ? `${Number(f.montantTotal).toLocaleString('fr-FR')} FCFA` : '—'}
-                  </td>
                   <td className="py-3 px-4">
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatutColor(f.statut)}`}>
                       {f.statut ? f.statut.replace(/_/g, ' ') : '—'}

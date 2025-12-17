@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Plus, Clock, X, FileText } from 'lucide-react'
-import MainLayout from '@/components/MainLayout'
+import MainLayout from '@/components/layouts/MainLayout'
 import Link from 'next/link'
 import { useUserSession } from '@/hooks/useSession'
 
@@ -29,7 +29,7 @@ type TimeSheet = {
     id: string
     titre: string
   }
-  validePar: {
+  valideParUser: {
     id: string
     nom: string
     prenom: string
@@ -338,7 +338,7 @@ export default function MyTimesheetsPage() {
                       </td>
                       <td className="px-6 py-4 text-sm">{getStatutBadge(ts.statut)}</td>
                       <td className="px-6 py-4 text-sm text-gray-600">
-                        {ts.validePar ? `${ts.validePar.prenom} ${ts.validePar.nom}` : '—'}
+                        {ts.valideParUser ? `${ts.valideParUser.prenom} ${ts.valideParUser.nom}` : '—'}
                       </td>
                     </tr>
                   ))}

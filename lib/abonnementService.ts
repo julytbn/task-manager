@@ -130,9 +130,7 @@ export async function generateDueInvoices() {
       const invoiceNumber = `FAC-${subscription.id.toUpperCase().slice(0, 8)}-${Date.now()}`
 
       // Calculer montant TTC
-      const tauxTVA = 0.18
-      const montantHT = subscription.montant
-      const montantTTC = montantHT * (1 + tauxTVA)
+      const montant = subscription.montant
 
       // Créer la facture
       const invoice = await prisma.facture.create({
@@ -142,9 +140,7 @@ export async function generateDueInvoices() {
           serviceId: subscription.serviceId,
           abonnementId: subscription.id,
           statut: 'EN_ATTENTE',
-          montant: montantHT,
-          tauxTVA: tauxTVA,
-          montantTotal: montantTTC,
+          montant: montant,
           dateEmission: today,
           dateEcheance: calculateNextBillingDate(today, subscription.frequence as FrequencePaiementType),
           notes: `Facturation ${subscription.frequence} - ${subscription.nom}`,

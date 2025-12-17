@@ -1,295 +1,208 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Plus, Search, Filter, Download, MoreHorizontal } from 'lucide-react';
+import { useState, useEffect } from 'react'
+import MainLayout from '@/components/layouts/MainLayout'
+import DataTable from '@/components/DataTable'
+import NouvelleChargeModal from '@/components/NouvelleChargeModal'
+import { Button } from '@/components/ui'
+import { Plus, Search, Filter, Download } from 'lucide-react'
 
-// Utilisation de table HTML standard pour l'instant
-const Table = ({ children }: { children: React.ReactNode }) => (
-  <div className="w-full overflow-auto">
-    <table className="w-full caption-bottom text-sm">
-      {children}
-    </table>
-  </div>
-);
 
-const TableHeader = ({ children }: { children: React.ReactNode }) => (
-  <thead className="[&_tr]:border-b">
-    {children}
-  </thead>
-);
-
-const TableBody = ({ children }: { children: React.ReactNode }) => (
-  <tbody className="[&_tr:last-child]:border-0">
-    {children}
-  </tbody>
-);
-
-const TableRow = ({ children, ...props }: { children: React.ReactNode } & React.HTMLAttributes<HTMLTableRowElement>) => (
-  <tr 
-    className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
-    {...props}
-  >
-    {children}
-  </tr>
-);
-
-const TableHead = ({ children = '', className = '' }: { children?: React.ReactNode, className?: string }) => (
-  <th className={`h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 ${className}`}>
-    {children}
-  </th>
-);
-
-const TableCell = ({ children, className = '', colSpan, ...props }: { children: React.ReactNode, className?: string, colSpan?: number } & React.HTMLAttributes<HTMLTableCellElement>) => (
-  <td colSpan={colSpan} className={`p-4 align-middle ${className}`} {...props}>
-    {children}
-  </td>
-);
-
-// Composant DropdownMenu simplifié
-const DropdownMenu = ({ children }: { children: React.ReactNode }) => (
-  <div className="relative">
-    {children}
-  </div>
-);
-
-const DropdownMenuTrigger = ({ children }: { children: React.ReactNode }) => (
-  <div className="cursor-pointer">
-    {children}
-  </div>
-);
-
-const DropdownMenuContent = ({ children }: { children: React.ReactNode }) => (
-  <div className="absolute right-0 z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
-    {children}
-  </div>
-);
-
-const DropdownMenuItem = ({ children, onClick }: { children: React.ReactNode, onClick?: () => void }) => (
-  <div 
-    className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground"
-    onClick={onClick}
-  >
-    {children}
-  </div>
-);
-
-// Types
 type Charge = {
-  id: string;
-  reference: string;
-  description: string;
-  amount: number;
-  date: string;
-  status: 'paid' | 'pending' | 'cancelled';
-  category: string;
-};
-
-// Données simulées
-const mockCharges: Charge[] = [
-  {
-    id: '1',
-    reference: 'CHG-2023-001',
-    description: 'Achat fournitures de bureau',
-    amount: 1250.5,
-    date: '2023-12-01',
-    status: 'paid',
-    category: 'Fournitures',
-  },
-  {
-    id: '2',
-    reference: 'CHG-2023-002',
-    description: 'Abonnement logiciel',
-    amount: 299.99,
-    date: '2023-12-05',
-    status: 'pending',
-    category: 'Logiciels',
-  },
-  {
-    id: '3',
-    reference: 'CHG-2023-003',
-    description: 'Frais de déplacement',
-    amount: 450.0,
-    date: '2023-12-10',
-    status: 'paid',
-    category: 'Déplacements',
-  },
-];
+  id: string
+  description: string
+  montant: number
+  categorie?: string
+  date?: string
+  statut?: string
+}
 
 export default function ChargesPage() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [charges, setCharges] = useState<Charge[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const [showModal, setShowModal] = useState(false)
+  const [editingCharge, setEditingCharge] = useState<Charge | null>(null)
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false)
+  const [chargeToDelete, setChargeToDelete] = useState<Charge | null>(null)
 
-  const filteredCharges = mockCharges.filter((charge) => {
-    const matchesSearch = charge.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      charge.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || charge.status === statusFilter;
-    const matchesCategory = categoryFilter === 'all' || charge.category === categoryFilter;
-    
-    return matchesSearch && matchesStatus && matchesCategory;
-  });
+  useEffect(() => {
+    const loadCharges = async () => {
+      try {
+        const res = await fetch('/api/charges')
+        if (!res.ok) throw new Error('Failed to load charges')
+        const data = await res.json()
+        // L'API retourne { success, data, count } ou un array direct
+        const chargesData = Array.isArray(data) ? data : (data.data || [])
+        setCharges(chargesData)
+      } catch (err) {
+        console.error('Error loading charges:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
 
-  const totalAmount = filteredCharges.reduce((sum, charge) => sum + charge.amount, 0);
+    loadCharges()
+  }, [])
+
+  const filtered = charges.filter(charge => {
+    const matchSearch = charge.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchCategory = !categoryFilter || charge.categorie === categoryFilter
+    return matchSearch && matchCategory
+  })
+
+  const totalAmount = filtered.reduce((sum, charge) => sum + (charge.montant || 0), 0)
+
+  const handleEdit = (row: any) => {
+    setEditingCharge(row as Charge)
+    setShowModal(true)
+  }
+
+  const handleDelete = (row: any) => {
+    setChargeToDelete(row as Charge)
+    setShowConfirmDelete(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!chargeToDelete) return
+    try {
+      const res = await fetch(`/api/charges/${chargeToDelete.id}`, {
+        method: 'DELETE',
+      })
+      if (!res.ok) throw new Error('Failed to delete charge')
+      setCharges(charges.filter(c => c.id !== chargeToDelete.id))
+      setShowConfirmDelete(false)
+      setChargeToDelete(null)
+    } catch (err) {
+      console.error('Error deleting charge:', err)
+    }
+  }
+
+  const handleModalClose = () => {
+    setShowModal(false)
+    setEditingCharge(null)
+  }
+
+  const columns = [
+    { key: 'description', label: 'Libellé' },
+    { key: 'categorie', label: 'Catégorie' },
+    { key: 'montant', label: 'Montant', render: (v: any) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(v) },
+    { key: 'date', label: 'Date', render: (v: any) => v ? new Date(v).toLocaleDateString('fr-FR') : '—' },
+    { key: 'statut', label: 'Statut' },
+  ]
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Gestion des charges</h1>
-          <p className="text-muted-foreground">
-            Consultez et gérez toutes les charges de l'entreprise
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/accounting/charges/new">
-            <Plus className="mr-2 h-4 w-4" />
-            Nouvelle charge
-          </Link>
-        </Button>
-      </div>
-
-      <div className="bg-card rounded-lg border p-6 space-y-4">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <input
-              type="search"
-              placeholder="Rechercher une charge..."
-              className="w-full rounded-lg border bg-background pl-8 pr-4 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+    <MainLayout>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-[var(--color-black-deep)]">Charges</h1>
+            <p className="text-sm text-[var(--color-anthracite)] mt-1">Gérez les dépenses et charges</p>
           </div>
-          
           <div className="flex gap-2">
-            <select
-              className="rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+            <Button variant="ghost" size="sm" className="flex items-center gap-2">
+              <Download size={16} />
+              Exporter
+            </Button>
+            <Button 
+              variant="primary" 
+              size="sm" 
+              className="flex items-center gap-2"
+              onClick={() => setShowModal(true)}
             >
-              <option value="all">Tous les statuts</option>
-              <option value="paid">Payé</option>
-              <option value="pending">En attente</option>
-              <option value="cancelled">Annulé</option>
-            </select>
-            
-            <select
-              className="rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              <option value="all">Toutes catégories</option>
-              <option value="Fournitures">Fournitures</option>
-              <option value="Logiciels">Logiciels</option>
-              <option value="Déplacements">Déplacements</option>
-              <option value="Services">Services</option>
-            </select>
-            
-            <Button variant="outline" size="icon">
-              <Filter className="h-4 w-4" />
+              <Plus size={16} />
+              Nouvelle charge
             </Button>
           </div>
         </div>
 
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Référence</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Catégorie</TableHead>
-                <TableHead className="text-right">Montant</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredCharges.length > 0 ? (
-                filteredCharges.map((charge) => (
-                  <TableRow key={charge.id}>
-                    <TableCell className="font-medium">{charge.reference}</TableCell>
-                    <TableCell>{charge.description}</TableCell>
-                    <TableCell>
-                      {new Date(charge.date).toLocaleDateString('fr-FR')}
-                    </TableCell>
-                    <TableCell>{charge.category}</TableCell>
-                    <TableCell className="text-right">
-                      {new Intl.NumberFormat('fr-FR', {
-                        style: 'currency',
-                        currency: 'EUR',
-                      }).format(charge.amount)}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          charge.status === 'paid'
-                            ? 'bg-green-100 text-green-800'
-                            : charge.status === 'pending'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {charge.status === 'paid'
-                          ? 'Payé'
-                          : charge.status === 'pending'
-                          ? 'En attente'
-                          : 'Annulé'}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="relative">
-                        <button 
-                          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-8 w-8 p-0"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            // Gérer l'ouverture du menu déroulant
-                          }}
-                        >
-                          <span className="sr-only">Ouvrir le menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </button>
-                        <div className="absolute right-0 z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md hidden">
-                          <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground">
-                            <Link href={`/accounting/charges/${charge.id}`}>
-                              Voir les détails
-                            </Link>
-                          </div>
-                          <div className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground">
-                            <Link href={`/accounting/charges/${charge.id}/edit`}>
-                              Modifier
-                            </Link>
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
-                    Aucune charge trouvée
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+        <NouvelleChargeModal 
+          isOpen={showModal} 
+          onClose={handleModalClose}
+          onSubmit={(newCharge) => {
+            setCharges([...charges, newCharge])
+            handleModalClose()
+            // Recharger les charges depuis l'API
+            const loadCharges = async () => {
+              try {
+                const res = await fetch('/api/charges')
+                if (!res.ok) throw new Error('Failed to load charges')
+                const data = await res.json()
+                const chargesData = Array.isArray(data) ? data : (data.data || [])
+                setCharges(chargesData)
+              } catch (err) {
+                console.error('Error loading charges:', err)
+              }
+            }
+            loadCharges()
+          }}
+        />
+
+        <div className="flex items-center gap-3 bg-white p-4 rounded-lg border border-[var(--color-gold)]">
+          <Search size={18} className="text-[var(--color-anthracite)]" />
+          <input
+            type="text"
+            placeholder="Rechercher une charge..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="flex-1 outline-none bg-transparent text-[var(--color-black-deep)]"
+          />
+          <Button variant="ghost" size="sm">
+            <Filter size={16} />
+          </Button>
         </div>
 
-        <div className="flex justify-between items-center pt-4">
-          <div className="text-sm text-muted-foreground">
-            {filteredCharges.length} charge{filteredCharges.length > 1 ? 's' : ''} au total
+        {loading ? (
+          <div className="text-center py-12 text-[var(--color-anthracite)]">Chargement...</div>
+        ) : (
+          <>
+            <DataTable
+              columns={columns}
+              data={filtered}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+            
+            <div className="bg-white p-4 rounded-lg border border-[var(--color-gold)] flex justify-between items-center">
+              <div className="text-sm text-[var(--color-anthracite)]">
+                {filtered.length} charge{filtered.length > 1 ? 's' : ''} affichée{filtered.length > 1 ? 's' : ''}
+              </div>
+              <div className="font-bold text-[var(--color-black-deep)]">
+                Total: {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(totalAmount)}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Modal de confirmation de suppression */}
+        {showConfirmDelete && chargeToDelete && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h2 className="text-xl font-bold text-[var(--color-black-deep)] mb-2">
+                Supprimer cette charge?
+              </h2>
+              <p className="text-sm text-[var(--color-anthracite)] mb-6">
+                Êtes-vous sûr de vouloir supprimer la charge "{chargeToDelete.description}"? Cette action ne peut pas être annulée.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setShowConfirmDelete(false)}
+                >
+                  Annuler
+                </Button>
+                <Button 
+                  variant="danger"
+                  onClick={confirmDelete}
+                >
+                  Supprimer
+                </Button>
+              </div>
+            </div>
           </div>
-          <div className="font-medium">
-            Total: {new Intl.NumberFormat('fr-FR', {
-              style: 'currency',
-              currency: 'EUR',
-            }).format(totalAmount)}
-          </div>
-        </div>
+        )}
       </div>
-    </div>
-  );
+    </MainLayout>
+  )
 }

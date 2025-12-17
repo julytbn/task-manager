@@ -3,8 +3,6 @@ import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
-export const dynamic = 'force-dynamic';
-
 /**
  * GET /api/taches/mes-taches
  * Récupère toutes les tâches assignées à l'employé connecté
@@ -55,9 +53,9 @@ export async function GET() {
 
     console.log(`📝 [GET /api/taches/mes-taches] Employé ${session.user.id} a ${mesTaches.length} tâche(s) assignée(s)`)
 
-    return NextResponse.json({
+    return NextResponse.json({ 
       success: true,
-      data: mesTaches
+      data: mesTaches 
     })
   } catch (error) {
     console.error('Erreur récupération mes-taches:', error)

@@ -3,12 +3,12 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Grid, List, Eye } from 'lucide-react'
-import MainLayout from '@/components/MainLayout'
 import DataTable from '@/components/DataTable'
 import { FormField, Button } from '@/components/FormField'
 import NouveauClientModal from '@/components/NouveauClientModal'
 import StatCard from '@/components/StatCard'
 import { useEnums } from '@/lib/useEnums'
+import MainLayout from '@/components/layouts/MainLayout'
 
 type Client = {
   id: string
@@ -100,16 +100,16 @@ export default function ClientsPage() {
   return (
     <MainLayout>
       <div className="space-y-8">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">Gestion des clients</h1>
-            <p className="text-gray-500 mt-2">Tous vos clients et leurs projets</p>
-          </div>
-          <Button variant="primary" size="lg" onClick={() => { setModalInitialClient(null); setIsNewClientOpen(true); }}>
-            <Plus size={20} />
-            Nouveau client
-          </Button>
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">Gestion des clients</h1>
+          <p className="text-gray-500 mt-2">Tous vos clients et leurs projets</p>
+        </div>
+        <Button variant="primary" size="lg" onClick={() => { setModalInitialClient(null); setIsNewClientOpen(true); }}>
+          <Plus size={20} />
+          Nouveau client
+        </Button>
         </div>
 
         {/* Stats Cards */}
@@ -437,5 +437,5 @@ export default function ClientsPage() {
           />
       </div>
     </MainLayout>
-  );
+  )
 }

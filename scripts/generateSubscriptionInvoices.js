@@ -56,10 +56,8 @@ async function generateSubscriptionInvoices() {
         // Générer un numéro de facture unique
         const invoiceNumber = `FAC-${subscription.id.toUpperCase().slice(0, 8)}-${Date.now()}`
 
-        // Calculer montant TTC
-        const tauxTVA = 0.18
-        const montantHT = subscription.montant
-        const montantTTC = montantHT * (1 + tauxTVA)
+        // Montant
+        const montant = subscription.montant
 
         // Calculer date d'échéance basée sur la fréquence
         let daysToAdd = 30
@@ -77,9 +75,7 @@ async function generateSubscriptionInvoices() {
             numero: invoiceNumber,
             clientId: subscription.clientId,
             statut: 'EN_ATTENTE',
-            montant: montantHT,
-            tauxTVA: tauxTVA,
-            montantTotal: montantTTC,
+            montant: montant,
             dateEmission: today,
             dateEcheance: dateEcheance,
             notes: `Facturation ${subscription.frequence} - ${subscription.nom}`,

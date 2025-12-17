@@ -1,28 +1,40 @@
 {
-  "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
-  "framework": "nextjs",
   "crons": [
     {
       "path": "/api/cron/generate-invoices",
-      "schedule": "0 0 1 * *",
-      "description": "Generate monthly subscription invoices - 1st of month at midnight"
-    },
-    {
-      "path": "/api/cron/check-late-payments",
       "schedule": "0 8 * * *",
-      "description": "Check late payments and send reminders - Daily at 8:00 AM"
+      "description": "Generate invoices daily at 08:00"
     },
     {
       "path": "/api/cron/salary-notifications",
       "schedule": "0 9 * * *",
-      "description": "Send salary payment notifications - Daily at 9:00 AM"
+      "description": "Send salary notifications daily at 09:00"
+    },
+    {
+      "path": "/api/cron/check-late-payments",
+      "schedule": "0 10 * * *",
+      "description": "Check for late payments daily at 10:00"
     },
     {
       "path": "/api/cron/check-late-tasks",
-      "schedule": "0 10 * * *",
-      "description": "Check late tasks and notify managers - Daily at 10:00 AM"
+      "schedule": "0 11 * * *",
+      "description": "Check for late tasks daily at 11:00"
+    },
+    {
+      "path": "/api/cron/salary/forecast-calculated",
+      "schedule": "0 0 31 * *",
+      "description": "Notifier les ADMINs que les prévisions salariales sont calculées (31 du mois)"
+    },
+    {
+      "path": "/api/cron/salary/payment-due",
+      "schedule": "0 8 1 * *",
+      "description": "Rappeler le paiement des salaires + créer les charges (1er du mois)"
+    },
+    {
+      "path": "/api/cron/salary/payment-late",
+      "schedule": "0 9 3 * *",
+      "description": "Alerte paiement retard si non payé (3 du mois)"
     }
   ]
 }
+

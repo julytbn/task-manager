@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Printer, ChevronLeft, ChevronRight } from 'lucide-react'
-import MainLayout from '@/components/MainLayout'
+import MainLayout from '@/components/layouts/MainLayout'
 
 type TimeSheet = {
   id: string
@@ -27,6 +27,11 @@ type TimeSheet = {
     id: string
     titre: string
   }
+  valideParUser: {
+    id: string
+    nom: string
+    prenom: string
+  } | null
 }
 
 type MonthlyData = {
@@ -48,6 +53,7 @@ export default function MonthlyReportPage() {
   const [timesheets, setTimesheets] = useState<TimeSheet[]>([])
   const [loading, setLoading] = useState(true)
   const [employee, setEmployee] = useState<any>(null)
+  const [supervisor, setSupervisor] = useState<any>(null)
 
   useEffect(() => {
     fetchMonthlyTimesheets()
@@ -68,6 +74,11 @@ export default function MonthlyReportPage() {
         setTimesheets(data.data)
         if (data.data.length > 0) {
           setEmployee(data.data[0].employee)
+          // Chercher le superviseur (manager qui a validé)
+          const validatedTs = data.data.find((ts: TimeSheet) => ts.valideParUser)
+          if (validatedTs && validatedTs.valideParUser) {
+            setSupervisor(validatedTs.valideParUser)
+          }
         }
       }
     } catch (error) {
@@ -214,7 +225,7 @@ export default function MonthlyReportPage() {
           </div>
 
           {/* Employee Info */}
-          <div className="grid grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-3 gap-6 mb-8">
             <div>
               <div className="mb-4">
                 <label className="text-sm text-gray-600 font-medium">Employé:</label>
@@ -225,6 +236,14 @@ export default function MonthlyReportPage() {
               <div>
                 <label className="text-sm text-gray-600 font-medium">Email:</label>
                 <p className="text-gray-900">{employee?.email || '—'}</p>
+              </div>
+            </div>
+            <div>
+              <div className="mb-4">
+                <label className="text-sm text-gray-600 font-medium">Superviseur:</label>
+                <p className="text-gray-900 font-semibold">
+                  {supervisor ? `${supervisor.prenom} ${supervisor.nom}` : '—'}
+                </p>
               </div>
             </div>
             <div>
@@ -305,10 +324,12 @@ export default function MonthlyReportPage() {
             <div className="text-center">
               <div className="border-t border-gray-400 pt-2 h-12"></div>
               <p className="text-xs text-gray-600 font-medium">Signature Employé</p>
+              <p className="text-xs text-gray-500">{employee?.prenom} {employee?.nom}</p>
             </div>
             <div className="text-center">
               <div className="border-t border-gray-400 pt-2 h-12"></div>
               <p className="text-xs text-gray-600 font-medium">Signature Superviseur</p>
+              <p className="text-xs text-gray-500">{supervisor ? `${supervisor.prenom} ${supervisor.nom}` : '—'}</p>
             </div>
             <div className="text-center">
               <div className="border-t border-gray-400 pt-2 h-12"></div>

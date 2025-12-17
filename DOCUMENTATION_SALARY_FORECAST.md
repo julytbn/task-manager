@@ -192,7 +192,7 @@ Email envoyé 5 jours avant le paiement:
 
 Notification in-app:
 - Type: ALERTE
-- Message: "Votre salaire pour {mois} sera payé dans 5 jours. Montant prévu: {montant}€"
+- Message: "Votre salaire pour {mois} sera payé dans 5 jours. Montant prévu: {montant} FCFA"
 
 ## 🔐 Sécurité
 
@@ -268,7 +268,7 @@ curl -H "Authorization: Bearer {CRON_SECRET}" \
 
 Les actions importantes sont loggées:
 ```
-[SalaryForecast] Prévision mise à jour pour {nom}: {montant}€
+[SalaryForecast] Prévision mise à jour pour {nom}: {montant} FCFA
 [CRON] Début de l'envoi des notifications
 [EMAIL] Tentative envoi SMTP vers: {email}
 ```

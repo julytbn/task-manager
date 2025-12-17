@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useMemo, useState } from 'react'
+import MainLayout from '@/components/layouts/MainLayout'
 import TaskDetailsModal from '@/components/dashboard/TaskDetailsModal'
 import KanbanBoard from '@/components/dashboard/KanbanBoard'
 import { Card, Badge, Button, Stat } from '@/components/ui'
@@ -163,7 +164,8 @@ export default function EmployeeTasksPage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <MainLayout>
+      <div className="space-y-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold text-[#1E1E1E]">Mes Tâches</h1>
@@ -381,6 +383,7 @@ export default function EmployeeTasksPage() {
       {selectedTask && (
         <TaskDetailsModal task={selectedTask} onClose={closeDetails} onUpdate={updateTaskLocal} />
       )}
-    </div>
+      </div>
+    </MainLayout>
   )
 }

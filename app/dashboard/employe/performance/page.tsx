@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useMemo, useState } from 'react'
+import MainLayout from '@/components/layouts/MainLayout'
 import { Line, Bar, Doughnut } from 'react-chartjs-2'
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Legend } from 'chart.js'
 import { Trophy, Clock, CheckCircle, Activity, Zap } from 'lucide-react'
@@ -154,7 +155,8 @@ export default function EmployeePerformancePage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <MainLayout>
+      <div className="space-y-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-[#0A2342]">Performance personnelle</h1>
         <p className="text-sm text-gray-500">Visualisez votre rendement, charge de travail et objectifs.</p>
@@ -310,6 +312,7 @@ export default function EmployeePerformancePage() {
           </ul>
         </div>
       </div>
-    </div>
+      </div>
+    </MainLayout>
   )
 }

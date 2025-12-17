@@ -1,9 +1,10 @@
 "use client"
+
 import { Search, Plus, Filter, ChevronDown, AlertTriangle, ArrowUp, ArrowDown, Minus, Eye, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import MainLayout from '../../components/MainLayout'
 import { NouvelleTacheModal } from '@/components/NouvelleTacheModal'
+import MainLayout from '@/components/layouts/MainLayout'
 
 type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done' | 'paid' | 'submitted'
 type Priority = 'high' | 'medium' | 'low' | 'urgent'
@@ -156,7 +157,7 @@ export default function KanbanPage() {
   }, [tasks, activeTab, selectedPriority, searchQuery])
 
   return (
-    <MainLayout>
+    <MainLayout showSidebar={true} showHeader={true}>
       <div className="p-8">
         <div className="flex justify-between items-center mb-6">
           <div>

@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useMemo, useState } from 'react'
+import MainLayout from '@/components/layouts/MainLayout'
 import TaskDetailsModal from '@/components/dashboard/TaskDetailsModal'
 
 type Tache = {
@@ -76,7 +77,8 @@ export default function EmployeeCalendar(){
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <MainLayout>
+      <div className="space-y-6">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-2xl font-bold">Calendrier</h2>
@@ -163,6 +165,7 @@ export default function EmployeeCalendar(){
       )}
 
       {selected && <TaskDetailsModal task={selected as any} onClose={()=>setSelected(null)} onUpdate={(id,patch)=>{ setTasks(prev=>prev.map(p=>p.id===id?{...p,...(patch as any)}:p)); setSelected(null) }} />}
-    </div>
+      </div>
+    </MainLayout>
   )
 }

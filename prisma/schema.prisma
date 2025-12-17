@@ -538,6 +538,7 @@ model TimeSheet {
   dateCreation     DateTime        @default(now())
   dateModification DateTime        @updatedAt
   validePar        String?
+  commentaire      String?         // Raison du rejet ou détails
   employee         Utilisateur     @relation("TimesheetEmploye", fields: [employeeId], references: [id])
   project          Projet          @relation("TimesheetProjet", fields: [projectId], references: [id], onDelete: Cascade)
   task             Tache           @relation(fields: [taskId], references: [id], onDelete: Cascade)

@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useMemo, useState } from 'react'
-import MainLayout from '@/components/MainLayout'
+import MainLayout from '@/components/layouts/MainLayout'
 import { DollarSign, CheckCircle, AlertCircle, TrendingUp } from 'lucide-react'
 import { useUserSession } from '@/hooks/useSession'
 

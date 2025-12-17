@@ -52,17 +52,14 @@ async function generateInvoiceNumber() {
 async function createInitialInvoice(subscription) {
   try {
     const invoiceNumber = await generateInvoiceNumber();
-    const tauxTVA = 0.18;
-    const montantTotal = subscription.montant * (1 + tauxTVA);
+    const montant = subscription.montant;
 
     const facture = await prisma.facture.create({
       data: {
         numero: invoiceNumber,
         clientId: subscription.clientId,
         abonnementId: subscription.id,
-        montant: subscription.montant,
-        tauxTVA: tauxTVA,
-        montantTotal: montantTotal,
+        montant: montant,
         statut: 'EN_ATTENTE',
         dateEmission: new Date(),
         dateEcheance: calculateNextDueDate(subscription.frequence),

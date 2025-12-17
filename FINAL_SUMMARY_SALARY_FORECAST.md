@@ -313,7 +313,7 @@ Timesheets validés:
 CALCUL: 82h × 25€/h = 2 050€
 
 RÉSULTAT:
-  ├─ Dashboard: 2 050€ affichés ✓
+  ├─ Dashboard: 2 050 FCFA affichés ✓
   ├─ Notification 27 jan: Email envoyé ✓
   ├─ In-app: Notification créée ✓
   ├─ Historique: Enregistré ✓

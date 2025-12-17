@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { CategorieCharge } from "@prisma/client";
 
 /**
  * Service pour gérer les Charges (Expenses/Operating Costs)
@@ -11,7 +12,7 @@ import { prisma } from "@/lib/prisma";
 
 export interface CreateChargeInput {
   montant: number;
-  categorie: string; // CategorieCharge enum value
+  categorie: CategorieCharge;
   description?: string;
   date?: Date;
   projetId?: string;
@@ -22,7 +23,7 @@ export interface CreateChargeInput {
 
 export interface UpdateChargeInput {
   montant?: number;
-  categorie?: string;
+  categorie?: CategorieCharge;
   description?: string;
   date?: Date;
   projetId?: string;
@@ -38,7 +39,7 @@ class ChargeService {
     return prisma.charge.create({
       data: {
         montant: input.montant,
-        categorie: input.categorie as any,
+        categorie: input.categorie,
         description: input.description,
         date: input.date || new Date(),
         projetId: input.projetId,
@@ -76,7 +77,7 @@ class ChargeService {
    * Récupérer toutes les charges avec filtres
    */
   async getAllCharges(filters?: {
-    categorie?: string;
+    categorie?: CategorieCharge;
     projetId?: string;
     employeId?: string;
     dateDebut?: Date;
@@ -84,16 +85,19 @@ class ChargeService {
     skip?: number;
     take?: number;
   }) {
+    // Construire la clause where de façon dynamique
+    const where: any = {};
+    if (filters?.categorie) where.categorie = filters.categorie;
+    if (filters?.projetId) where.projetId = filters.projetId;
+    if (filters?.employeId) where.employeId = filters.employeId;
+    if (filters?.dateDebut || filters?.dateFin) {
+      where.date = {};
+      if (filters?.dateDebut) where.date.gte = filters.dateDebut;
+      if (filters?.dateFin) where.date.lte = filters.dateFin;
+    }
+
     return prisma.charge.findMany({
-      where: {
-        categorie: filters?.categorie ? (filters.categorie as any) : undefined,
-        projetId: filters?.projetId,
-        employeId: filters?.employeId,
-        date: {
-          gte: filters?.dateDebut,
-          lte: filters?.dateFin,
-        },
-      },
+      where,
       include: {
         projet: {
           select: {
@@ -163,7 +167,7 @@ class ChargeService {
       where: { id },
       data: {
         montant: input.montant,
-        categorie: input.categorie ? (input.categorie as any) : undefined,
+        categorie: input.categorie,
         description: input.description,
         date: input.date,
         projetId: input.projetId,

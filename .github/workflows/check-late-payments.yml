@@ -1,31 +1,24 @@
-
 name: Check Late Payments
 
 on:
   schedule:
-    - cron: '0 7 * * *'  # Tous les jours à 07:00 UTC
-  workflow_dispatch:      # Permet manual trigger
+    - cron: '0 7 * * *'
+  workflow_dispatch:
 
 jobs:
   check-late-payments:
     runs-on: ubuntu-latest
-    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
       - name: Check late payments
-        run: |
-          curl -X POST \
-            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
-            -H "Content-Type: application/json" \
-            "${{ secrets.BASE_URL }}/api/cron/check-late-payments" \
-            -d '{}'
-        
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           BASE_URL: ${{ secrets.BASE_URL }}
-        
+        run: |
+          curl -X POST \
+            -H "X-Cron-Secret: ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            "${BASE_URL}/api/cron/check-late-payments" \
+            -d '{}'
         timeout-minutes: 5
         continue-on-error: true
 

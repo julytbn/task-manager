@@ -1,8 +1,9 @@
 "use client"
 import { useState, useEffect } from 'react'
-import { X, RefreshCw } from 'lucide-react'
+import { X, RefreshCw, Eye } from 'lucide-react'
 import { downloadFacturePDF, previewFacturePDF } from '@/lib/factureGenerator'
 import { generateFactureNumber } from '@/lib/paiementUtils'
+import FacturePreview from './FacturePreview'
 
 interface FactureData {
   id: string
@@ -68,6 +69,8 @@ export default function EditFactureModal({
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showPreview, setShowPreview] = useState(false)
+  const [clientData, setClientData] = useState<any>(null)
 
   useEffect(() => {
     if (isOpen && facture) {
@@ -90,6 +93,16 @@ export default function EditFactureModal({
       })
     }
   }, [isOpen, facture])
+
+  // Charger les données du client pour l'aperçu
+  useEffect(() => {
+    if (isOpen && facture?.client?.id) {
+      fetch(`/api/clients/${facture.client.id}`)
+        .then(res => res.json())
+        .then(data => setClientData(data))
+        .catch(err => console.error(err))
+    }
+  }, [isOpen, facture?.client?.id])
 
   const handleGenerateNumber = () => {
     const newNumber = generateFactureNumber()
@@ -157,6 +170,55 @@ export default function EditFactureModal({
   }
 
   if (!isOpen) return null
+
+  // Rendu de l'aperçu
+  if (showPreview) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="sticky top-0 bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4 flex justify-between items-center">
+            <h2 className="text-2xl font-bold text-white">📄 Aperçu Facture</h2>
+            <button
+              onClick={() => setShowPreview(false)}
+              className="text-white hover:bg-white/20 p-2 rounded"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Preview */}
+          <div className="p-8 bg-gray-100">
+            <div className="bg-white">
+              <FacturePreview
+                clientName={clientData ? `${clientData.prenom || ''} ${clientData.nom || ''}`.trim() : formData.client}
+                clientAddress={clientData?.adresse || 'Adresse du client'}
+                numeroFacture={formData.numero}
+                dateEmission={formData.dateEmission}
+                dateEcheance={formData.dateEcheance}
+                description={formData.description}
+                lignes={[]}
+                montant={parseFloat(formData.montant) || 0}
+                tauxTVA={formData.tauxTVA || 18}
+                notes={formData.notes}
+                statut={formData.statut}
+              />
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 justify-end p-6 border-t bg-white">
+            <button
+              onClick={() => setShowPreview(false)}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
+            >
+              Retour à l'édition
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
@@ -247,6 +309,9 @@ export default function EditFactureModal({
 
           <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
             <button type="button" onClick={onClose} disabled={loading} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition disabled:opacity-50">Annuler</button>
+            <button type="button" onClick={() => setShowPreview(true)} disabled={loading} className="flex items-center gap-2 px-4 py-2 border border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition disabled:opacity-50">
+              <Eye size={16} /> Aperçu
+            </button>
             <button type="submit" disabled={loading} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 font-medium">{loading ? 'Mise à jour...' : 'Enregistrer les modifications'}</button>
           </div>
         </form>

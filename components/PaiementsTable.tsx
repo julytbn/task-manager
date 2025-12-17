@@ -40,14 +40,14 @@ export default function PaiementsTable({
     const clientText = p.client ? `${p.client.prenom || ''} ${p.client.nom}`.trim() : ''
     const projetText = p.projet?.nom || ''
     
-    // Récupérer le montant total de la facture (montantTotal est le TTC depuis le backend)
+    // Récupérer le montant total de la facture (utiliser montant au lieu de montantTotal si nécessaire)
     const montantTotalFacture = p.facture?.montant || 0
     
     // Calculer le total des paiements pour cette facture
     // Si la facture a des paiements inclus, on les utilise, sinon on utilise le paiement actuel
     let totalPaye = p.montant || 0
-    if (p.facture?.paiements && p.facture.paiements.length > 0) {
-      totalPaye = p.facture.paiements.reduce((sum, paie) => sum + (paie.montant || 0), 0)
+    if ((p.facture?.paiements?.length ?? 0) > 0) {
+      totalPaye = p.facture?.paiements?.reduce((sum, paie) => sum + (paie.montant || 0), 0) || 0
     }
     
     // Calculer le solde restant

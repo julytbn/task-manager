@@ -65,7 +65,6 @@ async function testDevisEndpoints() {
     titre: "Devis Test - Audit Comptable",
     description: "Test creation devis",
     montant: 5000,
-    tauxTVA: 0.18,
     notes: "Test notes",
     services: [],
   });

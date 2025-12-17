@@ -251,14 +251,56 @@ export default function ChargesListPage() {
   useEffect(() => {
     const fetchCharges = async () => {
       try {
-        // Simuler un chargement
-        setTimeout(() => {
-          setCharges(mockCharges);
-          setIsLoading(false);
-        }, 800);
+        console.log('Fetching charges...');
+        const res = await fetch('/api/charges');
+        console.log('Response status:', res.status);
+        
+        if (!res.ok) {
+          throw new Error(`Failed to load charges: ${res.status} ${res.statusText}`);
+        }
+        
+        const data = await res.json();
+        console.log('Raw API response:', data);
+        
+        // L'API retourne { success, data, count } ou un array direct
+        const chargesData = Array.isArray(data) ? data : (data.data || []);
+        console.log('Charges data after extraction:', chargesData);
+        
+        // Transformer les données de l'API au format du composant
+        const transformedCharges = chargesData.map((charge: any) => {
+          console.log('Processing charge:', charge);
+          return {
+            id: charge.id,
+            reference: `CHG-${charge.id.substring(0, 8)}`,
+            description: charge.description || '',
+            amount: charge.montant || 0,
+            tva: 0,
+            date: charge.date ? new Date(charge.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            dueDate: new Date().toISOString().split('T')[0],
+            status: 'VALIDEE' as ChargeStatus,
+            type: 'FOURNISSEUR' as ChargeType,
+            category: charge.categorie || '',
+            provider: '',
+            projectId: charge.projetId || '',
+            paymentMethod: 'VIREMENT',
+            notes: charge.notes || '',
+            attachments: [],
+            createdAt: charge.dateCreation || new Date().toISOString(),
+            createdBy: {
+              id: 'unknown',
+              name: 'System',
+              email: 'system@example.com'
+            }
+          };
+        });
+        console.log('Transformed charges:', transformedCharges);
+        
+        setCharges(transformedCharges);
+        setIsLoading(false);
+        console.log('Charges loaded successfully');
       } catch (err) {
-        setError('Erreur lors du chargement des charges');
-        console.error(err);
+        console.error('Error fetching charges:', err);
+        setError('Erreur lors du chargement des charges: ' + (err instanceof Error ? err.message : String(err)));
         setIsLoading(false);
       }
     };
@@ -312,7 +354,7 @@ export default function ChargesListPage() {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
-      currency: 'EUR',
+      currency: 'XOF',
     }).format(amount);
   };
 
@@ -406,8 +448,7 @@ export default function ChargesListPage() {
             Consultez et gérez l'ensemble des charges de l'entreprise
           </p>
         </div>
-        <div className="mt-4 flex md:mt-0 md:ml-4
-        ">
+        <div className="mt-4 flex md:mt-0 md:ml-4">
           <Button 
             variant="primary" 
             onClick={() => router.push('/accounting/charges/new')}

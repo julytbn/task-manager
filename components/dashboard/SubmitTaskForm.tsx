@@ -36,8 +36,8 @@ export default function SubmitTaskForm(){
         const sJson = await sRes.json()
         const tachesJson = await tachesRes.json()
         if(!mounted) return
-        setProjects(pJson || [])
-        setServices(sJson || [])
+        setProjects(Array.isArray(pJson) ? pJson : [])
+        setServices(Array.isArray(sJson) ? sJson : [])
         setMesTaches(Array.isArray(tachesJson) ? tachesJson : [])
         setLoadingTaches(false)
       }catch(e){ 
