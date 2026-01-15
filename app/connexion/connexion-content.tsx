@@ -64,18 +64,27 @@ function ConnexionContent() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         {/* Logo et titre en haut */}
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <Image
-              src="/kekeli-logo.svg"
-              alt="Kekeli Logo"
-              width={80}
-              height={40}
-            />
+          <div className="flex justify-center mb-8">
+            <div className="relative w-40 h-32 flex items-center justify-center group">
+              {/* Glow background effect */}
+              <div className="absolute inset-0 bg-gradient-to-b from-[var(--color-gold)]/25 to-[var(--color-gold)]/10 rounded-xl blur-3xl opacity-80 group-hover:opacity-100 transition-opacity duration-300"></div>
+              {/* Logo container - Pure black */}
+              <div className="absolute inset-0 bg-[#000000] rounded-xl shadow-2xl border border-[var(--color-gold)]/50"></div>
+              {/* Logo image */}
+              <img
+                src="/imgkekeli.jpg"
+                alt="Kekeli Logo"
+                className="relative w-36 h-28 object-contain drop-shadow-2xl group-hover:scale-110 transition-transform duration-300"
+                style={{
+                  filter: 'drop-shadow(0 4px 12px rgba(212, 175, 55, 0.7)) brightness(1.7) contrast(2.3) saturate(1.5)',
+                }}
+              />
+            </div>
           </div>
-          <h1 className="text-xl font-bold" style={{ color: 'var(--color-gold)' }}>
+          <h1 className="text-4xl font-bold gold-gradient-text drop-shadow-lg">
             KEKELI GROUP
           </h1>
-          <p className="text-sm text-gray-600 mt-2">
+          <p className="text-sm text-[var(--color-anthracite)] mt-3 font-medium">
             Connectez-vous pour accéder à votre espace de travail
           </p>
         </div>

@@ -70,10 +70,18 @@ export default function NouveauPaiementModal({
         // Calculer le montant restant pour chaque facture
         const facturesAvecMontantRestant = data.map((facture: any) => {
           const totalPaiements = facture.paiements?.reduce((sum: number, p: any) => sum + (p.montant || 0), 0) || 0
-          const montantRestant = (facture.montantTotal || 0) - totalPaiements
+          // Montant total de la facture (main d'oeuvre + frais)
+          const montantTotal = facture.montant || 0
+          // Montant de main d'œuvre pour l'affichage
+          const montantMainDoeuvre = facture.lignes
+            ?.filter((ligne: any) => ligne.type === 'MAIN_D_OEUVRE')
+            .reduce((sum: number, ligne: any) => sum + (ligne.montant || 0), 0) || 0
+          // Le montantRestant = montantTotal - totalPaiements
+          const montantRestant = montantTotal - totalPaiements
           return {
             ...facture,
-            montantRestant: Math.max(0, montantRestant) // S'assurer que le montant n'est pas négatif
+            montantRestant: Math.max(0, montantRestant), // S'assurer que le montant n'est pas négatif
+            montantMainDoeuvre // Stocker aussi le montant de main d'œuvre pour l'affichage
           }
         })
         
@@ -300,7 +308,7 @@ export default function NouveauPaiementModal({
                 <option value="">-- Sélectionner une facture --</option>
                 {factures.map((f) => (
                   <option key={f.id} value={f.id}>
-                    FAC-{f.numero} | {f.client.nom} | {f.montantTotal}€ | {f.statut}
+                    FAC-{f.numero} | {f.client.nom} | {f.montantTotal} FCFA | {f.statut}
                   </option>
                 ))}
               </select>
@@ -317,7 +325,7 @@ export default function NouveauPaiementModal({
               <div className="grid grid-cols-2 gap-2 text-sm text-blue-800">
                 <p><strong>Numéro:</strong> FAC-{selectedFacture.numero}</p>
                 <p><strong>Client:</strong> {selectedFacture.client.nom}</p>
-                <p><strong>Montant TTC:</strong> {selectedFacture.montantTotal}€</p>
+                <p><strong>Montant TTC:</strong> {selectedFacture.montantTotal} FCFA</p>
                 <p><strong>Statut:</strong> {selectedFacture.statut}</p>
               </div>
             </div>
@@ -340,7 +348,7 @@ export default function NouveauPaiementModal({
                 required
               />
               {selectedFacture && (
-                <p className="text-xs text-gray-500 mt-1">Max: {selectedFacture.montantTotal}€</p>
+                <p className="text-xs text-gray-500 mt-1">Max: {selectedFacture.montantTotal} FCFA</p>
               )}
             </div>
 

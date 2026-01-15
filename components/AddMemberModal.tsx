@@ -13,12 +13,13 @@ interface AddMemberModalProps {
   isOpen: boolean
   onClose: () => void
   users: UserItem[]
-  onAdd: (utilisateurId: string) => Promise<void>
+  onAdd: (email: string) => Promise<void>
 }
 
 export default function AddMemberModal({ isOpen, onClose, users, onAdd }: AddMemberModalProps) {
   const [query, setQuery] = useState('')
-  const [loadingId, setLoadingId] = useState<string | null>(null)
+  const [loadingEmail, setLoadingEmail] = useState<string | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   if (!isOpen) return null
 
@@ -27,6 +28,24 @@ export default function AddMemberModal({ isOpen, onClose, users, onAdd }: AddMem
     const email = (u.email || '').toLowerCase()
     return name.includes(query.toLowerCase()) || email.includes(query.toLowerCase())
   })
+
+  const handleAddClick = async (email: string | undefined) => {
+    if (!email) return
+    try {
+      setErrorMsg(null)
+      setLoadingEmail(email)
+      await onAdd(email)
+      // If success, close the modal after a short delay
+      setTimeout(() => {
+        setLoadingEmail(null)
+        onClose()
+      }, 500)
+    } catch (err) {
+      setLoadingEmail(null)
+      setErrorMsg(err instanceof Error ? err.message : 'Erreur lors de l\'ajout')
+      console.error('Erreur ajout membre:', err)
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center pt-20 p-3 sm:p-4">
@@ -37,6 +56,12 @@ export default function AddMemberModal({ isOpen, onClose, users, onAdd }: AddMem
           <button onClick={onClose} className="p-2 rounded-md bg-gray-100 hover:bg-gray-200"><X /></button>
         </div>
 
+        {errorMsg && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
+            {errorMsg}
+          </div>
+        )}
+
         <div className="mb-4">
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher par nom ou email..." className="w-full px-3 py-2 border rounded-md" />
         </div>
@@ -46,13 +71,19 @@ export default function AddMemberModal({ isOpen, onClose, users, onAdd }: AddMem
             <div className="text-sm text-gray-500">Aucun utilisateur trouvé</div>
           ) : (
             filtered.map(u => (
-              <div key={u.id} className="flex items-center justify-between p-2 border rounded-md">
+              <div key={u.email || u.id} className="flex items-center justify-between p-2 border rounded-md hover:bg-gray-50">
                 <div className="text-sm">
                   <div className="font-medium">{(u.prenom || '') + (u.nom ? ' ' + u.nom : '') || u.email}</div>
                   <div className="text-xs text-gray-500">{u.email || '—'}</div>
                 </div>
                 <div>
-                  <button disabled={!!loadingId} onClick={async () => { setLoadingId(u.id); await onAdd(u.id); setLoadingId(null) }} className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50">{loadingId === u.id ? 'Ajout...' : 'Ajouter'}</button>
+                  <button 
+                    disabled={!!loadingEmail} 
+                    onClick={() => handleAddClick(u.email)}
+                    className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 text-sm font-medium"
+                  >
+                    {loadingEmail === u.email ? '⏳...' : '✓ Ajouter'}
+                  </button>
                 </div>
               </div>
             ))
@@ -60,7 +91,7 @@ export default function AddMemberModal({ isOpen, onClose, users, onAdd }: AddMem
         </div>
 
         <div className="flex justify-end mt-4">
-          <button onClick={onClose} className="px-4 py-2 bg-gray-50 border rounded-md">Fermer</button>
+          <button onClick={onClose} className="px-4 py-2 bg-gray-50 border rounded-md hover:bg-gray-100">Fermer</button>
         </div>
       </div>
     </div>

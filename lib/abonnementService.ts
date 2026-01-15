@@ -75,7 +75,6 @@ export async function createSubscription(data: {
       nom: data.nom,
       description: data.description,
       clientId: data.clientId,
-      serviceId: data.serviceId,
       montant: data.montant,
       frequence: data.frequence as FrequencePaiementType,
       statut: 'ACTIF',
@@ -85,9 +84,9 @@ export async function createSubscription(data: {
     },
     include: {
       client: true,
-      service: true,
     },
   })
+  return sub
 }
 
 /**
@@ -118,7 +117,6 @@ export async function generateDueInvoices() {
     },
     include: {
       client: true,
-      service: true,
     },
   })
 
@@ -137,7 +135,6 @@ export async function generateDueInvoices() {
         data: {
           numero: invoiceNumber,
           clientId: subscription.clientId,
-          serviceId: subscription.serviceId,
           abonnementId: subscription.id,
           statut: 'EN_ATTENTE',
           montant: montant,
@@ -171,7 +168,7 @@ export async function generateDueInvoices() {
         id: invoice.id,
         numero: invoice.numero,
         abonnementNom: subscription.nom,
-        clientNom: subscription.client.nom,
+        clientNom: subscription.clientId,
         montant: invoice.montant,
         dateEmission: invoice.dateEmission,
       })
@@ -193,7 +190,6 @@ export async function getActiveSubscriptions() {
     },
     include: {
       client: true,
-      service: true,
     },
     orderBy: {
       dateProchainFacture: 'asc',
@@ -210,7 +206,6 @@ export async function getClientSubscriptions(clientId: string) {
       clientId,
     },
     include: {
-      service: true,
       factures: {
         orderBy: {
           dateEmission: 'desc',
@@ -246,7 +241,6 @@ export async function updateSubscription(
     },
     include: {
       client: true,
-      service: true,
     },
   })
 }
@@ -284,7 +278,6 @@ export async function getUpcomingInvoices(daysAhead: number = 7) {
     },
     include: {
       client: true,
-      service: true,
     },
     orderBy: {
       dateProchainFacture: 'asc',

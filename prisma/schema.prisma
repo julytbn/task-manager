@@ -8,27 +8,30 @@ datasource db {
 }
 
 model Client {
-  id               String           @id @default(cuid())
-  nom              String
-  prenom           String
-  email            String?
-  telephone        String?
-  entreprise       String?
-  adresse          String?
-  type             TypeClient       @default(PARTICULIER)
-  gudefUrl         String?          // Lien GUDEF pour vérification entreprise
-  dateNaissance    DateTime?
-  siret            String?
-  siren            String?
-  dateCreation     DateTime         @default(now())
-  dateModification DateTime         @updatedAt
-  abonnements      Abonnement[]
-  documents        DocumentClient[]
-  factures         Facture[]
-  paiements        Paiement[]
-  proFormas        ProForma[]       @relation("ProFormasClient")
-  projets          Projet[]
-  souhaits         Souhait[]
+  id                 String             @id @default(cuid())
+  nom                String
+  prenom             String
+  email              String?
+  telephone          String?
+  entreprise         String?
+  adresse            String?
+  type               TypeClient         @default(PARTICULIER)
+  regimeFiscal       RegimeFiscal?      // Régime fiscal: AVEC_TVA, SANS_TVA, ou TPU
+  gudefUrl           String?            // Lien GUDEF pour vérification entreprise
+  dateNaissance      DateTime?
+  siret              String?
+  siren              String?
+  dateCreation       DateTime           @default(now())
+  dateModification   DateTime           @updatedAt
+  abonnements        Abonnement[]
+  documents          DocumentClient[]
+  factures           Facture[]
+  paiements          Paiement[]
+  proFormas          ProForma[]         @relation("ProFormasClient")
+  projets            Projet[]
+  souhaits           Souhait[]
+  dossiers           DossierComptable[]
+  entreesClients     EntreeClient[]
 
   @@map("clients")
 }
@@ -84,7 +87,7 @@ model Abonnement {
   nom                      String
   description              String?
   clientId                 String
-  serviceId                String
+  serviceId                String?
   montant                  Float
   frequence                FrequencePaiement @default(MENSUEL)
   statut                   StatutAbonnement  @default(ACTIF)
@@ -97,7 +100,7 @@ model Abonnement {
   dateCreation             DateTime          @default(now())
   dateModification         DateTime          @updatedAt
   client                   Client            @relation(fields: [clientId], references: [id])
-  service                  Service           @relation(fields: [serviceId], references: [id])
+  service                  Service?          @relation(fields: [serviceId], references: [id])
   factures                 Facture[]
 
   @@map("abonnements")
@@ -215,6 +218,7 @@ model ProFormaLigne {
   proFormaId   String
   designation  String
   montant      Float
+  type         String?  // MAIN_D_OEUVRE, FRAIS_EXTERNES, etc.
   intervenant  String?
   ordre        Int      @default(0)
   dateCreation DateTime @default(now())
@@ -267,6 +271,7 @@ model FactureLigne {
   designation      String
   intervenant      String?
   montant          Float
+  type             String?  // MAIN_D_OEUVRE, FRAIS_EXTERNES, MATERIEL, etc.
   ordre            Int      @default(0)
   dateCreation     DateTime @default(now())
   dateModification DateTime @updatedAt
@@ -345,6 +350,7 @@ model Utilisateur {
   tachesCreees         Tache[]                @relation("TacheCreatedBy")
   timesheets           TimeSheet[]            @relation("TimesheetEmploye")
   timesheetsValidees   TimeSheet[]            @relation("TimesheetValidatePar")
+  objectifs            Objectif[]
 
   @@map("utilisateurs")
 }
@@ -550,6 +556,26 @@ model TimeSheet {
   @@map("timesheets")
 }
 
+model Objectif {
+  id               String          @id @default(cuid())
+  employeId        String
+  titre            String
+  description      String?
+  valeurCible      Float
+  valeurActuelle   Float           @default(0)
+  statut           String          @default("EN_COURS") // EN_COURS, ATTEINT, ABANDONNE
+  dateCreation     DateTime        @default(now())
+  dateEcheance     DateTime?
+  dateModification DateTime        @updatedAt
+  notes            String?
+  
+  employe          Utilisateur     @relation(fields: [employeId], references: [id], onDelete: Cascade)
+  
+  @@index([employeId])
+  @@index([statut])
+  @@map("objectifs")
+}
+
 model PrevisionSalaire {
   id               String   @id @default(cuid())
   employeId        String
@@ -568,10 +594,161 @@ model PrevisionSalaire {
   @@map("previsions_salaires")
 }
 
+model DossierComptable {
+  id                    String                @id @default(cuid())
+  clientId              String
+  mois                  Int                   // 1-12
+  annee                 Int                   // 2026
+  statut                String                @default("EN_COURS")  // EN_COURS, VALIDE
+  
+  // Agrégations pré-calculées (cache pour performance)
+  totalEntrees          Float?                // Somme entrées du mois
+  totalChargesHT        Float?                // Somme montantHT de toutes charges
+  totalChargesTVA       Float?                // Somme montantTVA (charges avecTVA=true)
+  totalTVA              Float?                // TVA déductible totale
+  resultat              Float?                // totalEntrees - totalChargesHT
+  
+  // Méta
+  dateCreation          DateTime              @default(now())
+  dateValidation        DateTime?
+  dateModification      DateTime              @updatedAt
+  notes                 String?               // Notes du cabinet comptable
+  
+  // Relations
+  client                Client                @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  chargesDetailees      ChargeDetaillee[]
+  entrees               EntreeClient[]        @relation("EntreesOfDossier")
+  situationFinanciere   SituationFinanciere?
+  
+  // Unique: 1 dossier par client par mois
+  @@unique([clientId, mois, annee])
+  @@index([clientId])
+  @@index([mois, annee])
+  @@index([statut])
+  @@map("dossiers_comptables")
+}
+
+model ChargeDetaillee {
+  id                    String                @id @default(cuid())
+  dossierComptableId    String
+  
+  // Données de base (essentielles)
+  date                  DateTime              // Date exacte de la facture (jour)
+  fournisseur           String                // Nom du fournisseur/entreprise
+  montantHT             Float                 // Montant hors taxes (HT)
+  
+  // Gestion TVA (cœur du métier VIP)
+  avecTVA               Boolean               @default(false)  // Charge soumise à TVA?
+  tauxTVA               Float?                // Taux TVA: 20, 5.5, 2.1, etc. (%)
+  montantTVA            Float?                // Calculé: montantHT * tauxTVA / 100
+  montantTTC            Float                 // Calculé: montantHT + montantTVA
+  
+  // Classification
+  categorie             CategorieCharge
+  description           String?               // Description détaillée
+  
+  // Justification
+  justificatifUrl       String?               // URL vers PDF facture scannée
+  notes                 String?               // Notes additionnelles (remarques cabinet)
+  
+  // Méta
+  dateCreation          DateTime              @default(now())
+  dateModification      DateTime              @updatedAt
+  
+  // Relations
+  dossierComptable      DossierComptable      @relation(fields: [dossierComptableId], references: [id], onDelete: Cascade)
+  
+  // Index pour requêtes courantes
+  @@index([date])
+  @@index([avecTVA])
+  @@index([dossierComptableId])
+  @@index([categorie])
+  @@map("charges_detaillees")
+}
+
+model EntreeClient {
+  id                   String           @id @default(cuid())
+  clientId             String
+  dossierComptableId   String?
+  date                 DateTime
+  reference            String?          // Numéro de facture/référence
+  description          String
+  montant              Float            // Montant TTC (pour compatibilité)
+  montantHT            Float?           // Sous-total moins remises
+  montantTVA           Float?           // Montant TVA (18%)
+  tauxTVA              Float?           @default(18.0) // Taux TVA en %
+  sourceType           String?
+  remise               Float?           @default(0) // Remise totale
+  justificatifUrl      String?
+  notes                String?
+  // Ligne items
+  lignesJSON           String?          // JSON array of line items {designation, quantite, prixUnitaire, totalHT}
+  dateCreation         DateTime         @default(now())
+  dateModification     DateTime         @updatedAt
+  client               Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  dossier              DossierComptable? @relation("EntreesOfDossier", fields: [dossierComptableId], references: [id], onDelete: SetNull)
+  lignesFactures       LigneFacture[]
+
+  @@map("entrees_clients")
+}
+
+model SituationFinanciere {
+  id                    String                @id @default(cuid())
+  dossierComptableId    String                @unique
+  
+  // === ENTRÉES ===
+  totalEntrees          Float                 @default(0)
+  
+  // === CHARGES ===
+  totalChargesHT        Float                 @default(0)        // Somme montantHT
+  totalChargesTVA       Float                 @default(0)        // Somme montantTVA (charges avecTVA=true)
+  
+  // === CLASSIFICATION TVA ===
+  totalChargesAvecTVA   Float?                // Somme HT des charges avec TVA
+  totalChargesSansTVA   Float?                // Somme HT des charges sans TVA
+  nombreChargesAvecTVA  Int?                  @default(0)
+  nombreChargesSansTVA  Int?                  @default(0)
+  
+  // === RÉSULTAT ===
+  resultat              Float                 @default(0)        // totalEntrees - totalChargesHT
+  totalTVA              Float?                @default(0)        // TVA récupérable
+  
+  // === DÉTAILS (Agrégations) ===
+  // JSON pour stockage flexible des agrégations
+  chargesParJour        Json?                 // Structure: { "2026-03-02": [charges...], "2026-03-05": [...] }
+  chargesParCategorie   Json?                 // Structure: { "UTILITIES": montant, "SALAIRES": montant }
+  chargesParFournisseur Json?                 // Structure: { "EDF": montant, "Orange": montant }
+  
+  // Méta
+  dateGeneration        DateTime              @default(now())
+  dateModification      DateTime              @updatedAt
+  
+  // Relations
+  dossierComptable      DossierComptable      @relation(fields: [dossierComptableId], references: [id], onDelete: Cascade)
+  
+  @@map("situations_financieres")
+}
+
+model LigneFacture {
+  id                   String        @id @default(cuid())
+  entreeClientId       String?
+  factureId            String?
+  description          String
+  montant              Float
+  quantite             Int           @default(1)
+  dateCreation         DateTime      @default(now())
+  dateModification     DateTime      @updatedAt
+  entreeClient         EntreeClient? @relation(fields: [entreeClientId], references: [id], onDelete: SetNull)
+
+  @@map("lignes_factures")
+}
+
 enum TypeClient {
   PARTICULIER
   ENTREPRISE
   ORGANISATION
+  ETABLISSEMENT
+  SOCIETE
 }
 
 enum CategorieService {
@@ -696,6 +873,12 @@ enum StatutTimeSheet {
   VALIDEE
   REJETEE
   CORRIGEE
+}
+
+enum RegimeFiscal {
+  AVEC_TVA
+  SANS_TVA
+  TPU
 }
 
 enum StatutProForma {

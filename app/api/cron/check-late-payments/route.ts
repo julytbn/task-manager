@@ -7,6 +7,8 @@
  * pour unifier la documentation et simplifier les appels CRON
  */
 
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {

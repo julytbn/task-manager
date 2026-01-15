@@ -248,7 +248,7 @@ export default function ProFormaList({
                             {(pf.montantTotal || pf.montant || 0).toLocaleString('fr-FR', {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2
-                            })} €
+                            })} FCFA
                           </p>
                         </div>
 

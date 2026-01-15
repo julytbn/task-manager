@@ -106,7 +106,7 @@ export default function NouvelleChargeModal({ isOpen, onClose, onSubmit }: Nouve
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--color-black-deep)] mb-2">Montant (€)</label>
+              <label className="block text-sm font-medium text-[var(--color-black-deep)] mb-2">Montant (FCFA)</label>
               <input
                 type="number"
                 name="montant"

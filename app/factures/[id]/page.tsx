@@ -76,8 +76,13 @@ export default function FactureDetailPage() {
     }
   }
 
-  const montantRestant = facture ? Math.max(0, facture.montantTotal - (facture.montantPaye || 0)) : 0
-  const pourcentagePaye = facture ? ((facture.montantPaye || 0) / facture.montantTotal * 100) : 0
+  // Calculer le montant de main d'œuvre pour l'état du paiement
+  const montantMainDoeuvre = facture?.lignes
+    ?.filter((ligne: any) => ligne.type === 'MAIN_D_OEUVRE')
+    .reduce((sum: number, ligne: any) => sum + ligne.montant, 0) || facture?.montantTotal || 0
+  
+  const montantRestant = facture ? Math.max(0, montantMainDoeuvre - (facture.montantPaye || 0)) : 0
+  const pourcentagePaye = facture ? ((facture.montantPaye || 0) / montantMainDoeuvre * 100) : 0
 
   if (loading) return <UiLayout><div className="text-center py-8 text-[var(--color-anthracite)]">Chargement...</div></UiLayout>
   if (error) return <UiLayout><div className="bg-red-50 text-red-700 p-4 rounded mb-4">{error}</div></UiLayout>
@@ -166,17 +171,34 @@ export default function FactureDetailPage() {
         <div className="bg-[var(--color-offwhite)] rounded-xl shadow-sm border border-[var(--color-border)] p-8">
           <h2 className="text-xl font-bold text-[var(--color-anthracite)] mb-6">Détails financiers</h2>
           <div className="space-y-4">
+            {facture.lignes && facture.lignes.length > 0 && (
+              <>
+                {/* Main d'œuvre */}
+                <div className="p-4 bg-white rounded-lg border border-[var(--color-border)]">
+                  <p className="text-sm text-[var(--color-anthracite)] uppercase font-semibold mb-2">Main d'œuvre (Bénéfice)</p>
+                  <p className="text-lg font-bold text-[var(--color-gold)]">
+                    {facture.lignes
+                      .filter((ligne: any) => ligne.type === 'MAIN_D_OEUVRE')
+                      .reduce((sum: number, ligne: any) => sum + ligne.montant, 0)
+                      .toLocaleString('fr-FR')} FCFA
+                  </p>
+                </div>
+
+                {/* Frais externes */}
+                <div className="p-4 bg-white rounded-lg border border-[var(--color-border)]">
+                  <p className="text-sm text-[var(--color-anthracite)] uppercase font-semibold mb-2">Frais Externes</p>
+                  <p className="text-lg font-bold text-[var(--color-anthracite)]">
+                    {facture.lignes
+                      .filter((ligne: any) => ligne.type === 'FRAIS_EXTERNES')
+                      .reduce((sum: number, ligne: any) => sum + ligne.montant, 0)
+                      .toLocaleString('fr-FR')} FCFA
+                  </p>
+                </div>
+              </>
+            )}
             <div className="flex justify-between items-center pb-4 border-b border-[var(--color-border)]">
-              <span className="text-[var(--color-anthracite)]">Montant HT</span>
-              <span className="font-semibold text-[var(--color-anthracite)]">{montantHT.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}</span>
-            </div>
-            <div className="flex justify-between items-center pb-4 border-b border-[var(--color-border)]">
-              <span className="text-[var(--color-anthracite)]">TVA ({(facture.tauxTVA * 100).toFixed(0)}%)</span>
-              <span className="font-semibold text-[var(--color-anthracite)]">{tva.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}</span>
-            </div>
-            <div className="flex justify-between items-center pt-4 text-lg">
-              <span className="font-bold text-[var(--color-anthracite)]">Montant TTC</span>
-              <span className="font-bold text-[var(--color-gold)] text-xl">{montantTTC.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}</span>
+              <span className="text-[var(--color-anthracite)]">Montant Total</span>
+              <span className="font-semibold text-[var(--color-anthracite)]">{montantTTC.toLocaleString('fr-FR')} FCFA</span>
             </div>
           </div>
         </div>
@@ -197,16 +219,16 @@ export default function FactureDetailPage() {
             </div>
             <div className="grid grid-cols-3 gap-4 mt-6">
               <div className="p-4 bg-white rounded-lg border border-[var(--color-border)]">
-                <p className="text-xs text-[var(--color-anthracite)] uppercase font-semibold mb-1">Montant Total</p>
-                <p className="text-lg font-bold text-[var(--color-anthracite)]">{montantTTC.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}</p>
+                <p className="text-xs text-[var(--color-anthracite)] uppercase font-semibold mb-1">Montant Main d'œuvre</p>
+                <p className="text-lg font-bold text-[var(--color-gold)]">{montantMainDoeuvre.toLocaleString('fr-FR')} FCFA</p>
               </div>
               <div className="p-4 bg-white rounded-lg border border-green-200">
                 <p className="text-xs text-green-600 uppercase font-semibold mb-1">Montant Payé</p>
-                <p className="text-lg font-bold text-green-600">{(facture?.montantPaye || 0).toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}</p>
+                <p className="text-lg font-bold text-green-600">{(facture?.montantPaye || 0).toLocaleString('fr-FR')} FCFA</p>
               </div>
               <div className="p-4 bg-white rounded-lg border border-red-200">
                 <p className="text-xs text-red-600 uppercase font-semibold mb-1">Restant</p>
-                <p className="text-lg font-bold text-red-600">{montantRestant.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}</p>
+                <p className="text-lg font-bold text-red-600">{montantRestant.toLocaleString('fr-FR')} FCFA</p>
               </div>
             </div>
           </div>

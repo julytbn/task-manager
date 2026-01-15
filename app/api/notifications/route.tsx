@@ -9,15 +9,13 @@ const prisma = new PrismaClient()
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
     const notifications = await prisma.notification.findMany({
       where: {
-        utilisateur: {
-          email: session.user.email,
-        },
+        utilisateurId: session.user.id,
       },
       orderBy: {
         dateCreation: 'desc',

@@ -77,32 +77,48 @@ export default function ProFormaPreview({
   return (
     <div id={elementId} className="bg-white p-8 font-serif text-gray-800" style={{ fontSize: '13px' }}>
       {/* Header avec logo et services */}
-      <div className="mb-8 pb-6 border-b-4 border-blue-900">
-        <div className="flex gap-8 mb-6">
+      <div className="mb-8 pb-6 border-b-4 border-[#D4AF37]">
+        {/* Ligne 1: Logo + Nom + Services */}
+        <div className="flex gap-6 items-start mb-8">
           {/* Logo */}
-          <div className="w-28 h-28 bg-yellow-400 rounded-lg flex items-center justify-center font-bold text-6xl flex-shrink-0 shadow-sm">
-            ☀️
+          <div 
+            className="w-28 h-28 bg-black rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg border-2 border-[#D4AF37]"
+            style={{
+              boxShadow: '0 0 20px rgba(212, 175, 55, 0.4)'
+            }}
+          >
+            <img 
+              src="/imgkekeli.jpg" 
+              alt="Kekeli Logo" 
+              className="w-full h-full object-contain"
+              style={{
+                filter: 'brightness(1.7) contrast(2.3) saturate(1.5)'
+              }}
+            />
           </div>
 
           {/* Texte principal */}
-          <div className="flex-1 flex flex-col justify-center">
-            <h1 className="text-5xl font-black text-blue-900 leading-tight mb-3">
-              KEKELI<br />GROUP
+          <div className="flex-1 flex flex-col justify-start gap-2">
+            <h1 className="text-5xl font-black text-[#1a3a6b] leading-tight">
+              KEKELI GROUP
             </h1>
-            <div className="text-sm text-gray-800 font-medium leading-relaxed">
-              <p>Comptabilité - Fiscalité -</p>
-              <p>Rédaction & Gestion de Projet - Marketing -</p>
-              <p>Communication</p>
-              <p>Etude de marché - Formations - Coaching -</p>
-              <p>Démarches Administratives</p>
-              <p>Conceptions et Impressions - Solution IT</p>
+            <div className="text-sm text-gray-700 font-medium">
+              <p className="leading-relaxed">Comptabilité - Fiscalité - Rédaction & Gestion de Projet - Marketing - Communication</p>
+              <p className="leading-relaxed">Etude de marché - Formations - Coaching - Démarches Administratives</p>
+              <p className="leading-relaxed">Conceptions et Impressions - Solution IT</p>
             </div>
           </div>
+        </div>
 
-          {/* Infos à droite */}
-          <div className="text-right text-sm text-gray-700 flex-shrink-0 border-l-2 border-gray-400 pl-6 flex flex-col justify-center">
-            <p className="font-semibold mb-2">Date: {formattedDate}</p>
-            <p className="font-semibold mb-2">Numéro: PRO-{Math.random().toString(36).substr(2, 9).toUpperCase()}</p>
+        {/* Ligne 2: Infos (Date, Numéro, Échéance) - Alignées à droite */}
+        <div className="text-right text-sm text-gray-700 flex justify-end gap-12">
+          <div>
+            <p className="font-semibold">Date: {formattedDate}</p>
+          </div>
+          <div>
+            <p className="font-semibold">Numéro: PRO-{Math.random().toString(36).substr(2, 9).toUpperCase()}</p>
+          </div>
+          <div>
             <p className="font-semibold">Date d'échéance: {dateEcheance}</p>
           </div>
         </div>
@@ -112,6 +128,9 @@ export default function ProFormaPreview({
       <div className="mb-6">
         <p className="mb-2"><strong>Due par:</strong> {clientName}</p>
         <p><strong>Adresse:</strong> {clientAddress}</p>
+        <div className="text-right text-sm text-gray-600 mt-4 pt-4 border-t border-gray-300">
+          <p className="font-semibold">Pro Forma du {formattedDate}</p>
+        </div>
       </div>
 
       {/* Objet */}
@@ -125,7 +144,7 @@ export default function ProFormaPreview({
       <div className="mb-6">
         <table className="w-full border-collapse border border-gray-800" cellPadding="8">
           <thead>
-            <tr className="bg-gray-900 text-white">
+            <tr className="bg-[#1a3a6b] text-white">
               <th className="border border-gray-800 text-left font-bold">DESIGNATION</th>
               <th className="border border-gray-800 text-left font-bold">INTERVENANT</th>
               <th className="border border-gray-800 text-right font-bold">MONTANT À PAYER</th>
@@ -142,10 +161,10 @@ export default function ProFormaPreview({
               </tr>
             ))}
             {/* Ligne Total */}
-            <tr className="font-bold bg-gray-100">
+            <tr className="font-bold bg-[#D4AF37]/10 border-t-2 border-[#D4AF37]">
               <td colSpan={2} className="border border-gray-800 text-right">TOTAL GLOBAL</td>
               <td className="border border-gray-800 text-right"></td>
-              <td className="border border-gray-800 text-right text-lg">{totalHT.toLocaleString('fr-FR')} F CFA</td>
+              <td className="border border-gray-800 text-right text-lg text-[#D4AF37]">{totalHT.toLocaleString('fr-FR')} F CFA</td>
             </tr>
           </tbody>
         </table>
@@ -158,6 +177,25 @@ export default function ProFormaPreview({
         </p>
       </div>
 
+      {/* 📌 Clarification Frais et Main d'Œuvre */}
+      <div className="mb-6 bg-blue-50 p-4 border-l-4 border-blue-500">
+        <h3 className="font-bold text-sm text-blue-900 mb-3">📋 CLARIFICATION SUR LES FRAIS</h3>
+        <div className="text-xs text-gray-700 space-y-2 leading-relaxed">
+          <p>
+            <strong>💼 Main d'Œuvre :</strong> Les montants ci-dessus incluent nos frais de prestation et la main d'œuvre 
+            correspondante. Cette facturation rémunère les experts et professionnels impliqués dans ce projet.
+          </p>
+          <p>
+            <strong>🔧 Frais de Prestation :</strong> Certains montants peuvent inclure des frais techniques ou administratifs 
+            directement liés à l'exécution de la prestation.
+          </p>
+          <p>
+            <strong>✅ Bénéfice Net :</strong> Après déduction des coûts externes et charges associées au projet, 
+            le solde constitue le bénéfice net de KEKELI GROUP.
+          </p>
+        </div>
+      </div>
+
       {/* Notes */}
       {notes && (
         <div className="mb-6 p-4 border border-gray-300">
@@ -167,17 +205,12 @@ export default function ProFormaPreview({
       )}
 
       {/* Signature et pied de page */}
-      <div className="mt-12 pt-8 border-t-4 border-red-600">
-        <div className="mb-8">
-          <p className="text-center font-semibold">La Direction Générale</p>
-        </div>
-
-        <div className="text-center text-xs space-y-1 mt-8">
-          <p><strong>CABINET KEKELI GROUP</strong></p>
-          <p>RCCM: TG-LFW -01-2023-2023-B13-01308</p>
-          <p>NIF: 1001854635</p>
-          <p>Tél: (+228) 92681100 | Email: kekeligroup10@gmail.com</p>
-          <p>Togolese Business Directory</p>
+      <div className="mt-12 pt-8 border-t-4" style={{ borderTopColor: '#8B4513' }}>
+        <div className="text-center text-xs space-y-1">
+          <p style={{ color: '#D4AF37', fontWeight: 'bold', fontSize: '14px' }}>CABINET KEKELI GROUP</p>
+          <p>RCCM: TG-LFW -01-2023-2023-B13-01308 &nbsp;&nbsp;&nbsp;&nbsp; NIF: 1001854635</p>
+          <p>Totsi -Lomé contact : (+228) 92681100, e-mail: kekeligroup10@gmail.com</p>
+          <p>Lomé-Togo</p>
         </div>
       </div>
     </div>

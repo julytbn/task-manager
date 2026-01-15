@@ -98,7 +98,7 @@ class SalaryForecastService {
       });
 
       console.log(
-        `[SalaryForecast] Prévision mise à jour pour ${employe.nom} ${employe.prenom}: ${montantPrevu}€ (${heuresValidees}h)`
+        `[SalaryForecast] Prévision mise à jour pour ${employe.nom} ${employe.prenom}: ${montantPrevu} FCFA (${heuresValidees}h)`
       );
 
       return {
@@ -205,7 +205,7 @@ class SalaryForecastService {
               data: {
                 utilisateurId: prevision.employeId,
                 titre: "💰 Notification de paiement",
-                message: `Votre salaire pour ${this.getMonthName(mois)} sera payé dans 5 jours. Montant prévu: ${prevision.montantPrevu.toFixed(2)}€`,
+                message: `Votre salaire pour ${this.getMonthName(mois)} sera payé dans 5 jours. Montant prévu: ${prevision.montantPrevu.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF', minimumFractionDigits: 0 })}`,
                 type: "ALERTE",
                 sourceId: prevision.id,
                 sourceType: "SALARY_FORECAST",
@@ -282,7 +282,7 @@ class SalaryForecastService {
         
         <div class="salary-box">
           <p>Montant prévu:</p>
-          <div class="salary-amount">${montantPrevu.toFixed(2)} €</div>
+          <div class="salary-amount">${montantPrevu.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF', minimumFractionDigits: 0 })}</div>
         </div>
         
         <div class="details">

@@ -186,7 +186,6 @@ export async function generateSubscriptionInvoices(): Promise<InvoiceGenerationR
       },
       include: {
         client: true,
-        service: true
       }
     })
 

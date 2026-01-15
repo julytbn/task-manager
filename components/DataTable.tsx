@@ -78,13 +78,13 @@ export default function DataTable({
       <table className="w-full min-w-full">
         {/* Header */}
         <thead>
-          <tr className="table-header border-b-2 border-[var(--color-gold)]/30">
+          <tr className="bg-[var(--color-gold)]/10 border-b-2 border-[var(--color-gold)]/30">
             {columns.map((column) => (
               <th
                 key={column.key}
                 onClick={() => column.sortable && handleSort(column.key)}
-                className={`px-6 py-4 text-left text-xs font-bold uppercase tracking-wider cursor-pointer hover:text-[var(--color-gold-accent)] transition-all ${
-                  column.sortable ? 'hover:bg-[var(--color-black-900)]/30' : ''
+                className={`px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-[var(--color-black-deep)] cursor-pointer hover:text-[var(--color-gold)] transition-all ${
+                  column.sortable ? 'hover:bg-[var(--color-gold)]/20' : ''
                 }`}
                 style={{ width: column.width || 'auto' }}
               >

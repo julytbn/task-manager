@@ -185,6 +185,25 @@ export default function FacturePreview({
         </p>
       </div>
 
+      {/* 📌 Clarification Frais et Main d'Œuvre */}
+      <div className="mb-6 bg-blue-50 p-4 border-l-4 border-blue-500">
+        <h3 className="font-bold text-sm text-blue-900 mb-3">📋 CLARIFICATION SUR LES FRAIS</h3>
+        <div className="text-xs text-gray-700 space-y-2 leading-relaxed">
+          <p>
+            <strong>💼 Main d'Œuvre :</strong> Les montants facturés incluent nos frais de prestation et la main d'œuvre 
+            correspondante. Cette facturation rémunère les experts et professionnels impliqués dans ce projet.
+          </p>
+          <p>
+            <strong>🔧 Frais de Prestation :</strong> Certains montants peuvent inclure des frais techniques ou administratifs 
+            directement liés à l'exécution de la prestation.
+          </p>
+          <p>
+            <strong>✅ Bénéfice Net :</strong> Après déduction des coûts externes et charges associées au projet, 
+            le solde constitue le bénéfice net de KEKELI GROUP.
+          </p>
+        </div>
+      </div>
+
       {/* Notes */}
       {notes && (
         <div className="mb-6 p-4 border border-gray-300">

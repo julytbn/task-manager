@@ -91,7 +91,10 @@ export default function MonthlyReportPage() {
   const groupTimesheetsByDay = (): MonthlyData => {
     const grouped: MonthlyData = {}
 
-    timesheets.forEach(ts => {
+    // Only include VALIDEE timesheets in the report, exclude REJETEE
+    const validTimesheets = timesheets.filter(ts => ts.statut === 'VALIDEE')
+
+    validTimesheets.forEach(ts => {
       const date = new Date(ts.date)
       const day = date.getDate()
       const dayName = date.toLocaleDateString('fr-FR', { weekday: 'long' })
@@ -113,7 +116,10 @@ export default function MonthlyReportPage() {
       grouped[day].overtimeHrs += ts.overtimeHrs || 0
       grouped[day].sickHrs += ts.sickHrs || 0
       grouped[day].vacationHrs += ts.vacationHrs || 0
-      grouped[day].description += (grouped[day].description ? ' ; ' : '') + (ts.description || ts.task.titre)
+      // Ne pas ajouter le titre de la tâche, seulement la description si elle existe
+      if (ts.description) {
+        grouped[day].description += (grouped[day].description ? ' ; ' : '') + ts.description
+      }
       grouped[day].totalHrs = grouped[day].regularHrs + grouped[day].overtimeHrs + grouped[day].sickHrs + grouped[day].vacationHrs
     })
 

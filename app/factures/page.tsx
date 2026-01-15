@@ -1,10 +1,10 @@
 "use client"
 import { useEffect, useState } from 'react'
-import Link from "next/link"
 import { Plus, Eye, Download } from 'lucide-react'
 import NouveauFactureModal from "@/components/NouveauFactureModal"
 import NouveauPaiementModal from "@/components/NouveauPaiementModal"
 import EditFactureModal from "@/components/EditFactureModal"
+import FactureDetailModal from "@/components/FactureDetailModal"
 import { downloadFacturePDF, previewFacturePDF } from '@/lib/factureGenerator'
 import { useEnums } from '@/lib/useEnums'
 import MainLayout from "@/components/layouts/MainLayout"
@@ -45,17 +45,17 @@ export default function FacturesPage() {
   const [editingFacture, setEditingFacture] = useState<Facture | null>(null)
   const [isPaiementModalOpen, setIsPaiementModalOpen] = useState(false)
   const [selectedFacture, setSelectedFacture] = useState<Facture | null>(null)
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const [selectedFactureId, setSelectedFactureId] = useState<string | null>(null)
 
   useEffect(() => {
     // Initial load
     const fetchFactures = async () => {
       setLoading(true)
       try {
-        console.log('Fetching factures...')
         const res = await fetch('/api/factures')
-        if (!res.ok) throw new Error('Erreur récupération factures')
+        if (!res.ok) throw new Error('Erreur API factures')
         const data = await res.json()
-        console.log('Factures reçues:', data)
         setFactures(data || [])
         setError(null)
       } catch (err) {
@@ -217,23 +217,22 @@ export default function FacturesPage() {
         <div className="bg-[var(--color-offwhite)] rounded-xl shadow-sm border border-[var(--color-border)] overflow-x-auto">
           <div className="inline-block w-full">
             <table className="w-full min-w-max text-sm whitespace-nowrap">
-              <thead className="bg-[var(--color-gold)]/10 border-b border-[var(--color-border)] sticky top-0">
+              <thead className="bg-[var(--color-gold)] border-b border-[var(--color-border)] sticky top-0">
                 <tr>
-                  <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">N° Facture</th>
-                <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">Client</th>
-                <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">Date émission</th>
-                <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">Date échéance</th>
-                <th className="px-6 py-3 text-right font-semibold text-[var(--color-gold)]">Montant TTC</th>
-                <th className="px-6 py-3 text-right font-semibold text-[var(--color-gold)]">Payé</th>
-                <th className="px-6 py-3 text-right font-semibold text-[var(--color-gold)]">Restant</th>
-                <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">Statut</th>
-                <th className="px-6 py-3 text-center font-semibold text-[var(--color-gold)]">Actions</th>
-              </tr>
-            </thead>
+                  <th className="px-6 py-4 text-left font-semibold text-white">N° Facture</th>
+                  <th className="px-6 py-4 text-left font-semibold text-white">Client</th>
+                  <th className="px-6 py-4 text-left font-semibold text-white">Date émission</th>
+                  <th className="px-6 py-4 text-left font-semibold text-white">Date échéance</th>
+                  <th className="px-6 py-4 text-right font-semibold text-white">Montant TTC</th>
+                  <th className="px-6 py-4 text-right font-semibold text-white">Payé</th>
+                  <th className="px-6 py-4 text-right font-semibold text-white">Restant</th>
+                  <th className="px-6 py-4 text-left font-semibold text-white">Statut</th>
+                  <th className="px-6 py-4 text-center font-semibold text-white">Actions</th>
+                </tr>
+              </thead>
             <tbody>
               {factures.map((facture) => {
                 const badge = getStatusBadge(facture.statut)
-                console.log('Facture à afficher:', facture)
                 const montantTTC = facture.montantTotal ?? facture.montant
                 const montantPaye = facture.montantPaye ?? 0
                 const montantRestant = facture.montantRestant ?? Math.max(0, montantTTC - montantPaye)
@@ -251,13 +250,13 @@ export default function FacturesPage() {
                     <td className="px-6 py-3 text-[var(--color-anthracite)]">{dateEmission}</td>
                     <td className="px-6 py-3 text-[var(--color-anthracite)]">{dateEcheance}</td>
                     <td className="px-6 py-3 text-right font-semibold text-[var(--color-anthracite)]">
-                      {montantTTC.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}
+                      {montantTTC.toLocaleString('fr-FR')} FCFA
                     </td>
                     <td className="px-6 py-3 text-right font-medium text-green-600">
-                      {montantPaye.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}
+                      {montantPaye.toLocaleString('fr-FR')} FCFA
                     </td>
                     <td className="px-6 py-3 text-right font-medium text-red-600">
-                      {montantRestant.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}
+                      {montantRestant.toLocaleString('fr-FR')} FCFA
                     </td>
                     <td className="px-6 py-3">
                       <span className={`inline-flex px-3 py-1 rounded text-xs font-medium ${badge.color}`}>
@@ -266,13 +265,13 @@ export default function FacturesPage() {
                     </td>
                     <td className="px-6 py-3 text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <Link 
-                          href={`/factures/${facture.id}`} 
+                        <button
+                          onClick={() => { setSelectedFactureId(facture.id); setIsDetailModalOpen(true); }}
                           className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition text-xs" 
                           title="Voir la facture"
                         >
                           <Eye size={14} />
-                        </Link>
+                        </button>
                         <button
                           className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 text-gray-700 rounded hover:bg-gray-100 transition text-xs"
                           title="Télécharger la facture"
@@ -338,7 +337,7 @@ export default function FacturesPage() {
                   factureId: selectedFacture.id,
                   clientId: selectedFacture.client.id,
                   projetId: selectedFacture.projet?.id,
-                  methodePaiement: paiement.methodePaiement,
+                  moyenPaiement: paiement.moyenPaiement || 'VIREMENT_BANCAIRE',
                   datePaiement: paiement.date,
                   notes: paiement.notes,
                 })
@@ -359,6 +358,26 @@ export default function FacturesPage() {
             }
           }}
           prefilledFacture={selectedFacture}
+        />
+      )}
+
+      {/* Detail Modal */}
+      {isDetailModalOpen && selectedFactureId && (
+        <FactureDetailModal
+          factureId={selectedFactureId}
+          isOpen={isDetailModalOpen}
+          onClose={() => {
+            setIsDetailModalOpen(false)
+            setSelectedFactureId(null)
+          }}
+          onPaiementSuccess={() => {
+            // Rafraîchir la liste des factures
+            setLoading(true)
+            fetch('/api/factures')
+              .then(res => res.json())
+              .then(data => setFactures(data || []))
+              .finally(() => setLoading(false))
+          }}
         />
       )}
     </div>

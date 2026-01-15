@@ -24,6 +24,10 @@ export interface TimesheetRowData {
   description: string
   status: 'DRAFT' | 'SUBMITTED' | 'VALIDATED' | 'REJECTED' | 'EN_ATTENTE' | 'VALIDEE' | 'REJETEE' | 'CORRIGEE'
   period?: string
+  regularHrs?: number
+  overtimeHrs?: number | null
+  sickHrs?: number | null
+  vacationHrs?: number | null
 }
 
 interface TimesheetTableProps {

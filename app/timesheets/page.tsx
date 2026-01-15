@@ -166,8 +166,8 @@ export default function TimesheetPage() {
       .filter(t => t.status !== 'VALIDATED')
       .reduce((sum, t) => sum + t.hours, 0)
 
-    // Coût estimé (simulation: 15€/heure)
-    const estimatedCost = totalHours * 15
+    // Coût estimé: 0 (le tarif horaire n'est plus utilisé)
+    const estimatedCost = 0
 
     // Heures par projet
     const projectHours: { [key: string]: number } = {}

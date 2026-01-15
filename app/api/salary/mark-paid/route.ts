@@ -54,6 +54,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ✅ Vérifier que la facture existe et calculer le montant restant
+    const facture = await prisma.facture.findUnique({
+      where: { id: factureId },
+      include: {
+        lignes: { select: { montant: true, type: true } },
+        paiements: { select: { montant: true, statut: true } }
+      }
+    });
+
+    if (!facture) {
+      return NextResponse.json(
+        { error: 'Facture non trouvée' },
+        { status: 404 }
+      );
+    }
+
+    // ✅ Calculer le montant restant
+    // Pour les abonnements: montantRestant = montantTotal - paiements
+    // Pour les projets: montantRestant = montantMainDoeuvre - paiements
+    const montantMainDoeuvre = facture.lignes
+      .filter(ligne => ligne.type === 'MAIN_D_OEUVRE')
+      .reduce((sum, ligne) => sum + (ligne.montant || 0), 0);
+
+    const totalPaiementsExistants = facture.paiements
+      .filter(p => p.statut === 'CONFIRME' || p.statut === 'EN_ATTENTE')
+      .reduce((sum, p) => sum + (p.montant || 0), 0);
+
+    let montantAFacturer = 0;
+    if (facture.abonnementId) {
+      montantAFacturer = facture.montant || 0;
+    } else {
+      montantAFacturer = montantMainDoeuvre;
+    }
+
+    const montantRestant = Math.max(0, montantAFacturer - totalPaiementsExistants);
+
+    // ✅ Vérifier que le paiement ne dépasse pas le montant restant
+    if (montant > montantRestant) {
+      return NextResponse.json(
+        {
+          error: `Le montant ne peut pas dépasser ${montantRestant.toLocaleString('fr-FR')} FCFA (montant restant de la facture)`,
+          montantRestant,
+          montantDemande: montant
+        },
+        { status: 400 }
+      );
+    }
+
     // Créer le paiement
     const payment = await prisma.paiement.create({
       data: {

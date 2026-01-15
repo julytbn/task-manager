@@ -3,24 +3,28 @@ import { prisma } from "@/lib/prisma";
 
 /**
  * POST /api/employees/update-tariff - Mettre à jour le tarif horaire d'un employé
+ * Note: tarifHoraire est optionnel (peut être null ou undefined)
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { employeeId, tarifHoraire } = body;
 
-    if (!employeeId || tarifHoraire === undefined) {
+    if (!employeeId) {
       return NextResponse.json(
-        { error: "employeeId et tarifHoraire sont requis" },
+        { error: "employeeId est requis" },
         { status: 400 }
       );
     }
 
-    if (typeof tarifHoraire !== "number" || tarifHoraire < 0) {
-      return NextResponse.json(
-        { error: "tarifHoraire doit être un nombre positif" },
-        { status: 400 }
-      );
+    // tarifHoraire est optionnel (peut être null ou undefined)
+    if (tarifHoraire !== undefined && tarifHoraire !== null) {
+      if (typeof tarifHoraire !== "number" || tarifHoraire < 0) {
+        return NextResponse.json(
+          { error: "tarifHoraire doit être un nombre positif ou null" },
+          { status: 400 }
+        );
+      }
     }
 
     const employee = await prisma.utilisateur.update({

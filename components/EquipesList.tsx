@@ -107,14 +107,14 @@ export default function EquipesList({ teams, onView, onEdit, onDelete, onAddMemb
       {/* Tableau */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-[var(--color-gold)]/10 border-b border-[var(--color-border)]">
+          <thead className="bg-[var(--color-gold)] border-b border-[var(--color-border)]">
             <tr>
-              <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">Nom</th>
-              <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">Responsable</th>
-              <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">Membres</th>
-              <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">Projets</th>
-              <th className="px-6 py-3 text-left font-semibold text-[var(--color-gold)]">Statut</th>
-              <th className="px-6 py-3 text-right font-semibold text-[var(--color-gold)]">Actions</th>
+              <th className="px-6 py-3 text-left font-bold text-[var(--color-black-deep)]">Nom</th>
+              <th className="px-6 py-3 text-left font-bold text-[var(--color-black-deep)]">Responsable</th>
+              <th className="px-6 py-3 text-left font-bold text-[var(--color-black-deep)]">Membres</th>
+              <th className="px-6 py-3 text-left font-bold text-[var(--color-black-deep)]">Projets</th>
+              <th className="px-6 py-3 text-left font-bold text-[var(--color-black-deep)]">Statut</th>
+              <th className="px-6 py-3 text-right font-bold text-[var(--color-black-deep)]">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--color-border)] bg-white">

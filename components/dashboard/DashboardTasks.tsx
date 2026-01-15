@@ -3,8 +3,7 @@ import { Search, CheckCircle2, AlertCircle, Clock, MoreHorizontal } from 'lucide
 import { useEffect, useState } from 'react'
 import { Card, Badge, Section, Button, Modal } from '@/components/ui'
 import { useUserSession } from '@/hooks/useSession'
-
-const [rejectModalOpen, setRejectModalOpen] = useState<string|null>(null)
+import TaskDetailModal from '@/components/TaskDetailModal'
 
 type Tache = {
   id: string
@@ -43,6 +42,9 @@ export default function DashboardTasks({ compact = false }: { compact?: boolean 
   const [tasks, setTasks] = useState<Tache[]>([])
   const [filteredTasks, setFilteredTasks] = useState<Tache[]>([])
   const [loading, setLoading] = useState(true)
+  const [detailModalOpen, setDetailModalOpen] = useState(false)
+  const [selectedTask, setSelectedTask] = useState<Tache | undefined>(undefined)
+  const [rejectModalOpen, setRejectModalOpen] = useState<string|null>(null)
 
   useEffect(() => {
     if (isSessionLoading) {
@@ -252,6 +254,10 @@ export default function DashboardTasks({ compact = false }: { compact?: boolean 
                     variant="ghost" 
                     size="sm"
                     className="flex-1"
+                    onClick={() => {
+                      setSelectedTask(t)
+                      setDetailModalOpen(true)
+                    }}
                   >
                     Voir détails
                   </Button>
@@ -314,6 +320,34 @@ export default function DashboardTasks({ compact = false }: { compact?: boolean 
           })}
         </div>
       )}
+
+      {/* Task Detail Modal */}
+      <TaskDetailModal
+        isOpen={detailModalOpen}
+        onClose={() => {
+          setDetailModalOpen(false)
+          setSelectedTask(undefined)
+        }}
+        task={selectedTask}
+        onValidate={async (taskId) => {
+          await fetch(`/api/taches`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: taskId, statut: 'VALIDEE' })
+          })
+          setDetailModalOpen(false)
+          window.location.reload()
+        }}
+        onReject={async (taskId, reason) => {
+          await fetch(`/api/taches`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: taskId, statut: 'REJETEE', commentaire: reason })
+          })
+          setDetailModalOpen(false)
+          window.location.reload()
+        }}
+      />
     </div>
   )
 }

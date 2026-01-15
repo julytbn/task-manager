@@ -47,20 +47,85 @@ export async function GET(req: NextRequest) {
       (hoursThisMonth._sum.regularHrs || 0) +
       (hoursThisMonth._sum.overtimeHrs || 0);
 
-    // 4️⃣ RECETTES DU MOIS (Factures)
-    const invoicesThisMonth = await prisma.facture.aggregate({
+    // 4️⃣ RECETTES DU MOIS - DÉTAILLÉES PAR SOURCE
+    // ✅ Abonnements = Revenu pur pour l'entreprise
+    const subscriptionPaymentsThisMonth = await prisma.paiement.aggregate({
       where: {
         dateCreation: {
           gte: startOfMonth,
           lte: endOfMonth,
         },
+        statut: 'CONFIRME',
+        facture: {
+          abonnement: {
+            isNot: null // Factures liées à un abonnement
+          }
+        }
       },
       _sum: {
         montant: true,
       },
     });
 
-    const revenueThisMonth = invoicesThisMonth._sum.montant || 0;
+    const subscriptionRevenue = subscriptionPaymentsThisMonth._sum.montant || 0;
+
+    // 📊 Projets = Montant de main d'oeuvre uniquement = Recette nette de l'entreprise
+    // Récupérer toutes les factures de projets qui ont reçu un paiement ce mois-ci
+    const projectFacturesWithPayments = await prisma.facture.findMany({
+      where: {
+        projet: {
+          isNot: null // Factures liées à un projet
+        },
+        paiements: {
+          some: {
+            dateCreation: {
+              gte: startOfMonth,
+              lte: endOfMonth,
+            },
+            statut: 'CONFIRME'
+          }
+        }
+      },
+      include: {
+        lignes: {
+          select: {
+            montant: true,
+            type: true
+          }
+        }
+      }
+    });
+
+    // Calculer la recette = MONTANT TOTAL DE MAIN D'OEUVRE des factures payées ce mois
+    let projectMainDoeuvreTotal = 0;
+    let projectExternalFeesTotal = 0;
+    for (const facture of projectFacturesWithPayments) {
+      // Ligne MAIN_D_OEUVRE = recette (ou NULL/undefined = recette par défaut)
+      const montantMainDoeuvre = facture.lignes
+        ?.filter((ligne) => ligne.type === 'MAIN_D_OEUVRE' || !ligne.type)
+        .reduce((sum, ligne) => sum + (ligne.montant || 0), 0) || 0;
+      projectMainDoeuvreTotal += montantMainDoeuvre;
+      
+      // Ligne FRAIS_EXTERNES = coûts
+      const montantFrais = facture.lignes
+        ?.filter((ligne) => ligne.type === 'FRAIS_EXTERNES')
+        .reduce((sum, ligne) => sum + (ligne.montant || 0), 0) || 0;
+      projectExternalFeesTotal += montantFrais;
+    }
+
+    console.log('📊 PROJECT ANALYTICS DEBUG');
+    console.log(`Nombre de factures avec paiements ce mois: ${projectFacturesWithPayments.length}`);
+    projectFacturesWithPayments.forEach((f, i) => {
+      console.log(`  Facture ${i+1}:`, f.lignes?.map(l => ({ type: l.type, montant: l.montant })));
+    });
+    console.log(`Total main d'oeuvre calculé: ${projectMainDoeuvreTotal}`);
+    console.log(`Total frais externes calculé: ${projectExternalFeesTotal}`);
+
+    const projectNetRevenue = projectMainDoeuvreTotal;
+    const projectCharges = projectExternalFeesTotal;
+
+    // Total des recettes (Abonnements + Revenu net projets)
+    const revenueThisMonth = subscriptionRevenue + projectNetRevenue;
 
     // 5️⃣ CHARGES DU MOIS
     const chargesThisMonth = await prisma.charge.aggregate({
@@ -78,9 +143,15 @@ export async function GET(req: NextRequest) {
     const chargesThisMonthTotal = chargesThisMonth._sum.montant || 0;
 
     // 6️⃣ BÉNÉFICE ESTIMÉ
+    // Note: Le bénéfice réel = Abonnements (revenu pur) + Paiements projets (revenu - frais - main d'œuvre)
+    // Pour l'instant, on calcule: Recettes totales - Charges totales
     const estimatedProfit = revenueThisMonth - chargesThisMonthTotal;
 
-    // 7️⃣ DONNÉES HISTORIQUES POUR GRAPHIQUES (12 derniers mois)
+    // DÉTAIL DU CALCUL :
+    // - Abonnements (factures récurrentes) = revenu direct à 100%
+    // - Paiements projets = revenu - frais de prestation - coûts main d'œuvre
+
+    // 9️⃣ DONNÉES HISTORIQUES POUR GRAPHIQUES (12 derniers mois)
     const monthlyData = [];
     for (let i = 11; i >= 0; i--) {
       const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -91,36 +162,96 @@ export async function GET(req: NextRequest) {
         0
       );
 
-      // Recettes du mois
-      const monthRevenue = await prisma.facture.aggregate({
+      // Revenus des abonnements du mois
+      const monthSubscriptions = await prisma.paiement.aggregate({
         where: {
           dateCreation: {
             gte: monthStart,
             lte: monthEnd,
           },
+          statut: 'CONFIRME',
+          facture: {
+            abonnement: {
+              isNot: null
+            }
+          }
         },
         _sum: {
           montant: true,
         },
       });
 
-      // Charges du mois
-      const monthCharges = await prisma.charge.aggregate({
+      // Revenus des projets (montant de main d'oeuvre uniquement)
+      const monthProjectFactures = await prisma.facture.findMany({
+        where: {
+          projet: {
+            isNot: null
+          },
+          paiements: {
+            some: {
+              dateCreation: {
+                gte: monthStart,
+                lte: monthEnd,
+              },
+              statut: 'CONFIRME'
+            }
+          }
+        },
+        include: {
+          lignes: {
+            select: {
+              montant: true,
+              type: true
+            }
+          }
+        }
+      });
+
+      // Calculer la recette = MONTANT TOTAL DE MAIN D'OEUVRE des factures payées
+      let monthProjectMainDoeuvre = 0;
+      let monthProjectExternalFees = 0;
+      for (const facture of monthProjectFactures) {
+        const montantMainDoeuvre = facture.lignes
+          ?.filter(ligne => ligne.type === 'MAIN_D_OEUVRE' || !ligne.type)
+          .reduce((sum, ligne) => sum + (ligne.montant || 0), 0) || 0;
+        monthProjectMainDoeuvre += montantMainDoeuvre;
+        
+        const montantFrais = facture.lignes
+          ?.filter(ligne => ligne.type === 'FRAIS_EXTERNES')
+          .reduce((sum, ligne) => sum + (ligne.montant || 0), 0) || 0;
+        monthProjectExternalFees += montantFrais;
+      }
+
+      // Frais de prestation facturés du mois (lignes FRAIS_EXTERNES) - utiliser la valeur calculée
+      const monthExternalFeesCalculated = monthProjectExternalFees;
+
+      const monthSubscriptionRevenue = monthSubscriptions._sum.montant || 0;
+      const monthProjectRevenue = monthProjectMainDoeuvre;
+      const monthTotalRevenue = monthSubscriptionRevenue + monthProjectRevenue;
+
+      // Charges du mois (autres charges non liées aux projets)
+      const monthOtherCharges = await prisma.charge.aggregate({
         where: {
           date: {
             gte: monthStart,
             lte: monthEnd,
           },
+          projetId: null // Charges générales de l'entreprise
         },
         _sum: {
           montant: true,
         },
       });
 
+      const monthProjectCharges = monthExternalFeesCalculated;
+      const monthTotalCharges = monthProjectCharges + (monthOtherCharges._sum.montant || 0);
+
       monthlyData.push({
         month: monthStart.toLocaleString("fr-FR", { month: "short", year: "2-digit" }),
-        revenue: monthRevenue._sum.montant || 0,
-        charges: monthCharges._sum.montant || 0,
+        revenue: monthTotalRevenue,
+        charges: monthTotalCharges,
+        subscriptionRevenue: monthSubscriptionRevenue,
+        projectRevenue: monthProjectRevenue,
       });
     }
 
@@ -235,7 +366,10 @@ export async function GET(req: NextRequest) {
         projectsInProgress,
         projectsCompleted,
         totalHours,
-        revenueThisMonth,
+        revenueThisMonth, // Revenu total = Abonnements + Projets (main d'oeuvre)
+        subscriptionRevenue, // Abonnements (revenu pur)
+        projectNetRevenue, // Projets (Montant de main d'oeuvre uniquement)
+        projectCharges, // Frais des projets
         chargesThisMonthTotal,
         estimatedProfit,
       },

@@ -38,7 +38,8 @@ export default function PaiementsTable({
   // Préparer les données pour l'affichage
   const paiementsAvecAffichage = paiements.map(p => {
     const clientText = p.client ? `${p.client.prenom || ''} ${p.client.nom}`.trim() : ''
-    const projetText = p.projet?.nom || ''
+    // Améliorer la logique du projet - vérifier facture.projet aussi
+    const projetText = p.projet?.nom || p.facture?.projet?.nom || ''
     
     // Récupérer le montant total de la facture (utiliser montant au lieu de montantTotal si nécessaire)
     const montantTotalFacture = p.facture?.montant || 0

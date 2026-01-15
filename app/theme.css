@@ -37,7 +37,7 @@ table {
 }
 
 th {
-  @apply bg-[var(--color-table-header)] text-white text-left px-4 py-3 font-medium;
+  @apply bg-[var(--color-gold)] text-[var(--color-black-deep)] text-left px-4 py-3 font-medium;
 }
 
 td {
@@ -100,4 +100,27 @@ tbody tr:nth-child(even) {
 /* Transitions */
 .transition-all {
   transition: all 0.2s ease-in-out;
+}
+
+/* Scrollbar horizontal visible */
+.table-scroll-container {
+  @apply overflow-x-auto;
+}
+
+.table-scroll-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-scroll-container::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb {
+  background: var(--color-gold);
+  border-radius: 4px;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gold-accent);
 }

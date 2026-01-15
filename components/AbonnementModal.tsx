@@ -17,7 +17,6 @@ export default function AbonnementModal({ isOpen, onClose, onSaved, initialData 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showServiceModal, setShowServiceModal] = useState(false)
-  const [selectedService, setSelectedService] = useState('')
   const [dateDebut, setDateDebut] = useState<string>('')
   const [frequence, setFrequence] = useState<string>('MENSUEL')
   const [dateProchainFacture, setDateProchainFacture] = useState<string>('')
@@ -94,11 +93,6 @@ export default function AbonnementModal({ isOpen, onClose, onSaved, initialData 
     const data: Record<string, any> = Object.fromEntries(form.entries())
 
     try {
-      if (!selectedService) {
-        throw new Error('Veuillez sélectionner un service')
-      }
-      data.serviceId = selectedService
-
       // Conversion en types correctes
       if (data.montant) data.montant = parseFloat(String(data.montant))
       if (data.dateDebut) data.dateDebut = new Date(String(data.dateDebut)).toISOString()
@@ -110,11 +104,7 @@ export default function AbonnementModal({ isOpen, onClose, onSaved, initialData 
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...data,
-          // Pour les nouveaux abonnements, indiquer qu'une facture doit être auto-générée
-          generateInitialFacture: !initialData?.id
-        }),
+        body: JSON.stringify(data),
       })
       
       if (!res.ok) {
@@ -187,31 +177,6 @@ export default function AbonnementModal({ isOpen, onClose, onSaved, initialData 
                 )}
               </div>
               
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Service *</label>
-                <select 
-                  name="serviceId" 
-                  value={selectedService}
-                  onChange={(e) => {
-                    if (e.target.value === '__add_new__') {
-                      setShowServiceModal(true)
-                      e.target.value = ''
-                    } else {
-                      setSelectedService(e.target.value)
-                    }
-                  }}
-                  required 
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                >
-                  <option value="">-- Sélectionner un service --</option>
-                  {services.map(s => (
-                    <option key={s.id} value={s.id}>
-                      {s.nom}
-                    </option>
-                  ))}
-                  <option value="__add_new__" className="text-blue-600 font-semibold">+ Ajouter un nouveau service</option>
-                </select>
-              </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Montant (FCFA) *</label>
@@ -330,7 +295,6 @@ export default function AbonnementModal({ isOpen, onClose, onSaved, initialData 
             
             const createdService = await response.json()
             setServices([...services, createdService])
-            setSelectedService(createdService.id)
             setShowServiceModal(false)
           }}
         />

@@ -22,6 +22,8 @@ export default function ChargesPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
+  const [monthFilter, setMonthFilter] = useState('')
+  const [yearFilter, setYearFilter] = useState(new Date().getFullYear().toString())
   const [showModal, setShowModal] = useState(false)
   const [editingCharge, setEditingCharge] = useState<Charge | null>(null)
   const [showConfirmDelete, setShowConfirmDelete] = useState(false)
@@ -49,7 +51,23 @@ export default function ChargesPage() {
   const filtered = charges.filter(charge => {
     const matchSearch = charge.description?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchCategory = !categoryFilter || charge.categorie === categoryFilter
-    return matchSearch && matchCategory
+    
+    let matchDate = true
+    if (charge.date && (monthFilter || yearFilter)) {
+      const chargeDate = new Date(charge.date)
+      const chargeMonth = (chargeDate.getMonth() + 1).toString().padStart(2, '0')
+      const chargeYear = chargeDate.getFullYear().toString()
+      
+      if (monthFilter && yearFilter) {
+        matchDate = chargeMonth === monthFilter && chargeYear === yearFilter
+      } else if (yearFilter) {
+        matchDate = chargeYear === yearFilter
+      } else if (monthFilter) {
+        matchDate = chargeMonth === monthFilter
+      }
+    }
+    
+    return matchSearch && matchCategory && matchDate
   })
 
   const totalAmount = filtered.reduce((sum, charge) => sum + (charge.montant || 0), 0)
@@ -148,9 +166,62 @@ export default function ChargesPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="flex-1 outline-none bg-transparent text-[var(--color-black-deep)]"
           />
-          <Button variant="ghost" size="sm">
-            <Filter size={16} />
-          </Button>
+        </div>
+
+        <div className="flex gap-3 flex-wrap bg-white p-4 rounded-lg border border-[var(--color-gold)]">
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-[var(--color-anthracite)]">Année:</label>
+            <select
+              value={yearFilter}
+              onChange={(e) => setYearFilter(e.target.value)}
+              className="px-3 py-2 border border-[var(--color-gold)] rounded outline-none text-[var(--color-black-deep)]"
+            >
+              {[2024, 2025, 2026, 2027].map(year => (
+                <option key={year} value={year.toString()}>{year}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-[var(--color-anthracite)]">Mois:</label>
+            <select
+              value={monthFilter}
+              onChange={(e) => setMonthFilter(e.target.value)}
+              className="px-3 py-2 border border-[var(--color-gold)] rounded outline-none text-[var(--color-black-deep)]"
+            >
+              <option value="">Tous les mois</option>
+              <option value="01">Janvier</option>
+              <option value="02">Février</option>
+              <option value="03">Mars</option>
+              <option value="04">Avril</option>
+              <option value="05">Mai</option>
+              <option value="06">Juin</option>
+              <option value="07">Juillet</option>
+              <option value="08">Août</option>
+              <option value="09">Septembre</option>
+              <option value="10">Octobre</option>
+              <option value="11">Novembre</option>
+              <option value="12">Décembre</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-[var(--color-anthracite)]">Catégorie:</label>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="px-3 py-2 border border-[var(--color-gold)] rounded outline-none text-[var(--color-black-deep)]"
+            >
+              <option value="">Toutes les catégories</option>
+              <option value="Salaires">Salaires</option>
+              <option value="Loyer">Loyer</option>
+              <option value="Électricité">Électricité</option>
+              <option value="Internet">Internet</option>
+              <option value="Fournitures">Fournitures</option>
+              <option value="Transport">Transport</option>
+              <option value="Autre">Autre</option>
+            </select>
+          </div>
         </div>
 
         {loading ? (

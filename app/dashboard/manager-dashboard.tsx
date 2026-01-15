@@ -26,6 +26,9 @@ interface KPI {
   projectsCompleted: number;
   totalHours: number;
   revenueThisMonth: number;
+  subscriptionRevenue?: number;
+  projectNetRevenue?: number;
+  projectCharges?: number;
   chargesThisMonthTotal: number;
   estimatedProfit: number;
 }
@@ -207,54 +210,89 @@ export default function ManagerDashboard() {
 
         {/* 1️⃣ KPIs - CARTES PRINCIPALES */}
         {kpis && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Clients actifs */}
-            <div className="bg-white p-6 rounded-lg shadow border-l-4 border-[var(--color-gold)] hover:shadow-lg transition-shadow cursor-pointer">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-[var(--color-anthracite)] font-medium">Clients actifs</p>
-                  <p className="text-3xl font-bold text-[var(--color-black-deep)] mt-2">{kpis.activeClients}</p>
+          <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Clients actifs */}
+              <div className="bg-white p-6 rounded-lg shadow border-l-4 border-[var(--color-gold)] hover:shadow-lg transition-shadow cursor-pointer">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-[var(--color-anthracite)] font-medium">Clients actifs</p>
+                    <p className="text-3xl font-bold text-[var(--color-black-deep)] mt-2">{kpis.activeClients}</p>
+                  </div>
+                  <Users size={32} className="text-[var(--color-gold)] opacity-20" />
                 </div>
-                <Users size={32} className="text-[var(--color-gold)] opacity-20" />
+              </div>
+
+              {/* Projets en cours */}
+              <div className="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500 hover:shadow-lg transition-shadow cursor-pointer">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-[var(--color-anthracite)] font-medium">Projets en cours</p>
+                    <p className="text-3xl font-bold text-[var(--color-black-deep)] mt-2">{kpis.projectsInProgress}</p>
+                  </div>
+                  <CheckCircle2 size={32} className="text-blue-500 opacity-20" />
+                </div>
+              </div>
+
+              {/* Heures travaillées */}
+              <div className="bg-white p-6 rounded-lg shadow border-l-4 border-purple-500 hover:shadow-lg transition-shadow cursor-pointer">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-[var(--color-anthracite)] font-medium">Heures ce mois</p>
+                    <p className="text-3xl font-bold text-[var(--color-black-deep)] mt-2">{kpis.totalHours}</p>
+                  </div>
+                  <Clock size={32} className="text-purple-500 opacity-20" />
+                </div>
+              </div>
+
+              {/* Bénéfice */}
+              <div className={`p-6 rounded-lg shadow border-l-4 ${kpis.estimatedProfit >= 0 ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500'} hover:shadow-lg transition-shadow cursor-pointer`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-[var(--color-anthracite)] font-medium">Bénéfice estimé</p>
+                    <p className={`text-3xl font-bold mt-2 ${kpis.estimatedProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(kpis.estimatedProfit)}
+                    </p>
+                  </div>
+                  {kpis.estimatedProfit >= 0 ? (
+                    <TrendingUp size={32} className="text-green-500 opacity-20" />
+                  ) : (
+                    <TrendingDown size={32} className="text-red-500 opacity-20" />
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Projets en cours */}
-            <div className="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500 hover:shadow-lg transition-shadow cursor-pointer">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-[var(--color-anthracite)] font-medium">Projets en cours</p>
-                  <p className="text-3xl font-bold text-[var(--color-black-deep)] mt-2">{kpis.projectsInProgress}</p>
-                </div>
-                <CheckCircle2 size={32} className="text-blue-500 opacity-20" />
-              </div>
-            </div>
-
-            {/* Heures travaillées */}
-            <div className="bg-white p-6 rounded-lg shadow border-l-4 border-purple-500 hover:shadow-lg transition-shadow cursor-pointer">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-[var(--color-anthracite)] font-medium">Heures ce mois</p>
-                  <p className="text-3xl font-bold text-[var(--color-black-deep)] mt-2">{kpis.totalHours}</p>
-                </div>
-                <Clock size={32} className="text-purple-500 opacity-20" />
-              </div>
-            </div>
-
-            {/* Bénéfice */}
-            <div className={`p-6 rounded-lg shadow border-l-4 ${kpis.estimatedProfit >= 0 ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500'} hover:shadow-lg transition-shadow cursor-pointer`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-[var(--color-anthracite)] font-medium">Bénéfice estimé</p>
-                  <p className={`text-3xl font-bold mt-2 ${kpis.estimatedProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {formatCurrency(kpis.estimatedProfit)}
+            {/* 📊 DÉTAIL DES REVENUS */}
+            <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">📊 Détail des Revenus ce mois</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Abonnements */}
+                <div className="bg-white p-4 rounded-lg border-l-4 border-green-500">
+                  <p className="text-sm text-gray-600 font-medium">Abonnements</p>
+                  <p className="text-2xl font-bold text-green-600 mt-2">
+                    {formatCurrency(kpis.subscriptionRevenue || 0)}
                   </p>
+                  <p className="text-xs text-gray-500 mt-2">Revenu pur (100%)</p>
                 </div>
-                {kpis.estimatedProfit >= 0 ? (
-                  <TrendingUp size={32} className="text-green-500 opacity-20" />
-                ) : (
-                  <TrendingDown size={32} className="text-red-500 opacity-20" />
-                )}
+
+                {/* Projets (net) */}
+                <div className="bg-white p-4 rounded-lg border-l-4 border-blue-500">
+                  <p className="text-sm text-gray-600 font-medium">Projets (net des frais)</p>
+                  <p className="text-2xl font-bold text-blue-600 mt-2">
+                    {formatCurrency(kpis.projectNetRevenue || 0)}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">Montant - Frais de prestation</p>
+                </div>
+
+                {/* Frais projets */}
+                <div className="bg-white p-4 rounded-lg border-l-4 border-orange-500">
+                  <p className="text-sm text-gray-600 font-medium">Frais des projets</p>
+                  <p className="text-2xl font-bold text-orange-600 mt-2">
+                    -{formatCurrency(kpis.projectCharges || 0)}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">Coûts de prestation</p>
+                </div>
               </div>
             </div>
           </div>

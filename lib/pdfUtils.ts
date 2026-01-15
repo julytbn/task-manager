@@ -16,7 +16,7 @@ export async function generatePaiementReceiptPDF(paiement: any): Promise<Buffer>
       doc.fontSize(12)
       doc.text(`Numéro du paiement : ${paiement.id}`)
       doc.text(`Date : ${paiement.datePaiement ? new Date(paiement.datePaiement).toLocaleDateString() : ''}`)
-      doc.text(`Montant : ${paiement.montant} €`)
+      doc.text(`Montant : ${paiement.montant} FCFA`)
       doc.text(`Moyen de paiement : ${paiement.moyenPaiement}`)
       doc.text(`Client : ${paiement.client?.nom || ''}`)
       doc.text(`Facture associée : ${paiement.facture?.numero || ''}`)

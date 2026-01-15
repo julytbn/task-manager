@@ -1,7 +1,9 @@
 'use client'
+'use client'
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui'
 import { X } from 'lucide-react'
+import { useUserSession } from '@/hooks/useSession'
 
 type Timesheet = {
   id: string
@@ -34,6 +36,7 @@ interface Task {
 }
 
 export default function NouvelleTimesheetModal({ isOpen, onClose, onSubmit }: NouvelleTimesheetModalProps) {
+  const { user } = useUserSession()
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     heures: 8,
@@ -92,35 +95,39 @@ export default function NouvelleTimesheetModal({ isOpen, onClose, onSubmit }: No
     loadData()
   }, [isOpen])
 
-  // Filtrer les tâches selon le projet sélectionné
+  // Charger toutes les tâches disponibles
   useEffect(() => {
-    if (formData.projetId) {
-      const filtered = tasks.filter(t => t.projetId === formData.projetId)
-      setFilteredTasks(filtered)
-      // Réinitialiser la sélection de tâche si elle n'est pas dans le projet
-      if (formData.tacheId && !filtered.find(t => t.id === formData.tacheId)) {
-        setFormData(prev => ({ ...prev, tacheId: '' }))
-      }
-    } else {
-      setFilteredTasks(tasks)
-    }
-  }, [formData.projetId, tasks])
+    setFilteredTasks(tasks)
+  }, [tasks])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Vérifier que la description est remplie
+    if (!formData.description.trim()) {
+      alert('Veuillez saisir une description du travail effectué')
+      return
+    }
+    
+    if (!user) {
+      alert('Vous devez être connecté pour créer une feuille de temps')
+      return
+    }
+    
     setSubmitting(true)
     
     try {
-      // Récupérer les informations du projet et tâche sélectionnés
-      const projet = projects.find(p => p.id === formData.projetId)
-      const tache = tasks.find(t => t.id === formData.tacheId)
+      // Récupérer les informations du projet et tâche sélectionnés si disponibles
+      const projet = formData.projetId ? projects.find(p => p.id === formData.projetId) : null
+      const tache = formData.tacheId ? tasks.find(t => t.id === formData.tacheId) : null
 
       const payload: any = {
         date: formData.date,
-        heures: formData.heures,
+        regularHrs: formData.heures,
         description: formData.description,
-        projetId: formData.projetId || undefined,
-        tacheId: formData.tacheId || undefined
+        employeeId: user.id,
+        projectId: formData.projetId || null,
+        taskId: formData.tacheId || null
       }
 
       const res = await fetch('/api/timesheets', {
@@ -129,15 +136,28 @@ export default function NouvelleTimesheetModal({ isOpen, onClose, onSubmit }: No
         body: JSON.stringify(payload)
       })
 
-      if (!res.ok) throw new Error('Erreur lors de la création')
-      const newSheet = await res.json()
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.message || 'Erreur lors de la création')
+      }
       
-      // Enrichir les données retournées avec les infos du projet/tâche
-      const enrichedSheet: Timesheet = {
-        ...newSheet,
+      const responseData = await res.json()
+      
+      // Créer l'objet timesheet avec les données formatées pour l'interface
+      const newSheet = {
+        id: responseData.id || Date.now().toString(),
+        date: formData.date,
+        heures: formData.heures,
+        description: formData.description,
+        projetId: formData.projetId,
+        tacheId: formData.tacheId,
+        statut: 'EN_ATTENTE',
         projet: projet ? { id: projet.id, titre: projet.titre } : undefined,
         tache: tache ? { id: tache.id, titre: tache.titre } : undefined
       }
+      
+      // Utiliser la fonction de rappel avec les données formatées
+      const enrichedSheet: Timesheet = newSheet
 
       onSubmit(enrichedSheet)
       
@@ -183,7 +203,7 @@ export default function NouvelleTimesheetModal({ isOpen, onClose, onSubmit }: No
             />
           </div>
 
-          {/* Projet */}
+          {/* Projet - Optionnel */}
           <div>
             <label className="block text-sm font-medium mb-1">Projet (optionnel)</label>
             <select
@@ -192,7 +212,7 @@ export default function NouvelleTimesheetModal({ isOpen, onClose, onSubmit }: No
               className="w-full px-3 py-2 border rounded-lg"
               disabled={loading}
             >
-              <option value="">Sélectionner un projet...</option>
+              <option value="">Sélectionner un projet (optionnel)...</option>
               {projects.map(project => (
                 <option key={project.id} value={project.id}>
                   {project.titre}
@@ -201,23 +221,19 @@ export default function NouvelleTimesheetModal({ isOpen, onClose, onSubmit }: No
             </select>
           </div>
 
-          {/* Tâche */}
+          {/* Tâche - Optionnelle */}
           <div>
             <label className="block text-sm font-medium mb-1">Tâche (optionnel)</label>
             <select
               value={formData.tacheId}
               onChange={(e) => setFormData({ ...formData, tacheId: e.target.value })}
               className="w-full px-3 py-2 border rounded-lg"
-              disabled={loading || filteredTasks.length === 0}
+              disabled={loading || tasks.length === 0}
             >
-              <option value="">
-                {formData.projetId 
-                  ? 'Sélectionner une tâche...' 
-                  : 'Sélectionner d\'abord un projet'}
-              </option>
-              {filteredTasks.map(task => (
+              <option value="">Sélectionner une tâche (optionnel)...</option>
+              {tasks.map(task => (
                 <option key={task.id} value={task.id}>
-                  {task.titre}
+                  {task.titre} {task.projet ? `(${task.projet.titre})` : ''}
                 </option>
               ))}
             </select>
@@ -238,17 +254,18 @@ export default function NouvelleTimesheetModal({ isOpen, onClose, onSubmit }: No
             />
           </div>
 
-          {/* Description */}
+          {/* Description - Obligatoire */}
           <div>
-            <label className="block text-sm font-medium mb-1">Description</label>
+            <label className="block text-sm font-medium mb-1">Description <span className="text-red-500">*</span></label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Décrivez le travail effectué..."
+              placeholder="Décrivez en détail le travail effectué (obligatoire pour le rapport mensuel)..."
               className="w-full px-3 py-2 border rounded-lg"
-              rows={3}
+              rows={4}
               required
             />
+            <p className="text-xs text-gray-500 mt-1">Ce champ est obligatoire pour le rapport mensuel</p>
           </div>
 
           <div className="flex gap-3 pt-4">

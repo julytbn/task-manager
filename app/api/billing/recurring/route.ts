@@ -77,13 +77,6 @@ export async function GET() {
             email: true
           }
         },
-        service: {
-          select: {
-            id: true,
-            nom: true,
-            description: true
-          }
-        },
         montant: true,
         frequence: true,
         dateDebut: true,

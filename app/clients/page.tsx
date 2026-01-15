@@ -17,6 +17,7 @@ type Client = {
   email?: string
   telephone?: string
   type: string
+  regimeFiscal?: string
   entreprise?: string
   adresse?: string
   projetsCount?: number
@@ -32,26 +33,29 @@ export default function ClientsPage() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [isNewClientOpen, setIsNewClientOpen] = useState(false)
   const [modalInitialClient, setModalInitialClient] = useState<Client | null>(null)
+  
+  // Filtres avancés
+  const [filters, setFilters] = useState({
+    type: '',
+    regimeFiscal: '',
+    adresse: '',
+  })
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
 
   const fetchClients = async () => {
     try {
-      console.log('[CLIENTS PAGE] Fetching clients from API...')
       setIsLoading(true)
       const response = await fetch('/api/clients')
-      console.log('[CLIENTS PAGE] API Response status:', response.status)
       
       if (!response.ok) {
         const errorData = await response.json()
-        console.error('[CLIENTS PAGE] API Error:', errorData)
         throw new Error(`API Error: ${response.status} - ${JSON.stringify(errorData)}`)
       }
       
       const data = await response.json()
-      console.log('[CLIENTS PAGE] Received data:', data)
-      console.log('[CLIENTS PAGE] Data length:', Array.isArray(data) ? data.length : 'Not an array')
       setClients(data || [])
     } catch (error) {
-      console.error('[CLIENTS PAGE] Erreur:', error)
+      console.error('Erreur chargement clients:', error)
       alert(`Erreur lors du chargement des clients: ${error}`)
     } finally {
       setIsLoading(false)
@@ -62,12 +66,27 @@ export default function ClientsPage() {
   }, [])
 
   const filteredClients = useMemo(() => {
-    return clients.filter(client =>
-      client.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.entreprise?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  }, [clients, searchTerm])
+    return clients.filter(client => {
+      // Filtre recherche textuelle
+      const matchSearch = !searchTerm || 
+        client.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.entreprise?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.adresse?.toLowerCase().includes(searchTerm.toLowerCase())
+      
+      // Filtre type
+      const matchType = !filters.type || client.type === filters.type
+      
+      // Filtre régime fiscal
+      const matchRegime = !filters.regimeFiscal || (client as any).regimeFiscal === filters.regimeFiscal
+      
+      // Filtre adresse
+      const matchAdresse = !filters.adresse || 
+        client.adresse?.toLowerCase().includes(filters.adresse.toLowerCase())
+      
+      return matchSearch && matchType && matchRegime && matchAdresse
+    })
+  }, [clients, searchTerm, filters])
 
   const stats = {
     total: clients.length,
@@ -134,49 +153,115 @@ export default function ClientsPage() {
           />
         </div>
 
-        {/* Search & View Toggle */}
-        <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 mb-8">
-          <div className="flex flex-col sm:flex-row gap-4 items-center">
-            <div className="relative w-full">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-                </svg>
+        {/* Search & Filters Section */}
+        <div className="space-y-4 mb-8">
+          <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+            <div className="flex flex-col sm:flex-row gap-4 items-center">
+              <div className="relative w-full">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  className="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-all"
+                  placeholder="Rechercher par nom, email ou entreprise..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
-              <input
-                type="text"
-                className="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-all"
-                placeholder="Rechercher par nom, email ou entreprise..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            
-            <div className="flex items-center bg-gray-50 p-1 rounded-lg border border-gray-200">
-              <button
-                onClick={() => setViewMode('table')}
-                className={`p-2 rounded-md transition-all ${
-                  viewMode === 'table'
-                    ? 'bg-white shadow-sm text-blue-600'
-                    : 'text-gray-500 hover:bg-gray-100'
-                }`}
-                title="Vue tableau"
-              >
-                <List size={18} />
-              </button>
-              <button
-                onClick={() => setViewMode('cards')}
-                className={`p-2 rounded-md transition-all ${
-                  viewMode === 'cards'
-                    ? 'bg-white shadow-sm text-blue-600'
-                    : 'text-gray-500 hover:bg-gray-100'
-                }`}
-                title="Vue en grille"
-              >
-                <Grid size={18} />
-              </button>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                  className="px-4 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 transition-all"
+                >
+                  {showAdvancedFilters ? '⬆ Filtres' : '⬇ Filtres'}
+                </button>
+                
+                <div className="flex items-center bg-gray-50 p-1 rounded-lg border border-gray-200">
+                  <button
+                    onClick={() => setViewMode('table')}
+                    className={`p-2 rounded-md transition-all ${
+                      viewMode === 'table'
+                        ? 'bg-white shadow-sm text-blue-600'
+                        : 'text-gray-500 hover:bg-gray-100'
+                    }`}
+                    title="Vue tableau"
+                  >
+                    <List size={18} />
+                  </button>
+                  <button
+                    onClick={() => setViewMode('cards')}
+                    className={`p-2 rounded-md transition-all ${
+                      viewMode === 'cards'
+                        ? 'bg-white shadow-sm text-blue-600'
+                        : 'text-gray-500 hover:bg-gray-100'
+                    }`}
+                    title="Vue en grille"
+                  >
+                    <Grid size={18} />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
+
+          {/* Advanced Filters */}
+          {showAdvancedFilters && (
+            <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Type de client</label>
+                <select
+                  value={filters.type}
+                  onChange={(e) => setFilters({...filters, type: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                >
+                  <option value="">Tous</option>
+                  <option value="PARTICULIER">Particulier</option>
+                  <option value="ENTREPRISE">Entreprise</option>
+                  <option value="ORGANISATION">Organisation</option>
+                  <option value="ETABLISSEMENT">Établissement</option>
+                  <option value="SOCIETE">Société</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Régime fiscal</label>
+                <select
+                  value={filters.regimeFiscal}
+                  onChange={(e) => setFilters({...filters, regimeFiscal: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                >
+                  <option value="">Tous</option>
+                  <option value="AVEC_TVA">Avec TVA</option>
+                  <option value="SANS_TVA">Sans TVA</option>
+                  <option value="TPU">TPU</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Adresse</label>
+                <input
+                  type="text"
+                  value={filters.adresse}
+                  onChange={(e) => setFilters({...filters, adresse: e.target.value})}
+                  placeholder="Filtrer par adresse..."
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+              </div>
+
+              {(filters.type || filters.regimeFiscal || filters.adresse) && (
+                <button
+                  onClick={() => setFilters({type: '', regimeFiscal: '', adresse: ''})}
+                  className="col-span-1 md:col-span-3 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-all"
+                >
+                  Réinitialiser les filtres
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Content */}

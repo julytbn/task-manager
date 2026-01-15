@@ -1,0 +1,549 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useParams } from 'next/navigation'
+import MainLayout from '@/components/layouts/MainLayout'
+import { Plus, Trash2, Edit2, TrendingDown, TrendingUp, DollarSign, FileText } from 'lucide-react'
+
+interface AccountingSummary {
+  client: {
+    id: string
+    nom: string
+    prenom: string
+    entreprise: string
+    type: string
+  }
+  abonnements: any[]
+  financials: {
+    totalEntrees: number
+    totalCharges: number
+    solde: number
+    pourcentageCharges: string
+  }
+  details: {
+    paiements: { total: number; count: number }
+    factures: { total: number; count: number }
+    charges: {
+      total: number
+      count: number
+      parCategorie: Record<string, { montant: number; count: number }>
+    }
+  }
+  periode: string
+}
+
+interface DocumentComptable {
+  id: string
+  nom: string
+  montant: number
+  categorie?: string
+  type: 'ENTREE' | 'CHARGE' | 'AUTRE'
+  description?: string
+  dateDocument?: string
+  url?: string
+  notes?: string
+  chargeId?: string
+  entreeId?: string
+}
+
+export default function ClientAccountingPage() {
+  const params = useParams() as { id: string }
+  const clientId = params.id
+
+  const [summary, setSummary] = useState<AccountingSummary | null>(null)
+  const [documents, setDocuments] = useState<DocumentComptable[]>([])
+  const [loading, setLoading] = useState(true)
+  const [month, setMonth] = useState(new Date().getMonth() + 1)
+  const [year, setYear] = useState(new Date().getFullYear())
+
+  // Dialog states
+  const [isDocumentDialogOpen, setIsDocumentDialogOpen] = useState(false)
+  const [editingDocument, setEditingDocument] = useState<DocumentComptable | null>(null)
+  const [formData, setFormData] = useState({
+    nom: '',
+    montant: '',
+    categorie: 'AUTRES_CHARGES',
+    type: 'CHARGE' as 'ENTREE' | 'CHARGE' | 'AUTRE',
+    description: '',
+    dateDocument: new Date().toISOString().split('T')[0],
+    notes: ''
+  })
+
+  // Catégories disponibles par type
+  const categoriesByType = {
+    CHARGE: [
+      'SALAIRES_CHARGES_SOCIALES',
+      'LOYER_IMMOBILIER',
+      'UTILITIES',
+      'MATERIEL_EQUIPEMENT',
+      'TRANSPORT_DEPLACEMENT',
+      'FOURNITURES_BUREAUTIQUE',
+      'MARKETING_COMMUNICATION',
+      'ASSURANCES',
+      'TAXES_IMPOTS',
+      'AUTRES_CHARGES'
+    ],
+    ENTREE: [
+      'VENTES_PRODUITS',
+      'SERVICES_RENDUS',
+      'LOYERS_RECUS',
+      'INTERETS_PLACEMENTS',
+      'SUBVENTIONS',
+      'AUTRES_REVENUS'
+    ],
+    AUTRE: ['JUSTIFICATIF', 'AUTRE']
+  }
+
+  // Fetch data
+  useEffect(() => {
+    fetchData()
+  }, [month, year])
+
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      const [summaryRes, documentsRes] = await Promise.all([
+        fetch(`/api/clients/${clientId}/accounting-summary?month=${month}&year=${year}`),
+        fetch(`/api/clients/${clientId}/documents-comptables?month=${month}&year=${year}`)
+      ])
+
+      if (summaryRes.ok) {
+        const data = await summaryRes.json()
+        setSummary(data)
+      }
+
+      if (documentsRes.ok) {
+        const data = await documentsRes.json()
+        setDocuments(data.documents || [])
+      }
+    } catch (error) {
+      console.error('Erreur de chargement:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddDocument = () => {
+    setEditingDocument(null)
+    setFormData({
+      nom: '',
+      montant: '',
+      categorie: 'AUTRES_CHARGES',
+      type: 'CHARGE',
+      description: '',
+      dateDocument: new Date().toISOString().split('T')[0],
+      notes: ''
+    })
+    setIsDocumentDialogOpen(true)
+  }
+
+  const handleEditDocument = (doc: DocumentComptable) => {
+    setEditingDocument(doc)
+    setFormData({
+      nom: doc.nom,
+      montant: doc.montant.toString(),
+      categorie: doc.categorie || 'AUTRES_CHARGES',
+      type: doc.type,
+      description: doc.description || '',
+      dateDocument: doc.dateDocument || new Date().toISOString().split('T')[0],
+      notes: doc.notes || ''
+    })
+    setIsDocumentDialogOpen(true)
+  }
+
+  const handleSaveDocument = async () => {
+    if (!formData.nom || !formData.montant || !formData.type) {
+      alert('Nom, montant et type sont obligatoires')
+      return
+    }
+
+    try {
+      const url = editingDocument
+        ? `/api/clients/${clientId}/documents-comptables/${editingDocument.id}`
+        : `/api/clients/${clientId}/documents-comptables`
+
+      const method = editingDocument ? 'PATCH' : 'POST'
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nom: formData.nom,
+          montant: parseFloat(formData.montant),
+          categorie: formData.categorie,
+          type: formData.type,
+          description: formData.description,
+          dateDocument: formData.dateDocument,
+          fichierUrl: '',
+          notes: formData.notes
+        })
+      })
+
+      if (response.ok) {
+        setIsDocumentDialogOpen(false)
+        fetchData()
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Erreur lors de la sauvegarde')
+      }
+    } catch (error) {
+      console.error('Erreur de sauvegarde:', error)
+      alert('Erreur lors de la sauvegarde')
+    }
+  }
+
+  const handleDeleteDocument = async (documentId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce document ?')) return
+
+    try {
+      const response = await fetch(`/api/clients/${clientId}/documents-comptables/${documentId}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        fetchData()
+      } else {
+        alert('Erreur lors de la suppression')
+      }
+    } catch (error) {
+      console.error('Erreur de suppression:', error)
+      alert('Erreur lors de la suppression')
+    }
+  }
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p>Chargement...</p>
+          </div>
+        </div>
+      </MainLayout>
+    )
+  }
+
+  return (
+    <MainLayout>
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold gold-gradient-text">Comptabilité Client</h1>
+            {summary && (
+              <p className="text-gray-600 mt-2">
+                {summary.client.entreprise || `${summary.client.prenom} ${summary.client.nom}`}
+              </p>
+            )}
+          </div>
+
+          {/* Filtres Mois/Année */}
+          <div className="flex gap-2">
+            <select
+              value={month}
+              onChange={(e) => setMonth(parseInt(e.target.value))}
+              className="px-3 py-2 border border-gray-300 rounded-lg"
+            >
+              {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                <option key={m} value={m}>
+                  {new Date(2024, m - 1).toLocaleString('fr-FR', { month: 'long' })}
+                </option>
+              ))}
+            </select>
+            <select
+              value={year}
+              onChange={(e) => setYear(parseInt(e.target.value))}
+              className="px-3 py-2 border border-gray-300 rounded-lg"
+            >
+              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Situation Financière Cards */}
+        {summary && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Total Entrées */}
+            <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-gray-700">Total Entrées</h3>
+                <TrendingUp className="h-4 w-4 text-green-600" />
+              </div>
+              <div className="text-2xl font-bold text-green-600">
+                {summary.financials.totalEntrees.toLocaleString('fr-FR', {
+                  style: 'currency',
+                  currency: 'XAF'
+                })}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {summary.details.charges.count} documents d'entrée
+              </p>
+            </div>
+
+            {/* Total Charges */}
+            <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-gray-700">Total Charges</h3>
+                <TrendingDown className="h-4 w-4 text-red-600" />
+              </div>
+              <div className="text-2xl font-bold text-red-600">
+                {summary.financials.totalCharges.toLocaleString('fr-FR', {
+                  style: 'currency',
+                  currency: 'XAF'
+                })}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {summary.details.charges.count} charges ({summary.financials.pourcentageCharges}% des entrées)
+              </p>
+            </div>
+
+            {/* Solde */}
+            <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-gray-700">Solde</h3>
+                <DollarSign className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className={`text-2xl font-bold ${summary.financials.solde >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {summary.financials.solde.toLocaleString('fr-FR', {
+                  style: 'currency',
+                  currency: 'XAF'
+                })}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                {summary.financials.solde >= 0 ? 'Bénéfice' : 'Déficit'}
+              </p>
+            </div>
+
+            {/* Abonnement */}
+            <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-gray-700">Abonnement</h3>
+                <div className="h-4 w-4 text-blue-600">📋</div>
+              </div>
+              <div className="text-xl font-bold">
+                {summary.abonnements.length > 0 ? (
+                  <span className="text-green-600">✓ Actif</span>
+                ) : (
+                  <span className="text-red-600">✗ Inactif</span>
+                )}
+              </div>
+              {summary.abonnements.length > 0 && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {summary.abonnements[0].montant.toLocaleString('fr-FR', {
+                    style: 'currency',
+                    currency: 'XAF'
+                  })}
+                  /mois
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Documents Comptables */}
+        <div className="bg-white rounded-lg shadow border border-gray-200">
+          <div className="flex items-center justify-between p-6 border-b">
+            <h2 className="text-lg font-bold">Documents Comptables</h2>
+            <button
+              onClick={handleAddDocument}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded transition text-sm"
+            >
+              <Plus className="h-4 w-4" />
+              Ajouter un document
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b bg-gray-50">
+                <tr>
+                  <th className="text-left py-3 px-4 font-semibold">Date</th>
+                  <th className="text-left py-3 px-4 font-semibold">Nom</th>
+                  <th className="text-left py-3 px-4 font-semibold">Type</th>
+                  <th className="text-left py-3 px-4 font-semibold">Catégorie</th>
+                  <th className="text-right py-3 px-4 font-semibold">Montant</th>
+                  <th className="text-center py-3 px-4 font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {documents.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-8 text-gray-500">
+                      Aucun document enregistré
+                    </td>
+                  </tr>
+                ) : (
+                  documents.map((doc) => (
+                    <tr key={doc.id} className="border-b hover:bg-gray-50">
+                      <td className="py-3 px-4">
+                        {doc.dateDocument ? new Date(doc.dateDocument).toLocaleDateString('fr-FR') : '-'}
+                      </td>
+                      <td className="py-3 px-4 font-medium">{doc.nom}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          doc.type === 'ENTREE' ? 'bg-green-100 text-green-800' :
+                          doc.type === 'CHARGE' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {doc.type}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">{doc.categorie || '-'}</td>
+                      <td className={`text-right py-3 px-4 font-semibold ${doc.type === 'ENTREE' ? 'text-green-600' : 'text-red-600'}`}>
+                        {doc.type === 'ENTREE' ? '+' : '-'}{doc.montant.toLocaleString('fr-FR', {
+                          style: 'currency',
+                          currency: 'XAF'
+                        })}
+                      </td>
+                      <td className="text-center py-3 px-4">
+                        <div className="flex justify-center gap-2">
+                          <button
+                            onClick={() => handleEditDocument(doc)}
+                            className="text-blue-600 hover:text-blue-800 p-1"
+                            title="Éditer"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteDocument(doc.id)}
+                            className="text-red-600 hover:text-red-800 p-1"
+                            title="Supprimer"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Dialog Ajouter/Éditer Document */}
+        {isDocumentDialogOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full mx-4">
+              <div className="p-6 border-b">
+                <h2 className="text-lg font-bold flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  {editingDocument ? 'Éditer le document' : 'Ajouter un document comptable'}
+                </h2>
+              </div>
+
+              <div className="p-6 space-y-4 max-h-96 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Nom du document *</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Facture ABC-001"
+                      value={formData.nom}
+                      onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Type *</label>
+                    <select
+                      value={formData.type}
+                      onChange={(e) => setFormData({ 
+                        ...formData, 
+                        type: e.target.value as 'ENTREE' | 'CHARGE' | 'AUTRE',
+                        categorie: e.target.value === 'ENTREE' ? 'VENTES_PRODUITS' : 'AUTRES_CHARGES'
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded"
+                    >
+                      <option value="CHARGE">Charge (dépense)</option>
+                      <option value="ENTREE">Entrée (revenu)</option>
+                      <option value="AUTRE">Autre (justificatif)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Montant *</label>
+                    <input
+                      type="number"
+                      placeholder="0"
+                      step="0.01"
+                      value={formData.montant}
+                      onChange={(e) => setFormData({ ...formData, montant: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Catégorie *</label>
+                    <select
+                      value={formData.categorie}
+                      onChange={(e) => setFormData({ ...formData, categorie: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded"
+                    >
+                      {categoriesByType[formData.type].map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Date du document</label>
+                  <input
+                    type="date"
+                    value={formData.dateDocument}
+                    onChange={(e) => setFormData({ ...formData, dateDocument: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Description</label>
+                  <input
+                    type="text"
+                    placeholder="Détails du document"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Notes</label>
+                  <textarea
+                    placeholder="Remarques additionnelles"
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded resize-none"
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 p-6 border-t justify-end">
+                <button
+                  onClick={() => setIsDocumentDialogOpen(false)}
+                  className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleSaveDocument}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded"
+                >
+                  {editingDocument ? 'Mettre à jour' : 'Ajouter'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </MainLayout>
+  )
+}

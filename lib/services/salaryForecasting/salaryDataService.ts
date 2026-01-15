@@ -28,6 +28,7 @@ export async function getSalaryForecastCurrentMonth(): Promise<SalaryForecastDat
   const annee = now.getFullYear();
 
   try {
+    // First try to get from PrevisionSalaire table
     const prévisions = await prisma.previsionSalaire.findMany({
       where: {
         mois,
@@ -47,29 +48,110 @@ export async function getSalaryForecastCurrentMonth(): Promise<SalaryForecastDat
       },
     });
 
-    if (prévisions.length === 0) {
+    // If previsions found in table, use them
+    if (prévisions.length > 0) {
+      const dateLimite = new Date(annee, mois, 5);
+      const montantTotal = prévisions.reduce((sum, p) => sum + p.montantPrevu, 0);
+
+      return {
+        montantTotal,
+        nombreEmployes: prévisions.length,
+        mois,
+        annee,
+        dateLimite,
+        prévisions: prévisions.map((p) => ({
+          id: p.id,
+          employeId: p.employeId,
+          nomEmploye: `${p.employe.prenom} ${p.employe.nom}`,
+          montantPrevu: p.montantPrevu,
+          dateNotification: p.dateNotification || undefined,
+        })),
+      };
+    }
+
+    // If no previsions found, calculate from timesheets and employee rates
+    console.log(`[Salary Forecast] Calculating from timesheets for ${mois}/${annee}`);
+    
+    // Get all employees
+    const employees = await prisma.utilisateur.findMany({
+      where: {
+        role: 'EMPLOYE',
+      },
+      select: {
+        id: true,
+        prenom: true,
+        nom: true,
+        tarifHoraire: true,
+        timesheets: {
+          where: {
+            AND: [
+              {
+                date: {
+                  gte: new Date(annee, mois - 1, 1),
+                },
+              },
+              {
+                date: {
+                  lt: new Date(annee, mois, 1),
+                },
+              },
+            ],
+          },
+          select: {
+            regularHrs: true,
+            overtimeHrs: true,
+            statut: true,
+          },
+        },
+      },
+    });
+
+    console.log(`[Salary Forecast] Found ${employees.length} employees`);
+
+    // Calculate salary forecasts from timesheets
+    const forecasts = employees
+      .map((emp) => {
+        // Only count validated timesheets
+        const validatedSheets = emp.timesheets.filter(
+          (ts: any) => ts.statut === 'VALIDEE'
+        );
+
+        const totalHours = validatedSheets.reduce(
+          (sum: number, ts: any) => sum + (ts.regularHrs || 0) + (ts.overtimeHrs || 0),
+          0
+        );
+
+        const montantPrevu = totalHours * (emp.tarifHoraire || 0);
+
+        console.log(`[Salary Forecast] ${emp.prenom} ${emp.nom}: ${totalHours}h × ${emp.tarifHoraire || 0} = ${montantPrevu}`);
+
+        return {
+          id: `forecast-${emp.id}-${mois}-${annee}`,
+          employeId: emp.id,
+          nomEmploye: `${emp.prenom} ${emp.nom}`,
+          montantPrevu,
+          dateNotification: undefined,
+        };
+      })
+      .sort((a, b) => b.montantPrevu - a.montantPrevu);
+
+    console.log(`[Salary Forecast] Forecasts calculated: ${forecasts.length} employees with data`);
+
+    if (forecasts.length === 0) {
+      console.log('[Salary Forecast] No employees found or no data');
       return null;
     }
 
-    // Calculer la date limite (5 du mois suivant)
+    const montantTotal = forecasts.reduce((sum, f) => sum + f.montantPrevu, 0);
     const dateLimite = new Date(annee, mois, 5);
-
-    // Calculer le total
-    const montantTotal = prévisions.reduce((sum, p) => sum + p.montantPrevu, 0);
 
     return {
       montantTotal,
-      nombreEmployes: prévisions.length,
+      nombreEmployes: forecasts.filter(f => f.montantPrevu > 0).length,
       mois,
       annee,
       dateLimite,
-      prévisions: prévisions.map((p) => ({
-        id: p.id,
-        employeId: p.employeId,
-        nomEmploye: `${p.employe.prenom} ${p.employe.nom}`,
-        montantPrevu: p.montantPrevu,
-        dateNotification: p.dateNotification || undefined,
-      })),
+      prévisions: forecasts,
     };
   } catch (error) {
     console.error('Error fetching salary forecast:', error);
@@ -98,18 +180,46 @@ export async function getSalaryCoverageAnalysis() {
       },
     });
 
-    // Récupérer les recettes (factures payées)
-    const revenues = await prisma.paiement.aggregate({
-      _sum: {
-        montant: true,
-      },
+    // Récupérer les paiements confirmés avec le détail des factures
+    const paiements = await prisma.paiement.findMany({
       where: {
         datePaiement: {
           gte: startDate,
         },
         statut: 'CONFIRME',
       },
+      include: {
+        facture: {
+          include: {
+            lignes: true
+          }
+        }
+      },
     });
+
+    // Calculer la part main-d'œuvre des paiements
+    const montantMainDOeuvre = paiements.reduce((sum, paiement) => {
+      if (!paiement.facture?.lignes) return sum;
+      
+      // Calculer le ratio main-d'œuvre / montant total de la facture
+      const montantTotalFacture = paiement.facture.lignes.reduce(
+        (total, ligne) => total + (ligne.montant || 0), 0
+      );
+      
+      const montantMainDOeuvreFacture = paiement.facture.lignes
+        .filter(ligne => ligne.type === 'MAIN_D_OEUVRE')
+        .reduce((sum, ligne) => sum + (ligne.montant || 0), 0);
+      
+      // Si le montant total est 0, on évite la division par zéro
+      const ratio = montantTotalFacture > 0 
+        ? montantMainDOeuvreFacture / montantTotalFacture 
+        : 0;
+      
+      // On applique ce ratio au montant du paiement
+      return sum + (paiement.montant * ratio);
+    }, 0);
+    
+    const revenues = { _sum: { montant: montantMainDOeuvre } };
 
     // Transformer les données pour le graphique
     const monthlyData = salaryForecasts.map((sf) => {

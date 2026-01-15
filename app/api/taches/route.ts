@@ -1,8 +1,11 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { sendEmail, generateTaskAssignmentEmail } from '@/lib/email'
+import { notifyWithEmail, notificationTemplates } from '@/lib/notificationService'
 import fs from 'fs'
 import path from 'path'
 
@@ -23,16 +26,22 @@ export async function GET(request: Request) {
     
     // Si un userId est spécifié en query, l'utiliser
     if (queryUserId) {
-      where.assigneAId = queryUserId
+      where.OR = [
+        { assigneAId: queryUserId },    // Tâches assignées à l'utilisateur
+        { creeParId: queryUserId }      // Tâches créées par l'utilisateur
+      ]
       if (process.env.NODE_ENV === 'development') {
-        console.log('📋 [GET /api/taches] Filtre par userId appliqué:', queryUserId)
+        console.log('📋 [GET /api/taches] Filtre par userId appliqué (assignées + créées):', queryUserId)
       }
     }
-    // Sinon, si l'utilisateur est un employé, retourner ses tâches
+    // Sinon, si l'utilisateur est un employé, retourner ses tâches (assignées OU créées par lui)
     else if (session?.user?.role === 'EMPLOYE' && session.user.id) {
-      where.assigneAId = session.user.id
+      where.OR = [
+        { assigneAId: session.user.id },      // Tâches assignées à l'employé
+        { creeParId: session.user.id }        // Tâches créées par l'employé
+      ]
       if (process.env.NODE_ENV === 'development') {
-        console.log('📋 [GET /api/taches] Filtre EMPLOYE appliqué')
+        console.log('📋 [GET /api/taches] Filtre EMPLOYE appliqué - show assigned and created tasks')
       }
     } else {
       if (process.env.NODE_ENV === 'development') {
@@ -45,6 +54,7 @@ export async function GET(request: Request) {
       include: {
         projet: { select: { id: true, titre: true } },
         assigneA: { select: { id: true, nom: true, prenom: true, email: true } },
+        creeePar: { select: { id: true, nom: true, prenom: true } },
         DocumentTache: {
           select: {
             id: true,
@@ -101,6 +111,11 @@ export async function POST(request: Request) {
 
     const session = await getServerSession(authOptions)
 
+    // For employees: force status to SOUMISE (waiting for manager validation)
+    if (session?.user?.role === 'EMPLOYE') {
+      data.statut = 'SOUMISE'
+    }
+
     // Basic validation: require title, statut, priorite and projetId (assignee is optional)
     if (!data.titre || !data.statut || !data.priorite || !data.projetId) {
       return NextResponse.json(
@@ -121,11 +136,6 @@ export async function POST(request: Request) {
     // Track who created the task
     if (session?.user?.id) {
       createData.creeePar = { connect: { id: session.user.id } }
-    }
-
-    // Si un responsable est fourni, le connecter
-    if (data.assigneAId) {
-      createData.assigneA = { connect: { id: data.assigneAId } }
     }
 
     // If an assignee is provided, validate permissions and membership
@@ -157,12 +167,21 @@ export async function POST(request: Request) {
         }
       } else {
         // No team context: allow admins and managers to assign tasks outside of a team
+        // Employees creating SOUMISE tasks don't need assignment permission
         if (session?.user?.role !== 'ADMIN' && session?.user?.role !== 'MANAGER') {
-          return NextResponse.json({ error: 'Permission refusée : assignment hors équipe réservé aux administrateurs' }, { status: 403 })
+          // For employees: only allow if creating a SOUMISE task (waiting for validation)
+          if (data.statut !== 'SOUMISE') {
+            return NextResponse.json({ error: 'Permission refusée : assignment hors équipe réservé aux administrateurs' }, { status: 403 })
+          }
+          // If SOUMISE, ignore the assigneAId from employee - let manager assign after validation
+          data.assigneAId = undefined
         }
       }
 
-      createData.assigneA = { connect: { id: data.assigneAId } }
+      // Only connect if assigneAId is still set (not cleared for employee SOUMISE tasks)
+      if (data.assigneAId) {
+        createData.assigneA = { connect: { id: data.assigneAId } }
+      }
     }
 
     const nouvelleTache = await prisma.tache.create({
@@ -173,9 +192,11 @@ export async function POST(request: Request) {
       }
     })
 
-    // Send email to assignee if a task is assigned
+    // Send email and create notification for assignee if a task is assigned
     if (data.assigneAId && nouvelleTache.assigneA?.email) {
       try {
+        console.log(`📢 [POST /api/taches] Création notification d'assignation pour assigneAId=${data.assigneAId}`)
+        
         // Get assigner name (the user creating the task)
         let assignerName = 'Un manager'
         if (session?.user?.id) {
@@ -195,15 +216,28 @@ export async function POST(request: Request) {
           `https://task-manager.kekeligroup.com/taches/${nouvelleTache.id}`
         )
 
-        await sendEmail({
-          to: nouvelleTache.assigneA.email,
-          subject: emailContent.subject,
-          html: emailContent.html
-        })
+        // Créer notification in-app ET envoyer email
+        const notificationResult = await notifyWithEmail(
+          {
+            utilisateurId: data.assigneAId,
+            titre: `Nouvelle tâche assignée: ${nouvelleTache.titre}`,
+            message: `${assignerName} vous a assigné une nouvelle tâche: "${nouvelleTache.titre}".${nouvelleTache.description ? ` \n${nouvelleTache.description}` : ''}`,
+            type: 'TACHE',
+            lien: `/taches/${nouvelleTache.id}`,
+            sourceId: nouvelleTache.id,
+            sourceType: 'TACHE_ASSIGNEE'
+          },
+          {
+            to: nouvelleTache.assigneA.email,
+            subject: emailContent.subject,
+            html: emailContent.html
+          },
+          true // nonBlockingEmail: n'arrête pas si l'email échoue
+        )
 
-        console.log(`✅ Email d'assignation de tâche envoyé à ${nouvelleTache.assigneA.email}`)
-      } catch (emailError) {
-        console.error('❌ Erreur envoi email assignation tâche:', emailError)
+        console.log(`✅ [POST /api/taches] Notification et email d'assignation traités: ${JSON.stringify(notificationResult)}`)
+      } catch (error) {
+        console.error('❌ [POST /api/taches] Erreur envoi notification/email assignation tâche:', error)
         // Continue without failing the entire operation
       }
     }
@@ -264,49 +298,112 @@ export async function POST(request: Request) {
 
     // Create notifications for managers to inform them of the new submission
     try {
+      console.log(`📢 [POST /api/taches] Début création notifications pour managers...`)
+      
       // Get submitter info if available
       let submitterName = 'Un employé'
+      let submitterEmail = ''
       if (session?.user?.id) {
         try {
-          const user = await prisma.utilisateur.findUnique({ where: { id: session.user.id }, select: { nom: true, prenom: true } })
-          if (user) submitterName = `${user.prenom || ''} ${user.nom || ''}`.trim() || submitterName
+          const user = await prisma.utilisateur.findUnique({ where: { id: session.user.id }, select: { nom: true, prenom: true, email: true } })
+          if (user) {
+            submitterName = `${user.prenom || ''} ${user.nom || ''}`.trim() || submitterName
+            submitterEmail = user.email || ''
+          }
         } catch (e) {
           // ignore
         }
       }
 
-      const managers = await prisma.utilisateur.findMany({ where: { role: 'MANAGER' }, select: { id: true } })
+      const managers = await prisma.utilisateur.findMany({ where: { role: 'MANAGER' }, select: { id: true, email: true } })
+      console.log(`👥 [POST /api/taches] ${managers.length} managers trouvés`)
+      
       type NotificationData = {
         utilisateurId: string
         titre: string
         message: string
+        type: 'TACHE' | 'INFO'
         lien: string
         sourceId: string
         sourceType: string
       }
       // Déterminer si c'est une tâche soumise ou créée
       const isSubmitted = data.statut === 'SOUMISE'
+      console.log(`📋 [POST /api/taches] Tâche soumise? ${isSubmitted}`)
+      
       const notifications: NotificationData[] = managers.map(m => ({
         utilisateurId: m.id,
         titre: isSubmitted ? `Nouvelle tâche soumise par ${submitterName}` : 'Nouvelle tâche créée',
         message: isSubmitted 
           ? `${submitterName} a soumis la tâche « ${nouvelleTache.titre} » pour validation.`
           : `${submitterName} a créé la tâche « ${nouvelleTache.titre} ».`,
+        type: 'TACHE',
         lien: `/taches/${nouvelleTache.id}`,
         sourceId: nouvelleTache.id,
         sourceType: 'TACHE'
       }))
 
       // create notifications in DB (one by manager)
+      let notificationsCreated = 0
       for (const n of notifications) {
         try {
           await prisma.notification.create({ data: n })
+          notificationsCreated++
+          console.log(`✅ [POST /api/taches] Notification créée pour manager ${n.utilisateurId}: "${n.titre}"`)
         } catch (e) {
-          console.error('Erreur création notification:', e)
+          console.error(`❌ [POST /api/taches] Erreur création notification:`, e)
         }
       }
+      console.log(`📊 [POST /api/taches] ${notificationsCreated}/${managers.length} notifications créées en BD`)
+
+      // Send emails to managers if task is submitted for validation
+      if (isSubmitted && managers.length > 0) {
+        console.log(`📧 [POST /api/taches] Envoi emails aux ${managers.length} managers...`)
+        try {
+          let emailsSent = 0
+          for (const manager of managers) {
+            if (manager.email) {
+              try {
+                const emailContent = {
+                  subject: `Nouvelle tâche soumise pour validation - ${nouvelleTache.titre}`,
+                  html: `
+                    <h2>Nouvelle tâche soumise pour validation</h2>
+                    <p><strong>${submitterName}</strong> a soumis une tâche pour validation.</p>
+                    <p><strong>Titre:</strong> ${nouvelleTache.titre}</p>
+                    <p><strong>Projet:</strong> ${nouvelleTache.projet?.titre || 'N/A'}</p>
+                    ${nouvelleTache.description ? `<p><strong>Description:</strong> ${nouvelleTache.description}</p>` : ''}
+                    <p><strong>Priorité:</strong> ${data.priorite}</p>
+                    <p>
+                      <a href="https://task-manager.kekeligroup.com/taches/${nouvelleTache.id}" style="background-color: #d4af37; color: #1a1a1a; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                        Consulter la tâche
+                      </a>
+                    </p>
+                    <p>Veuillez valider ou rejeter cette tâche.</p>
+                  `
+                }
+
+                await sendEmail({
+                  to: manager.email,
+                  subject: emailContent.subject,
+                  html: emailContent.html
+                })
+
+                emailsSent++
+                console.log(`✅ [POST /api/taches] Email envoyé à ${manager.email}`)
+              } catch (e) {
+                console.error(`❌ [POST /api/taches] Erreur envoi email à ${manager.email}:`, e)
+              }
+            }
+          }
+          console.log(`📊 [POST /api/taches] ${emailsSent}/${managers.length} emails envoyés`)
+        } catch (emailErr) {
+          console.error('❌ [POST /api/taches] Erreur envoi emails managers:', emailErr)
+        }
+      } else {
+        console.log(`⏭️ [POST /api/taches] Pas d'emails à envoyer (isSubmitted=${isSubmitted}, managers=${managers.length})`)
+      }
     } catch (notifErr) {
-      console.error('Erreur lors de la création des notifications:', notifErr)
+      console.error('❌ [POST /api/taches] Erreur lors de la création des notifications:', notifErr)
     }
 
     return NextResponse.json(nouvelleTache, { status: 201 })
@@ -394,6 +491,7 @@ export async function PUT(request: Request) {
         }
       } else {
         // When changing assignee and there's no team context, allow ADMIN and MANAGER
+        // Employees can't change assignee outside of team context
         if (session?.user?.role !== 'ADMIN' && session?.user?.role !== 'MANAGER') {
           return NextResponse.json({ error: 'Permission refusée : assignment hors équipe réservé aux administrateurs' }, { status: 403 })
         }
@@ -494,51 +592,73 @@ export async function PATCH(request: Request) {
           const managerInfo = session?.user || {}
           const managerName = `${managerInfo.prenom || managerInfo.nom || 'Un manager'}`
           
-          // Send notification to task creator
-          try {
-            await prisma.notification.create({
-              data: {
-                utilisateurId: creator.id,
-                titre: `Tâche ${statusLabel}: ${tache.titre}`,
-                message: `Votre tâche "${tache.titre}" a été ${statusLabel} par ${managerName}.${data.commentaire ? ` Commentaire: ${data.commentaire}` : ''}`,
-                lien: `/taches/${tache.id}`,
-                sourceId: tache.id,
-                sourceType: 'TACHE'
-              }
-            })
-          } catch (notifErr) {
-            console.error('Erreur création notification:', notifErr)
-          }
+          // Utiliser le service de notification unifié
+          await notifyWithEmail(
+            {
+              utilisateurId: creator.id,
+              titre: `Tâche ${statusLabel}: ${tache.titre}`,
+              message: `Votre tâche "${tache.titre}" a été ${statusLabel} par ${managerName}.${data.commentaire ? ` Commentaire: ${data.commentaire}` : ''}`,
+              type: 'TACHE',
+              lien: `/taches/${tache.id}`,
+            },
+            {
+              to: creator.email,
+              subject: `Tâche ${statusLabel}: ${tache.titre}`,
+              html: `
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
+    <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; max-width: 600px; margin: 0 auto;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <h1 style="color: #1e40af; margin: 0;">KEKELI GROUP</h1>
+      </div>
+      <h2 style="color: #1e40af; border-bottom: 3px solid #1e40af; padding-bottom: 10px;">📋 Tâche ${statusLabel}</h2>
+      
+      <p>Bonjour <strong>${creator.prenom} ${creator.nom}</strong>,</p>
+      
+      <p>Votre tâche <strong>"${tache.titre}"</strong> a été <strong>${statusLabel}</strong> par ${managerName}.</p>
+      
+      <div style="background-color: #fff; padding: 15px; border-left: 4px solid #1e40af; margin: 20px 0; border-radius: 4px;">
+        <p style="margin-top: 0;"><strong>📌 Détails :</strong></p>
+        <ul style="margin: 10px 0; padding-left: 20px;">
+          <li><strong>Tâche :</strong> ${tache.titre}</li>
+          <li><strong>Statut :</strong> ${statusLabel.charAt(0).toUpperCase() + statusLabel.slice(1)}</li>
+          <li><strong>Validée par :</strong> ${managerName}</li>
+        </ul>
+        ${data.commentaire ? `<p style="margin: 10px 0;"><strong>💬 Commentaire du manager:</strong></p><p style="margin: 5px 0; padding: 10px; background-color: #f9f9f9; border-radius: 4px;">${data.commentaire}</p>` : ''}
+      </div>
 
-          // Send email to task creator
-          if (creator.email) {
-            try {
-              const creatorName = `${creator.prenom || ''} ${creator.nom || ''}`.trim()
-              const emailSubject = `Tâche ${statusLabel}: ${tache.titre}`
-              const emailContent = `
-<html>
-  <body style="font-family: Arial, sans-serif; color: #333;">
-    <h2>Notification de tâche</h2>
-    <p>Bonjour ${creatorName},</p>
-    <p>Votre tâche <strong>"${tache.titre}"</strong> a été <strong>${statusLabel}</strong> par ${managerName}.</p>
-    ${data.commentaire ? `<p><strong>Commentaire du manager:</strong></p><p>${data.commentaire}</p>` : ''}
-    <p><a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/taches/${tache.id}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Voir la tâche</a></p>
-    <p>Cordialement,<br/>L'équipe de gestion des tâches</p>
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/taches/${tache.id}" style="background-color: #1e40af; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+          Voir la tâche
+        </a>
+      </div>
+
+      <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
+      
+      <p style="font-size: 12px; color: #666; margin-bottom: 5px;">
+        <strong>Besoin d'aide ?</strong><br>
+        Contactez votre responsable ou l'équipe support.
+      </p>
+      <p style="font-size: 11px; color: #999; margin: 10px 0 0 0; text-align: center;">
+        © 2025 KEKELI GROUP. Tous droits réservés.<br>
+        Cet email a été généré automatiquement.
+      </p>
+    </div>
   </body>
 </html>
               `
-              await sendEmail({
-                to: creator.email,
-                subject: emailSubject,
-                html: emailContent
-              })
-            } catch (emailErr) {
-              console.error('Erreur envoi email:', emailErr)
-            }
-          }
+            },
+            false
+          );
+          console.log(`✅ Notification + Email de validation envoyés à ${creator.email}`);
         }
       } catch (notifErr) {
-        console.error('Erreur notification tâche validée:', notifErr)
+        console.error('❌ Erreur notification tâche validée:', notifErr)
       }
     }
 

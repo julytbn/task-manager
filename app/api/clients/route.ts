@@ -32,6 +32,7 @@ export async function GET() {
         entreprise: c.entreprise,
         adresse: c.adresse,
         type: c.type,
+        regimeFiscal: c.regimeFiscal,
         dateCreation: c.dateCreation,
         projetsCount: c._count?.projets ?? 0,
         montantProjets,
@@ -65,7 +66,8 @@ export async function POST(request: Request) {
         adresse: data.adresse || null,
         type: data.type || 'PARTICULIER',
         dateNaissance: data.dateNaissance ? new Date(data.dateNaissance) : null,
-        gudefUrl: data.gudefUrl || null
+        gudefUrl: data.gudefUrl || null,
+        regimeFiscal: data.regimeFiscal || null
       }
     })
 
@@ -92,7 +94,8 @@ export async function PUT(request: Request) {
         adresse: data.adresse || null,
         type: data.type,
         dateNaissance: data.dateNaissance ? new Date(data.dateNaissance) : null,
-        gudefUrl: data.gudefUrl || null
+        gudefUrl: data.gudefUrl || null,
+        regimeFiscal: data.regimeFiscal || null
       }
     })
 

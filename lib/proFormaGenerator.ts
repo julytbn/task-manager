@@ -22,7 +22,7 @@ export function formatProFormaHTML(proForma: any): string {
     <tr class="border-b">
       <td class="px-4 py-3 text-left">${ligne.designation}</td>
       <td class="px-4 py-3 text-center">${ligne.intervenant || '-'}</td>
-      <td class="px-4 py-3 text-right font-semibold">${ligne.montant.toFixed(2)}€</td>
+      <td class="px-4 py-3 text-right font-semibold">${ligne.montant.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF', minimumFractionDigits: 0 })}</td>
     </tr>
   `).join('')
 
@@ -46,56 +46,56 @@ export function formatProFormaHTML(proForma: any): string {
         }
         .company { 
           display: flex;
-          align-items: flex-start;
+          align-items: center;
+          gap: 25px;
+          flex: 1;
         }
         .company-logo { 
           width: 100px; 
-          height: 100px;
-          margin-right: 20px;
-          border: 1px solid #000;
+          height: 80px;
+          background-color: #000000;
+          border: 2px solid #D4AF37;
+          border-radius: 8px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 12px;
-          color: #666;
           flex-shrink: 0;
-          background-color: #f8f8f8;
+          box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+        }
+        .company-logo img {
+          max-width: 95%;
+          max-height: 95%;
+          object-fit: contain;
+          filter: brightness(1.7) contrast(2.3) saturate(1.5);
         }
         .company-details {
           display: flex;
           flex-direction: column;
+          flex: 1;
         }
         .company-title { 
-          font-size: 24px; 
+          font-size: 32px; 
           font-weight: bold; 
-          color: #000; 
-          margin-bottom: 5px;
+          color: #1a3a6b; 
+          margin: 0 0 8px 0;
           text-transform: uppercase;
-          letter-spacing: 1px;
-        }
-        .company-info { 
-          font-size: 10px; 
-          line-height: 1.3; 
-          color: #000; 
-          margin-bottom: 3px;
+          letter-spacing: 2px;
         }
         .company-services {
-          margin: 10px 0;
-          font-size: 10px;
+          margin: 8px 0 0 0;
+          font-size: 13px;
           line-height: 1.6;
           font-weight: normal;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
+          color: #333;
         }
-        .services-title {
-          font-weight: bold;
-          margin-bottom: 5px;
-          text-decoration: underline;
+        .company-services p {
+          margin: 3px 0;
         }
-        .company-address { 
-          font-size: 10px; 
-          line-height: 1.5; 
-          margin-top: 5px;
+        .company-info { 
+          font-size: 13px; 
+          line-height: 1.6; 
+          color: #333; 
+          margin: 3px 0;
         }
         .doc-title { 
           text-align: right;
@@ -199,16 +199,17 @@ export function formatProFormaHTML(proForma: any): string {
         <!-- Header -->
         <div class="header">
           <div class="company">
-            <div class="company-logo">LOGO</div>
+            <div class="company-logo">
+              <img src="/imgkekeli.jpg" alt="Kekeli Logo" />
+            </div>
             <div class="company-details">
               <div class="company-title">KEKELI GROUP</div>
               
               <div class="company-services">
-                <div class="services-title">NOS SERVICES</div>
-                <div>• COMPTABILITÉ • AUDIT & FISCALITÉ • MARKETING • COMMUNICATION</div>
-                <div>• RÉDACTION & GESTION DE PROJET • DÉMARRAGE ADMINISTRATIF</div>
-                <div>• FORMATION • COACHING • ÉTUDE DE MARCHÉ</div>
-                <div>• CONCEPTION ET IMPRESSION • IMMOBILIER</div>
+                <p><strong>Comptabilité - Fiscalité - Rédaction & Gestion de Projet</strong></p>
+                <p>Marketing - Communication - Étude de marché</p>
+                <p>Formations - Coaching - Démarches Administratives</p>
+                <p>Conceptions et Impressions - Solution IT</p>
               </div>
             </div>
           </div>
@@ -253,7 +254,7 @@ export function formatProFormaHTML(proForma: any): string {
               <tr>
                 <th>DÉSIGNATION</th>
                 <th style="text-align: center;">INTERVENANT</th>
-                <th style="text-align: right;">MONTANT (€)</th>
+                <th style="text-align: right;">MONTANT (FCFA)</th>
               </tr>
             </thead>
             <tbody>
@@ -267,7 +268,7 @@ export function formatProFormaHTML(proForma: any): string {
           <table class="totals-table">
             <tr class="total-row">
               <td>TOTAL:</td>
-              <td style="text-align: right;">${proForma.montant.toFixed(2)}€</td>
+              <td style="text-align: right;">${proForma.montant.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF', minimumFractionDigits: 0 })}</td>
             </tr>
           </table>
         </div>
@@ -279,14 +280,11 @@ export function formatProFormaHTML(proForma: any): string {
         </div>` : ''}
 
         <!-- Footer -->
-        <div class="footer">
-          <div class="footer-legal">
-            <div>RCCM: CI-ABJ-01-12345678X - N° CNPS: J 1234567 A - N° CONTRIBUABLE: 12345678X</div>
-            <div>Siège social: Abidjan, Côte d'Ivoire - Tél: +225 01 23 45 67 89 - Email: contact@kekeli.com</div>
-          </div>
-          <div style="font-style: italic; margin-top: 10px;">
-            Cette pro-forma est une estimation. Elle reste valable 30 jours à compter de la date d'émission.
-          </div>
+        <div class="footer" style="border-top: 4px solid #8B4513; padding-top: 20px; text-align: center; font-size: 11px;">
+          <div style="color: #D4AF37; font-weight: bold; font-size: 12px; margin-bottom: 5px;">CABINET KEKELI GROUP</div>
+          <div style="margin-bottom: 3px;">RCCM: TG-LFW -01-2023-2023-B13-01308 &nbsp;&nbsp;&nbsp;&nbsp; NIF: 1001854635</div>
+          <div style="margin-bottom: 3px;">Totsi -Lomé contact : (+228) 92681100, e-mail: kekeligroup10@gmail.com</div>
+          <div>Lomé-Togo</div>
         </div>
       </div>
     </body>

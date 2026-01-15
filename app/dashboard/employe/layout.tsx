@@ -7,8 +7,8 @@ export default function EmployeeLayout({
 }) {
   return (
     <MainLayout 
-      showSidebar={false}
-      showHeader={false}
+      showSidebar={true}
+      showHeader={true}
     >
       {children}
     </MainLayout>

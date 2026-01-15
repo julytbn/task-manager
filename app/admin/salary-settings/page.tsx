@@ -53,7 +53,7 @@ export default function SalarySettingsAdmin() {
     }
   }
 
-  async function updateTariff(employeeId: string, newRate: number) {
+  async function updateTariff(employeeId: string, newRate: number | null) {
     try {
       setSaving(employeeId);
       setMessage(null);
@@ -171,12 +171,12 @@ export default function SalarySettingsAdmin() {
                             className="w-24 px-2 py-1 border border-gray-300 rounded text-sm"
                             autoFocus
                           />
-                          <span className="text-gray-600">€/h</span>
+                          <span className="text-gray-600">FCFA/h</span>
                         </div>
                       ) : (
                         <span className="font-semibold text-green-600">
                           {employee.tarifHoraire
-                            ? `${employee.tarifHoraire.toFixed(2)}€/h`
+                            ? `${employee.tarifHoraire.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} FCFA/h`
                             : "Non défini"}
                         </span>
                       )}

@@ -10,6 +10,8 @@
  * Authentification: Nécessite un header X-CRON-SECRET valide
  */
 
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server'
 import { generateSubscriptionInvoices } from '@/lib/invoice-generator'
 

@@ -3,7 +3,8 @@
 import { useEffect, useState, FormEvent } from 'react'
 import { X } from 'lucide-react'
 
-type TypeClient = 'PARTICULIER' | 'ENTREPRISE' | 'ORGANISATION'
+type TypeClient = 'PARTICULIER' | 'ENTREPRISE' | 'ORGANISATION' | 'ETABLISSEMENT' | 'SOCIETE'
+type RegimeFiscal = 'AVEC_TVA' | 'SANS_TVA' | 'TPU'
 
 type Client = {
   id?: string | number
@@ -12,6 +13,7 @@ type Client = {
   email?: string
   telephone?: string
   type?: TypeClient
+  regimeFiscal?: RegimeFiscal | null
   entreprise?: string
   gudefUrl?: string
   adresse?: string
@@ -26,7 +28,7 @@ type Props = {
 }
 
 export default function NouveauClientModal({ isOpen, onClose, onSave, initial }: Props) {
-  const [form, setForm] = useState<Client>({ nom: '', prenom: '', email: '', telephone: '', type: 'PARTICULIER', entreprise: '', gudefUrl: '', adresse: '', dateNaissance: '' })
+  const [form, setForm] = useState<Client>({ nom: '', prenom: '', email: '', telephone: '', type: 'PARTICULIER', regimeFiscal: null, entreprise: '', gudefUrl: '', adresse: '', dateNaissance: '' })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -38,6 +40,7 @@ export default function NouveauClientModal({ isOpen, onClose, onSave, initial }:
         email: initial.email || '',
         telephone: initial.telephone || '',
         type: initial.type || 'PARTICULIER',
+        regimeFiscal: initial.regimeFiscal || null,
         entreprise: initial.entreprise || '',
         gudefUrl: initial.gudefUrl || '',
         adresse: initial.adresse || '',
@@ -45,7 +48,7 @@ export default function NouveauClientModal({ isOpen, onClose, onSave, initial }:
         id: initial.id,
       })
     } else {
-      setForm({ nom: '', prenom: '', email: '', telephone: '', type: 'PARTICULIER', entreprise: '', gudefUrl: '', adresse: '', dateNaissance: '' })
+      setForm({ nom: '', prenom: '', email: '', telephone: '', type: 'PARTICULIER', regimeFiscal: null, entreprise: '', gudefUrl: '', adresse: '', dateNaissance: '' })
     }
   }, [initial, isOpen])
 
@@ -110,8 +113,22 @@ export default function NouveauClientModal({ isOpen, onClose, onSave, initial }:
                 <option value="PARTICULIER">Particulier</option>
                 <option value="ENTREPRISE">Entreprise</option>
                 <option value="ORGANISATION">Organisation</option>
+                <option value="ETABLISSEMENT">Établissement</option>
+                <option value="SOCIETE">Société</option>
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Régime fiscal</label>
+              <select value={form.regimeFiscal || ''} onChange={e => setForm(f => ({...f, regimeFiscal: (e.target.value as RegimeFiscal) || null}))} className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white">
+                <option value="">-- Sélectionner --</option>
+                <option value="AVEC_TVA">Avec TVA</option>
+                <option value="SANS_TVA">Sans TVA</option>
+                <option value="TPU">TPU (Taxe Professionnelle Unique)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Entreprise / Organisation</label>
               <input value={form.entreprise || ''} onChange={e => setForm(f => ({...f, entreprise: e.target.value}))} className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white" />

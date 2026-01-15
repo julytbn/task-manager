@@ -13,8 +13,14 @@ export async function POST(req: NextRequest, { params }: { params: { clientId: s
 
     const originalName = (form.get('nom')?.toString()) || (file as any).name || 'file'
     const description = form.get('description')?.toString() || null
-    const type = form.get('type')?.toString() || null
+    const typeValue = form.get('type')?.toString() || null
     const uploadPar = form.get('uploadPar')?.toString() || null
+
+    // Valider le type s'il est fourni
+    let type: string | null = null
+    if (typeValue && ['ENTREE', 'CHARGE', 'AUTRE'].includes(typeValue)) {
+      type = typeValue
+    }
 
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)

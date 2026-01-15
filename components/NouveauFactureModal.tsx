@@ -105,7 +105,14 @@ export default function NouveauFactureModal({
     notes: '',
   })
 
-  const [lignes, setLignes] = useState<Array<any>>([])
+  const [lignes, setLignes] = useState<Array<{
+    designation: string
+    montant: number
+    type: string
+    intervenant?: string
+    montantAPayer: number
+    ordre: number
+  }>>([{ designation: '', montant: 0, type: 'MAIN_D_OEUVRE', montantAPayer: 0, ordre: 1 }])
   const [documents, setDocuments] = useState<Array<any>>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -272,11 +279,18 @@ export default function NouveauFactureModal({
     }
   }
 
-  const addLigne = () => {
-    setLignes((prev) => [...prev, { designation: '', intervenant: '', montantAPayer: 0, ordre: prev.length + 1 }])
+  const handleAddLigne = () => {
+    setLignes(prev => [...prev, { 
+      designation: '', 
+      montant: 0, 
+      type: 'MAIN_D_OEUVRE', 
+      montantAPayer: 0, 
+      ordre: prev.length + 1 
+    }])
   }
   const removeLigne = (idx: number) => setLignes((prev) => prev.filter((_, i) => i !== idx))
-  const updateLigne = (idx: number, key: string, value: any) => setLignes((prev) => prev.map((l, i) => i === idx ? { ...l, [key]: value } : l))
+  const updateLigne = (idx: number, field: keyof typeof lignes[0], value: any) => 
+    setLignes((prev) => prev.map((l, i) => i === idx ? { ...l, [field]: value } : l))
 
   const addDocument = () => setDocuments((prev) => [...prev, { nom: '', obligatoire: false, notes: '' }])
   const removeDocument = (idx: number) => setDocuments((prev) => prev.filter((_, i) => i !== idx))
@@ -313,8 +327,8 @@ export default function NouveauFactureModal({
                 lignes={lignes.filter(l => l.designation).map(l => ({
                   designation: l.designation,
                   intervenant: l.intervenant,
-                  montant: parseFloat(l.montantAPayer) || 0
-                }))}
+                  montant: Number(l.montantAPayer) || 0
+                } as const))}
                 montant={parseFloat(formData.montant) || 0}
                 tauxTVA={18}
                 notes={formData.notes}
@@ -442,7 +456,7 @@ export default function NouveauFactureModal({
                 <option value="">Sélectionner un abonnement</option>
                 {abonnements.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {a.nom} | {a.service?.nom || 'Service'} | {a.montant}€/{a.frequence}
+                    {a.nom} | {a.service?.nom || 'Service'} | {a.montant} FCFA/{a.frequence}
                   </option>
                 ))}
               </select>
@@ -483,7 +497,7 @@ export default function NouveauFactureModal({
               >
                 <option value="">Sélectionner un service</option>
                 {services.map((s) => (
-                  <option key={s.id} value={s.id}>{s.nom} | {s.prix}€</option>
+                  <option key={s.id} value={s.id}>{s.nom} | {s.prix} FCFA</option>
                 ))}
               </select>
             </div>
@@ -540,29 +554,65 @@ export default function NouveauFactureModal({
           <div className="border-t pt-4" style={{ borderColor: 'var(--color-border)' }}>
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-semibold text-[var(--color-anthracite)]">Lignes de facture</h4>
-              <button type="button" onClick={addLigne} className="flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition text-sm">
+              <button type="button" onClick={handleAddLigne} className="flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 transition text-sm">
                 <Plus size={16} /> Ajouter ligne
               </button>
             </div>
-            <div className="space-y-2">
-              {lignes.length === 0 ? (
-                <p className="text-sm text-gray-500 italic">Aucune ligne. Cliquez sur "Ajouter ligne" pour en créer.</p>
-              ) : (
-                lignes.map((ligne, idx) => (
-                  <div key={idx} className="flex gap-2 items-end bg-gray-50 p-2 rounded">
-                    <div className="flex-1">
+            
+            {lignes.length === 0 ? (
+              <p className="text-sm text-gray-500 italic mt-2">Aucune ligne ajoutée. Cliquez sur "Ajouter ligne" pour commencer.</p>
+            ) : (
+              <div className="space-y-3 mt-3">
+                {lignes.map((ligne, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-2 items-end bg-gray-50 p-3 rounded">
+                    <div className="col-span-5">
                       <label className="block text-xs font-medium text-gray-700">Désignation</label>
-                      <input type="text" value={ligne.designation} onChange={(e) => updateLigne(idx, 'designation', e.target.value)} placeholder="Ex: Service de..." className="w-full px-2 py-1 border border-gray-300 rounded bg-white text-sm" />
+                      <input
+                        type="text"
+                        value={ligne.designation}
+                        onChange={(e) => updateLigne(idx, 'designation', e.target.value)}
+                        className="w-full px-2 py-1 border border-gray-300 rounded bg-white text-sm"
+                        placeholder="Description de la ligne"
+                      />
                     </div>
-                    <div className="w-24">
-                      <label className="block text-xs font-medium text-gray-700">Montant HT</label>
-                      <input type="number" value={ligne.montantAPayer} onChange={(e) => updateLigne(idx, 'montantAPayer', parseFloat(e.target.value) || 0)} placeholder="0" step="100" className="w-full px-2 py-1 border border-gray-300 rounded bg-white text-sm" />
+                    <div className="col-span-2">
+                      <label className="block text-xs font-medium text-gray-700">Montant</label>
+                      <input
+                        type="number"
+                        value={ligne.montant || ''}
+                        onChange={(e) => updateLigne(idx, 'montant', parseFloat(e.target.value) || 0)}
+                        className="w-full px-2 py-1 border border-gray-300 rounded bg-white text-sm"
+                        placeholder="0"
+                        step="0.01"
+                      />
                     </div>
-                    <button type="button" onClick={() => removeLigne(idx)} className="px-2 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 transition text-sm">✕</button>
+                    <div className="col-span-3">
+                      <label className="block text-xs font-medium text-gray-700">Type</label>
+                      <select
+                        value={ligne.type}
+                        onChange={(e) => updateLigne(idx, 'type', e.target.value)}
+                        className="w-full px-2 py-1 border border-gray-300 rounded bg-white text-sm"
+                      >
+                        <option value="MAIN_D_OEUVRE">Main d'œuvre</option>
+                        <option value="FOURNITURE">Fourniture</option>
+                        <option value="FRAIS">Frais</option>
+                        <option value="AUTRE">Autre</option>
+                      </select>
+                    </div>
+                    <div className="col-span-1">
+                      <button
+                        type="button"
+                        onClick={() => removeLigne(idx)}
+                        className="w-full p-1 bg-red-50 text-red-600 rounded hover:bg-red-100 transition text-sm"
+                        title="Supprimer cette ligne"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </div>
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Required Documents */}

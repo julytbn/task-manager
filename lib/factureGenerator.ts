@@ -120,23 +120,60 @@ export function generateFactureHTML(facture: FactureData): string {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          border-bottom: 3px solid #0066cc;
+          border-bottom: 3px solid #D4AF37;
           padding-bottom: 32px;
           margin-bottom: 36px;
+          gap: 30px;
         }
         
-        .company-info h1 {
-          color: #0066cc;
+        .company-left {
+          display: flex;
+          align-items: center;
+          gap: 25px;
+          flex: 1;
+        }
+        
+        .logo-box {
+          width: 100px;
+          height: 80px;
+          background: #000000;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 2px solid #D4AF37;
+          box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+          flex-shrink: 0;
+        }
+        
+        .logo-box img {
+          width: 90px;
+          height: 70px;
+          object-fit: contain;
+          filter: brightness(1.7) contrast(2.3) saturate(1.5);
+        }
+        
+        .company-details {
+          flex: 1;
+        }
+        
+        .company-details h1 {
+          color: #1a3a6b;
           font-size: 32px;
-          margin-bottom: 8px;
-          letter-spacing: 1px;
+          margin: 0 0 8px 0;
+          letter-spacing: 2px;
+          font-weight: bold;
         }
         
-        .company-info p {
+        .company-services {
           font-size: 13px;
-          color: #444;
-          line-height: 1.7;
-          margin: 2px 0;
+          color: #333;
+          line-height: 1.6;
+          margin: 8px 0 0 0;
+        }
+        
+        .company-services p {
+          margin: 3px 0;
         }
         
         .invoice-details {
@@ -145,9 +182,10 @@ export function generateFactureHTML(facture: FactureData): string {
         
         .invoice-details h2 {
           font-size: 26px;
-          color: #0066cc;
+          color: #D4AF37;
           margin-bottom: 12px;
           letter-spacing: 1px;
+          font-weight: bold;
         }
         
         .invoice-details p {
@@ -195,7 +233,7 @@ export function generateFactureHTML(facture: FactureData): string {
         .client-section h3 {
           font-size: 12px;
           font-weight: bold;
-          color: #0066cc;
+          color: #D4AF37;
           text-transform: uppercase;
           margin-bottom: 8px;
           letter-spacing: 0.5px;
@@ -218,7 +256,7 @@ export function generateFactureHTML(facture: FactureData): string {
         
         thead {
           background-color: #f8f9fa;
-          border-bottom: 2px solid #0066cc;
+          border-bottom: 2px solid #D4AF37;
         }
         
         th {
@@ -275,12 +313,12 @@ export function generateFactureHTML(facture: FactureData): string {
         }
 
         .total-row.total {
-          border-bottom: 2px solid #0066cc;
-          border-top: 2px solid #0066cc;
+          border-bottom: 2px solid #D4AF37;
+          border-top: 2px solid #D4AF37;
           font-weight: bold;
           font-size: 16px;
           padding: 12px 0;
-          color: #0066cc;
+          color: #D4AF37;
         }
         
         .notes {
@@ -319,12 +357,19 @@ export function generateFactureHTML(facture: FactureData): string {
       <div class="container">
         <!-- En-tête -->
         <div class="header">
-          <div class="company-info">
-            <h1>${entreprise.nom}</h1>
-            ${entreprise.adresse ? `<p>${entreprise.adresse}</p>` : ''}
-            ${entreprise.telephone ? `<p>Tél: ${entreprise.telephone}</p>` : ''}
-            ${entreprise.email ? `<p>Email: ${entreprise.email}</p>` : ''}
-            ${entreprise.siteWeb ? `<p>Web: ${entreprise.siteWeb}</p>` : ''}
+          <div class="company-left">
+            <div class="logo-box">
+              <img src="/imgkekeli.jpg" alt="Kekeli Logo" />
+            </div>
+            <div class="company-details">
+              <h1>KEKELI GROUP</h1>
+              <div class="company-services">
+                <p><strong>Comptabilité - Fiscalité - Rédaction & Gestion de Projet</strong></p>
+                <p>Marketing - Communication - Étude de marché</p>
+                <p>Formations - Coaching - Démarches Administratives</p>
+                <p>Conceptions et Impressions - Solution IT</p>
+              </div>
+            </div>
           </div>
           
           <div class="invoice-details">
@@ -412,12 +457,11 @@ export function generateFactureHTML(facture: FactureData): string {
         ` : ''}
         
         <!-- Pied de page -->
-        <div class="footer">
-          <p>Merci pour votre confiance</p>
-          <p>Cette facture a été générée automatiquement</p>
-          <p style="margin-top: 10px; border-top: 1px solid #ccc; padding-top: 10px;">
-            ${new Date().toLocaleDateString('fr-FR')}
-          </p>
+        <div class="footer" style="border-top: 4px solid #8B4513; padding-top: 20px; text-align: center; font-size: 11px;">
+          <div style="color: #D4AF37; font-weight: bold; font-size: 12px; margin-bottom: 5px;">CABINET KEKELI GROUP</div>
+          <div style="margin-bottom: 3px;">RCCM: TG-LFW -01-2023-2023-B13-01308 &nbsp;&nbsp;&nbsp;&nbsp; NIF: 1001854635</div>
+          <div style="margin-bottom: 3px;">Totsi -Lomé contact : (+228) 92681100, e-mail: kekeligroup10@gmail.com</div>
+          <div>Lomé-Togo</div>
         </div>
       </div>
     </body>

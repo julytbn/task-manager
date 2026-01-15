@@ -1,6 +1,8 @@
 import MainLayout from '@/components/layouts/MainLayout'
 import ClientDetailTabs from '../../../components/ClientDetailTabs'
 import { prisma } from '../../../lib/prisma'
+import Link from 'next/link'
+import { DollarSign } from 'lucide-react'
 
 export default async function ClientPage({ params }: { params: { id: string } }) {
   const client = await prisma.client.findUnique({
@@ -39,6 +41,17 @@ export default async function ClientPage({ params }: { params: { id: string } })
             <h1 className="text-3xl sm:text-4xl font-bold gold-gradient-text">Détails du client</h1>
             <p className="text-[var(--color-anthracite)] mt-2">{client.nom}</p>
           </div>
+          
+          {/* Bouton Comptabilité pour clients VIP */}
+          {client.abonnements && client.abonnements.length > 0 && (
+            <Link
+              href={`/clients/${client.id}/accounting`}
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
+            >
+              <DollarSign className="h-4 w-4" />
+              Comptabilité
+            </Link>
+          )}
         </div>
 
         {/* Tabs */}

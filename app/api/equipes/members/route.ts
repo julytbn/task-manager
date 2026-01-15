@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendEmail } from '@/lib/email'
+import { sendEmailSafe, notifyWithEmail } from '@/lib/notificationService'
 
 /**
  * POST /api/equipes/members - ajouter un membre { equipeId, utilisateurId, role }
@@ -9,15 +10,27 @@ import { sendEmail } from '@/lib/email'
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { equipeId, utilisateurId, role } = body
-    if (!equipeId || !utilisateurId) return NextResponse.json({ error: 'equipeId et utilisateurId requis' }, { status: 400 })
+    const { equipeId, utilisateurId, email, role } = body
+    
+    console.log('📋 [API] POST /equipes/members - Paramètres reçus:', { equipeId, utilisateurId, email, role })
+    
+    // Accept both utilisateurId and email for backwards compatibility
+    let userId = utilisateurId
+    if (!userId && email) {
+      const user = await prisma.utilisateur.findUnique({ where: { email } })
+      console.log(`🔍 [API] Recherche utilisateur par email "${email}":`, user ? `Trouvé ID: ${user.id}` : 'NON TROUVÉ')
+      if (!user) return NextResponse.json({ error: 'Utilisateur avec cet email introuvable' }, { status: 404 })
+      userId = user.id
+    }
+    if (!equipeId || !userId) return NextResponse.json({ error: 'equipeId et email/utilisateurId requis' }, { status: 400 })
 
     // Vérifier existence
     const equipe = await prisma.equipe.findUnique({ 
       where: { id: equipeId },
       include: { lead: true, projets: true }
     })
-    const utilisateur = await prisma.utilisateur.findUnique({ where: { id: utilisateurId } })
+    const utilisateur = await prisma.utilisateur.findUnique({ where: { id: userId } })
+    console.log(`✅ [API] Vérification existence - Equipe: ${equipe ? equipe.nom : 'NON TROUVÉE'}, Utilisateur: ${utilisateur ? utilisateur.email : 'NON TROUVÉ'}`)
     if (!equipe || !utilisateur) return NextResponse.json({ error: 'Equipe ou utilisateur introuvable' }, { status: 404 })
 
     // Vérifier si déjà membre
@@ -25,35 +38,36 @@ export async function POST(request: Request) {
       where: {
         equipeId_utilisateurId: {
           equipeId,
-          utilisateurId
+          utilisateurId: userId
         }
       }
     })
+    console.log(`👥 [API] Vérification membership - Déjà membre: ${alreadyMember ? 'OUI' : 'NON'}`)
     if (alreadyMember) return NextResponse.json({ error: 'Utilisateur est déjà membre' }, { status: 400 })
 
     const created = await prisma.membreEquipe.create({ 
-      data: { equipeId, utilisateurId, role: role || 'MEMBRE' },
+      data: { equipeId, utilisateurId: userId, role: role || 'MEMBRE' },
       include: { utilisateur: true, equipe: true }
     })
+    console.log(`✨ [API] Membre créé avec succès pour l'équipe "${created.equipe.nom}"`)
     
-    // Créer notification interne
-    const projet = equipe.projets?.[0]
-    const notification = await (prisma as any).notification.create({
-      data: {
+    // Utiliser le service de notification unifié
+    const dashboardLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/employe`
+    const leadName = equipe.lead ? `${equipe.lead.prenom} ${equipe.lead.nom}` : 'Le responsable'
+    
+    await notifyWithEmail(
+      {
         utilisateurId,
         titre: `Bienvenue dans l'équipe ${equipe.nom}`,
-        message: `Vous avez été ajouté(e) à l'équipe **${equipe.nom}**${projet ? ` pour le projet **${projet.titre}**` : ''}.`,
+        message: `Vous avez été ajouté(e) à l'équipe **${equipe.nom}**.`,
         type: 'EQUIPE',
-        lien: `/dashboard/manager/equipes?team=${equipeId}`
-      }
-    })
-
-    // Préparer et envoyer l'email
-    const leadName = equipe.lead ? `${equipe.lead.prenom} ${equipe.lead.nom}` : 'Le responsable'
-    const projetText = projet ? `pour le projet ${projet.titre}` : ''
-    const dashboardLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/employe`
-
-    const emailContent = `
+        lien: `/equipes`
+      },
+      {
+        from: process.env.SMTP_FROM || 'noreply@kekeligroup.com',
+        to: utilisateur.email!,
+        subject: `Bienvenue dans l'équipe ${equipe.nom} 🚀`,
+        html: `
 <!DOCTYPE html>
 <html lang="fr">
   <head>
@@ -69,7 +83,7 @@ export async function POST(request: Request) {
       
       <p>Bonjour <strong>${utilisateur.prenom} ${utilisateur.nom}</strong>,</p>
       
-      <p>Vous avez été ajouté(e) à l'équipe <strong>${equipe.nom}</strong> ${projetText}.</p>
+      <p>Vous avez été ajouté(e) à l'équipe <strong>${equipe.nom}</strong>.</p>
       
       <div style="background-color: #fff; padding: 15px; border-left: 4px solid #1e40af; margin: 20px 0; border-radius: 4px;">
         <p style="margin-top: 0;"><strong>📌 Détails de votre accès :</strong></p>
@@ -108,38 +122,17 @@ export async function POST(request: Request) {
     </div>
   </body>
 </html>
-    `
-
-    // Envoyer l'email (async, ne pas bloquer la réponse)
-    let emailPreviewUrl: string | undefined = undefined
-    let emailError: string | undefined = undefined
-    try {
-      console.log(`[MEMBRES] Envoi email à: ${utilisateur.email}`)
-      const result = await sendEmail({
-        from: process.env.SMTP_FROM || 'noreply@kekeligroup.com',
-        to: utilisateur.email!,
-        subject: `Bienvenue dans l'équipe ${equipe.nom} 🚀`,
-        html: emailContent
-      })
-      if ((result as any).provider === 'ethereal') {
-        emailPreviewUrl = (result as any).previewUrl
-        console.log('✉️ Email envoyé (ethereal preview):', emailPreviewUrl)
-      } else {
-        console.log(`✉️ Email SMTP envoyé à ${utilisateur.email}`)
-      }
-    } catch (err) {
-      emailError = String(err)
-      console.error('⚠️ Erreur envoi email:', err)
-      // Ne pas bloquer l'ajout du membre si l'email échoue
-    }
+        `
+      },
+      false
+    )
+    
+    console.log(`✉️ [API] Notification + email envoyés à ${utilisateur.email}`)
     
     return NextResponse.json({ 
       ok: true, 
       memberId: created.id,
-      notification,
-      emailPreviewUrl,
-      emailError,
-      message: emailError ? 'Collaborateur ajouté mais email non envoyé' : 'Collaborateur ajouté avec succès et email envoyé'
+      message: 'Collaborateur ajouté avec succès et email envoyé'
     })
   } catch (err) {
     console.error(err)

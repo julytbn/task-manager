@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import { X } from 'lucide-react'
 
 interface Projet {
@@ -27,6 +28,7 @@ interface NouvelleTacheModalProps {
   readOnly?: boolean
 }
 export function NouvelleTacheModal({ isOpen, onClose, onSave, initial }: NouvelleTacheModalProps) {
+  const { data: session } = useSession()
   const [projets, setProjets] = useState<Projet[]>([])
   const [services, setServices] = useState<Service[]>([])
   const [employes, setEmployes] = useState<Employe[]>([])
@@ -45,6 +47,8 @@ export function NouvelleTacheModal({ isOpen, onClose, onSave, initial }: Nouvell
   // When editing, prefill form with `initial` data
   useEffect(() => {
     if (isOpen && initial) {
+      console.log('🔧 Charging task data in modal:', initial);
+      console.log('📋 Assignee ID:', initial.assigneAId || initial.assigneA?.id);
       setFormData({
         titre: initial.titre || '',
         description: initial.description || '',
@@ -68,22 +72,61 @@ export function NouvelleTacheModal({ isOpen, onClose, onSave, initial }: Nouvell
     }
   }, [isOpen, initial])
 
+  // Update form when employees are loaded (to ensure assigneAId is set correctly)
+  useEffect(() => {
+    if (isOpen && initial && employes.length > 0 && formData.assigneAId) {
+      console.log('✅ Employees loaded:', employes);
+      const assignedEmployee = employes.find(emp => emp.id === formData.assigneAId);
+      console.log('🎯 Assigned employee found:', assignedEmployee);
+    }
+  }, [employes, isOpen, initial, formData.assigneAId])
+
   // Charger les projets et employés
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [projetsRes, employesRes] = await Promise.all([
-          fetch('/api/projets').then(res => res.json()),
-          fetch('/api/utilisateurs').then(res => res.json())
+        setIsLoading(true)
+        console.log('📋 [NouvelleTacheModal] Chargement des projets et utilisateurs...')
+        
+        const [projetsResponse, employesResponse] = await Promise.all([
+          fetch('/api/projets'),
+          fetch('/api/utilisateurs')
         ])
         
+        // Vérifier le statut HTTP des réponses
+        if (!projetsResponse.ok) {
+          console.error('❌ Erreur API projets:', projetsResponse.status, projetsResponse.statusText)
+          throw new Error(`Erreur API projets: ${projetsResponse.statusText}`)
+        }
+        
+        if (!employesResponse.ok) {
+          console.error('❌ Erreur API utilisateurs:', employesResponse.status, employesResponse.statusText)
+          throw new Error(`Erreur API utilisateurs: ${employesResponse.statusText}`)
+        }
+        
+        const projetsRes = await projetsResponse.json()
+        const employesRes = await employesResponse.json()
+        
+        console.log('✅ Projets reçus:', projetsRes)
+        console.log('✅ Utilisateurs reçus:', employesRes)
+        
         // Normaliser les projets reçus (certaines API renvoient `title` au lieu de `titre`)
-        setProjets(
-          projetsRes.map((p: any) => ({ id: p.id, titre: p.titre || p.title || p.nom || '' }))
-        )
-        setEmployes(employesRes.filter((u: any) => u.role === 'EMPLOYE'))
+        const projetsFormatted = (Array.isArray(projetsRes) ? projetsRes : projetsRes.data || []).map((p: any) => ({ 
+          id: p.id, 
+          titre: p.titre || p.title || p.nom || '' 
+        }))
+        
+        const employesFiltered = (Array.isArray(employesRes) ? employesRes : employesRes.data || []).filter((u: any) => u.role === 'EMPLOYE')
+        
+        console.log('📊 Projets formatés:', projetsFormatted)
+        console.log('👥 Employés filtrés:', employesFiltered)
+        
+        setProjets(projetsFormatted)
+        setEmployes(employesFiltered)
       } catch (error) {
-        console.error('Erreur lors du chargement des données:', error)
+        console.error('❌ Erreur lors du chargement des données:', error)
+        setProjets([])
+        setEmployes([])
       } finally {
         setIsLoading(false)
       }
@@ -108,14 +151,18 @@ export function NouvelleTacheModal({ isOpen, onClose, onSave, initial }: Nouvell
     if ((initial as any)?.readOnly) return
 
     // Convertir les chaînes vides en null pour les champs optionnels
-    const payload = {
+    const payload: any = {
       titre: formData.titre,
       description: formData.description || null,
       projetId: formData.projetId,
-      assigneAId: formData.assigneAId || null,
       statut: formData.statut,
       priorite: formData.priorite,
       dateEcheance: formData.dateEcheance || null
+    }
+
+    // Only include assigneAId if it was explicitly provided (avoid permission issues for regular employees)
+    if (formData.assigneAId) {
+      payload.assigneAId = formData.assigneAId
     }
 
     onSave(payload)
@@ -198,21 +245,32 @@ export function NouvelleTacheModal({ isOpen, onClose, onSave, initial }: Nouvell
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Statut *</label>
-              <select
-                name="statut"
-                value={formData.statut}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white"
-                required
-              >
-                <option value="A_FAIRE">À faire</option>
-                <option value="EN_COURS">En cours</option>
-                <option value="EN_REVISION">En révision</option>
-                <option value="TERMINE">Terminé</option>
-              </select>
-            </div>
+            {/* Only managers/admins can set status. Employees always submit as SOUMISE */}
+            {session?.user?.role !== 'EMPLOYE' ? (
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Statut *</label>
+                <select
+                  name="statut"
+                  value={formData.statut}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-white"
+                  required
+                >
+                  <option value="A_FAIRE">À faire</option>
+                  <option value="EN_COURS">En cours</option>
+                  <option value="EN_REVISION">En révision</option>
+                  <option value="TERMINE">Terminé</option>
+                </select>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Statut</label>
+                <div className="w-full px-3 py-2 border border-[var(--color-border)] rounded bg-[var(--color-offwhite)] text-[var(--color-anthracite)]">
+                  📋 Soumise (en attente de validation)
+                </div>
+                <p className="text-xs text-[var(--color-anthracite)]/60 mt-1">Les tâches soumises seront validées par un manager</p>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-[var(--color-anthracite)] mb-1">Priorité *</label>

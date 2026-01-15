@@ -5,6 +5,7 @@ import EquipesList from '@/components/EquipesList'
 import TeamDetailModal from '@/components/TeamDetailModal'
 import CreateTeamModal from '@/components/CreateTeamModal'
 import EditTeamModal from '@/components/EditTeamModal'
+import AddMemberModal from '@/components/AddMemberModal'
 import { Plus, AlertCircle } from 'lucide-react'
 
 export default function EquipesPage() {
@@ -13,6 +14,8 @@ export default function EquipesPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false)
+  const [availableUsers, setAvailableUsers] = useState<any[]>([])
   const [editTeamData, setEditTeamData] = useState<{ name: string; description?: string } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -109,37 +112,49 @@ export default function EquipesPage() {
 
   const handleAddMember = async (id: string) => {
     try {
-      // Fetch available users
+      setSelectedTeamId(id)
       const res = await fetch('/api/utilisateurs/available')
       if (!res.ok) throw new Error('Failed to load users')
       const users = await res.json()
-      if (users.length === 0) return alert('Aucun utilisateur disponible')
-
-      // Simple selection (could be improved with a proper modal)
-      const userList = users.map((u: any) => `${u.id} - ${u.prenom} ${u.nom}`).join('\n')
-      const selection = window.prompt(`Sélectionner un utilisateur (ID - Nom):\n\n${userList}\n\nEntrez l'ID:`)
-      if (!selection) return
-
-      const utilisateurId = selection.trim()
-      const prev = teams
-      setTeams(teams.map(t => t.id === id ? { ...t, membersCount: t.membersCount + 1, members: [...(t.members||[]), { id: utilisateurId, name: '—', role: 'Membre' }] } : t))
-      
-      const addRes = await fetch('/api/equipes/members', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ equipeId: id, utilisateurId })
-      })
-      if (!addRes.ok) {
-        alert('❌ Impossible d\'ajouter le membre')
-        const r = await fetch('/api/equipes')
-        const d = await r.json()
-        setTeams(d)
-      } else {
-        alert('✅ Membre ajouté')
-      }
+      setAvailableUsers(users)
+      setIsAddMemberOpen(true)
     } catch (err) {
       console.error(err)
-      alert('❌ Erreur ajout membre')
+      alert('❌ Erreur chargement utilisateurs')
+    }
+  }
+
+  const handleAddMemberSubmit = async (email: string) => {
+    if (!selectedTeamId) {
+      throw new Error('Aucune équipe sélectionnée')
+    }
+    
+    const prev = teams
+    setTeams(teams.map(t => t.id === selectedTeamId ? { ...t, membersCount: t.membersCount + 1 } : t))
+    
+    try {
+      const res = await fetch('/api/equipes/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ equipeId: selectedTeamId, email })
+      })
+      
+      if (!res.ok) {
+        const errorData = await res.json()
+        setTeams(prev)
+        throw new Error(errorData.error || 'Impossible d\'ajouter le membre')
+      }
+      
+      // Rafraîchir la liste
+      const r = await fetch('/api/equipes')
+      const d = await r.json()
+      setTeams(d.map((t: any) => ({ ...t, status: t.status || 'Active' })))
+      setSelectedTeamId(null)
+      setAvailableUsers([])
+      alert('✅ Membre ajouté avec succès')
+    } catch (err) {
+      setTeams(prev)
+      throw err
     }
   }
 
@@ -219,6 +234,13 @@ export default function EquipesPage() {
       <CreateTeamModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onCreate={handleCreateTeam} />
 
       <EditTeamModal isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} onSave={handleSaveEdit} initialName={editTeamData?.name} initialDescription={editTeamData?.description} />
+
+      <AddMemberModal 
+        isOpen={isAddMemberOpen} 
+        onClose={() => setIsAddMemberOpen(false)} 
+        users={availableUsers}
+        onAdd={handleAddMemberSubmit}
+      />
     </div>
     </MainLayout>
   )

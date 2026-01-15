@@ -83,7 +83,7 @@ export default function PaiementDetailPage() {
         <div className="space-y-4 mb-8 pb-8 border-b border-[var(--color-border)]">
           <div className="flex justify-between">
             <span className="text-[var(--color-anthracite)]">Montant</span>
-            <span className="font-bold text-xl text-[var(--color-gold)]">{paiement.montant.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}</span>
+            <span className="font-bold text-xl text-[var(--color-gold)]">{paiement.montant.toLocaleString('fr-FR')} FCFA</span>
           </div>
           <div className="flex justify-between">
             <span className="text-[var(--color-anthracite)]">Moyen de paiement</span>
@@ -98,15 +98,15 @@ export default function PaiementDetailPage() {
             <>
               <div className="flex justify-between">
                 <span className="text-[var(--color-anthracite)]">Montant facture (TTC)</span>
-                <span className="font-medium">{montantFacture.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}</span>
+                <span className="font-medium">{montantFacture.toLocaleString('fr-FR')} FCFA</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[var(--color-anthracite)]">Total payé (facture)</span>
-                <span className="font-medium">{totalFacturePayes.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}</span>
+                <span className="font-medium">{totalFacturePayes.toLocaleString('fr-FR')} FCFA</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[var(--color-anthracite)]">Reste à payer</span>
-                <span className="font-bold text-xl text-[var(--color-gold)]">{restant.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}</span>
+                <span className="font-bold text-xl text-[var(--color-gold)]">{restant.toLocaleString('fr-FR')} FCFA</span>
               </div>
             </>
           )}

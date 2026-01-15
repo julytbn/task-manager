@@ -33,6 +33,10 @@ export default function DashboardSalaryWidget() {
         const res = await fetch('/api/dashboard/salary-widget');
         if (!res.ok) throw new Error('Failed to fetch salary data');
         const result = await res.json();
+        // Convert dateLimite string to Date object
+        if (result.dateLimite && typeof result.dateLimite === 'string') {
+          result.dateLimite = new Date(result.dateLimite);
+        }
         setData(result);
       } catch (err) {
         console.error('Error fetching salary data:', err);
@@ -73,6 +77,10 @@ export default function DashboardSalaryWidget() {
       const res = await fetch('/api/dashboard/salary-widget');
       if (res.ok) {
         const result = await res.json();
+        // Convert dateLimite string to Date object
+        if (result.dateLimite && typeof result.dateLimite === 'string') {
+          result.dateLimite = new Date(result.dateLimite);
+        }
         setData(result);
       }
     } catch (error) {

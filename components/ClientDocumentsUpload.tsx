@@ -24,12 +24,6 @@ export default function ClientDocumentsUpload({ clientId }: { clientId: string }
   const [deletingError, setDeletingError] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
 
-  // Use upload server URL from env (NEXT_PUBLIC_* is required for client-side)
-  // If `NEXT_PUBLIC_UPLOAD_SERVER_URL` is not set, we fallback to the internal Next.js API
-  const UPLOAD_SERVER_URL = (process.env.NEXT_PUBLIC_UPLOAD_SERVER_URL as string) || ''
-  const UPLOAD_API_KEY = (process.env.NEXT_PUBLIC_UPLOAD_API_KEY as string) || ''
-  const useExternalServer = Boolean(UPLOAD_SERVER_URL)
-
   useEffect(() => {
     fetchDocs()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -37,22 +31,15 @@ export default function ClientDocumentsUpload({ clientId }: { clientId: string }
 
   async function fetchDocs() {
     try {
-      const endpoint = useExternalServer
-        ? `${UPLOAD_SERVER_URL}/clients/${clientId}/documents`
-        : `/api/clients/${clientId}/documents`
-      const res = await fetch(endpoint, {
-        headers: useExternalServer && UPLOAD_API_KEY ? { 'x-api-key': UPLOAD_API_KEY } : undefined,
-      })
+      const res = await fetch(`/api/uploads?clientId=${clientId}`)
       if (res.ok) {
         const data = await res.json()
         setDocuments(data)
       } else {
         setDocuments([])
-        // eslint-disable-next-line no-console
         console.error('Fetch docs failed:', res.status, await res.text())
       }
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Fetch docs error:', err)
       setDocuments([])
     }
@@ -64,37 +51,7 @@ export default function ClientDocumentsUpload({ clientId }: { clientId: string }
       setError('Veuillez sélectionner un fichier')
       return
     }
-    
-    // Check if upload server is reachable with proper timeout
-    try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000)
-      
-      try {
-        const healthCheck = await fetch(`${UPLOAD_SERVER_URL}/health`, { 
-          method: 'GET',
-          signal: controller.signal
-        })
-        clearTimeout(timeoutId)
-        
-        if (!healthCheck.ok) {
-          setError(`❌ Serveur d'upload indisponible (statut: ${healthCheck.status}). Assurez-vous que le serveur est lancé sur le port 4000.`)
-          return
-        }
-      } catch (fetchErr) {
-        clearTimeout(timeoutId)
-        throw fetchErr
-      }
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : 'Erreur inconnue'
-      const isAborted = err instanceof Error && err.name === 'AbortError'
-      const timeoutMsg = isAborted ? ' (Timeout après 5 secondes)' : ''
-      setError(`❌ Impossible de se connecter au serveur d'upload (${UPLOAD_SERVER_URL}): ${errMsg}${timeoutMsg}\n\nAssurez-vous que:\n1. Le serveur est en cours d'exécution (npm run upload-server)\n2. Le port 4000 est disponible\n3. La variable NEXT_PUBLIC_UPLOAD_SERVER_URL est correcte`)
-      // eslint-disable-next-line no-console
-      console.error('Health check failed:', err)
-      return
-    }
-    
+
     setLoading(true)
     setError(null)
     setSuccess(null)
@@ -102,100 +59,36 @@ export default function ClientDocumentsUpload({ clientId }: { clientId: string }
       let uploadCount = 0
       let failedFiles: string[] = []
 
-      // If an external upload server is configured, use XMLHttpRequest to keep the progress behaviour
-      if (useExternalServer) {
-        for (let i = 0; i < files.length; i++) {
-          const f = files[i]
-          await new Promise<void>((resolve) => {
-            const xhr = new XMLHttpRequest()
-            const url = `${UPLOAD_SERVER_URL}/upload`
-            const timeoutId = setTimeout(() => {
-              xhr.abort()
-              setError(`⏱️ Timeout lors de l'upload de ${f.name}. Le serveur a mis trop de temps à répondre.`)
-              failedFiles.push(f.name)
-              setProgress(0)
-              resolve()
-            }, 60000)
+      // Upload via Next.js API
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i]
+        try {
+          const formData = new FormData()
+          formData.append('file', f)
+          formData.append('clientId', clientId)
+          formData.append('nom', f.name)
+          formData.append('type', f.type || 'unknown')
 
-            xhr.open('POST', url)
-            if (UPLOAD_API_KEY) xhr.setRequestHeader('x-api-key', UPLOAD_API_KEY)
-
-            xhr.upload.onprogress = (event) => {
-              if (event.lengthComputable) setProgress(Math.round((event.loaded / event.total) * 100))
-            }
-
-            xhr.onload = async () => {
-              clearTimeout(timeoutId)
-              if (xhr.status >= 200 && xhr.status < 300) {
-                uploadCount++
-              } else {
-                failedFiles.push(f.name)
-                let errorMsg = xhr.responseText
-                try {
-                  const jsonErr = JSON.parse(xhr.responseText)
-                  errorMsg = jsonErr.error || errorMsg
-                } catch {}
-                setError(`⚠️ Erreur upload ${f.name}: ${errorMsg}`)
-              }
-              setProgress(0)
-              resolve()
-            }
-
-            xhr.onerror = () => {
-              clearTimeout(timeoutId)
-              failedFiles.push(f.name)
-              setError(`❌ Erreur réseau pendant l'upload de ${f.name}. Vérifiez votre connexion et que le serveur d'upload est actif.`)
-              setProgress(0)
-              resolve()
-            }
-
-            xhr.onabort = () => {
-              clearTimeout(timeoutId)
-              failedFiles.push(f.name)
-              setProgress(0)
-              resolve()
-            }
-
-            const form = new FormData()
-            form.append('file', f)
-            form.append('clientId', clientId)
-            form.append('nom', f.name)
-            form.append('type', f.type || 'unknown')
-            try {
-              xhr.send(form)
-            } catch (err) {
-              setError(`❌ Erreur lors de l'envoi du fichier: ${err instanceof Error ? err.message : 'Erreur inconnue'}`)
-              failedFiles.push(f.name)
-              setProgress(0)
-              resolve()
-            }
+          const res = await fetch(`/api/uploads`, {
+            method: 'POST',
+            body: formData,
           })
-        }
-      } else {
-        // Use internal Next.js API for uploads (no per-file progress available)
-        for (let i = 0; i < files.length; i++) {
-          const f = files[i]
-          try {
-            const formData = new FormData()
-            formData.append('file', f)
-            formData.append('nom', f.name)
-            formData.append('type', f.type || 'unknown')
-            const res = await fetch(`/api/clients/${clientId}/documents`, { method: 'POST', body: formData })
-            if (res.ok) {
-              uploadCount++
-            } else {
-              failedFiles.push(f.name)
-              let errText = await res.text()
-              try {
-                const j = JSON.parse(errText)
-                errText = j.error || errText
-              } catch {}
-              setError(`⚠️ Erreur upload ${f.name}: ${errText}`)
-            }
-          } catch (err) {
+
+          if (res.ok) {
+            uploadCount++
+            setProgress(Math.round(((i + 1) / files.length) * 100))
+          } else {
             failedFiles.push(f.name)
-            setError(`❌ Erreur réseau pendant l'upload de ${f.name}: ${err instanceof Error ? err.message : 'Erreur inconnue'}`)
+            let errText = await res.text()
+            try {
+              const j = JSON.parse(errText)
+              errText = j.error || errText
+            } catch {}
+            setError(`⚠️ Erreur upload ${f.name}: ${errText}`)
           }
+        } catch (err) {
+          failedFiles.push(f.name)
+          setError(`❌ Erreur réseau pendant l'upload de ${f.name}: ${err instanceof Error ? err.message : 'Erreur inconnue'}`)
         }
       }
 
@@ -211,10 +104,10 @@ export default function ClientDocumentsUpload({ clientId }: { clientId: string }
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : 'Erreur inconnue'
       setError(`❌ Erreur: ${errMsg}`)
-      // eslint-disable-next-line no-console
       console.error('Upload error:', err)
     } finally {
       setLoading(false)
+      setProgress(0)
     }
   }
 
@@ -222,13 +115,8 @@ export default function ClientDocumentsUpload({ clientId }: { clientId: string }
     setDeletingLoading(true)
     setDeletingError(null)
     try {
-      const endpoint = useExternalServer
-        ? `${UPLOAD_SERVER_URL}/clients/${clientId}/documents/${id}`
-        : `/api/clients/${clientId}/documents/${id}`
-
-      const res = await fetch(endpoint, {
+      const res = await fetch(`/api/uploads?documentId=${id}`, {
         method: 'DELETE',
-        headers: useExternalServer && UPLOAD_API_KEY ? { 'x-api-key': UPLOAD_API_KEY } : undefined,
       })
 
       if (!res.ok) {
@@ -239,7 +127,6 @@ export default function ClientDocumentsUpload({ clientId }: { clientId: string }
         } catch {}
         setDeletingError(`Erreur suppression: ${errText}`)
       } else {
-        // refresh list
         await fetchDocs()
         setDeletingId(null)
         setToast('Document supprimé avec succès')

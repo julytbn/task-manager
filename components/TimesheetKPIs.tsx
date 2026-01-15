@@ -41,7 +41,7 @@ export default function TimesheetKPIs({
     },
     {
       label: 'Coût estimé du travail',
-      value: `${estimatedCost.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })}`,
+      value: `—`, // Pas calculé sans tarif horaire
       icon: Target,
       color: 'bg-purple-50',
       textColor: 'text-purple-600'

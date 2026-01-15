@@ -24,15 +24,36 @@ export default function TimesheetDetailModal({
 
   if (!isOpen || !data) return null
 
-  // Tableau journalier exemple (simulé - devrait venir du backend)
+  // Récupérer la ventilation journalière à partir des vraies données
   const getDailyBreakdown = () => {
-    return [
-      { day: 'Lun 01', regular: 8, overtime: 0, sick: 0, vacation: 0 },
-      { day: 'Mar 02', regular: 8, overtime: 1, sick: 0, vacation: 0 },
-      { day: 'Mer 03', regular: 8, overtime: 0, sick: 0, vacation: 0 },
-      { day: 'Jeu 04', regular: 8, overtime: 0, sick: 0, vacation: 0 },
-      { day: 'Ven 05', regular: 8, overtime: 0, sick: 2, vacation: 0 },
-    ]
+    const startDate = new Date(data.date)
+    const year = startDate.getFullYear()
+    const month = startDate.getMonth()
+    
+    // Obtenir le premier jour du mois
+    const firstDay = new Date(year, month, 1)
+    // Obtenir le dernier jour du mois
+    const lastDay = new Date(year, month + 1, 0)
+    
+    const days = []
+    const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
+    
+    // Générer les lignes pour chaque jour du mois
+    for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
+      const dayIndex = d.getDay()
+      const dayNum = d.getDate()
+      const dayName = dayNames[dayIndex]
+      
+      days.push({
+        day: `${dayName} ${String(dayNum).padStart(2, '0')}`,
+        regular: data.regularHrs || 0,
+        overtime: data.overtimeHrs || 0,
+        sick: data.sickHrs || 0,
+        vacation: data.vacationHrs || 0,
+      })
+    }
+    
+    return days
   }
 
   const dailyData = getDailyBreakdown()

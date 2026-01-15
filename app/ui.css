@@ -1,0 +1,556 @@
+/* ==========================================
+   KEKELI GROUP - DESIGN SYSTEM
+   ========================================== */
+
+/* Root CSS Variables */
+:root {
+  --color-gold: #d4a537;
+  --color-gold-accent: #f4c863;
+  --color-black-deep: #0f0f0f;
+  --color-black-900: #1a1a1a;
+  --color-black-800: #242424;
+  --color-offwhite: #f5f5f5;
+  --color-anthracite: #2a2a2a;
+  --sidebar-width: 250px;
+  --header-height: 64px;
+  --transition-fast: 150ms;
+  --transition-normal: 300ms;
+  --transition-slow: 500ms;
+}
+
+/* ==========================================
+   GLOBAL STYLES
+   ========================================== */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: linear-gradient(135deg, var(--color-offwhite) 0%, #f9f9f9 50%, var(--color-offwhite) 100%);
+  color: var(--color-black-deep);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  letter-spacing: 0.3px;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 165, 55, 0.3);
+  border-radius: 4px;
+  transition: background var(--transition-normal);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 165, 55, 0.6);
+}
+
+/* ==========================================
+   TYPOGRAPHY
+   ========================================== */
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.gold-gradient-text {
+  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 600;
+}
+
+/* ==========================================
+   LAYOUT COMPONENTS
+   ========================================== */
+
+/* Header Enhancement */
+header {
+  backdrop-filter: blur(8px);
+  background: linear-gradient(90deg, rgba(15, 15, 15, 0.95) 0%, rgba(26, 26, 26, 0.95) 50%, rgba(15, 15, 15, 0.95) 100%);
+  box-shadow: 0 4px 20px rgba(212, 165, 55, 0.1);
+}
+
+header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
+  opacity: 0.3;
+}
+
+/* Sidebar Enhancement */
+aside {
+  background: linear-gradient(180deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%);
+  backdrop-filter: blur(10px);
+}
+
+/* Main Content Area */
+main {
+  background: linear-gradient(135deg, var(--color-offwhite) 0%, #fafafa 50%, var(--color-offwhite) 100%);
+}
+
+/* ==========================================
+   NAVIGATION ITEMS
+   ========================================== */
+
+nav a {
+  position: relative;
+  transition: all var(--transition-normal) ease;
+}
+
+nav a::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--color-gold), var(--color-gold-accent));
+  transition: width var(--transition-normal) ease;
+}
+
+nav a:hover::before {
+  width: 20px;
+}
+
+nav a.active {
+  box-shadow: inset 0 0 15px rgba(212, 165, 55, 0.1);
+}
+
+/* ==========================================
+   BUTTONS
+   ========================================== */
+
+button {
+  transition: all var(--transition-normal) ease;
+  position: relative;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(212, 165, 55, 0.15);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* Gold Button Variant */
+.btn-gold {
+  background: linear-gradient(135deg, var(--color-gold) 0%, var(--color-gold-accent) 100%);
+  color: var(--color-black-deep);
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(212, 165, 55, 0.3);
+}
+
+.btn-gold:hover {
+  box-shadow: 0 8px 25px rgba(212, 165, 55, 0.5);
+}
+
+/* Secondary Button */
+.btn-secondary {
+  background: var(--color-black-800);
+  color: var(--color-gold);
+  border: 1px solid var(--color-gold);
+  border-radius: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: all var(--transition-normal) ease;
+}
+
+.btn-secondary:hover {
+  background: var(--color-gold);
+  color: var(--color-black-deep);
+}
+
+/* ==========================================
+   CARDS & MODALS
+   ========================================== */
+
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(212, 165, 55, 0.1);
+  transition: all var(--transition-normal) ease;
+}
+
+.card:hover {
+  box-shadow: 0 8px 24px rgba(212, 165, 55, 0.15);
+  border-color: rgba(212, 165, 55, 0.3);
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--color-black-deep);
+}
+
+.modal-overlay {
+  background: rgba(15, 15, 15, 0.6);
+  backdrop-filter: blur(4px);
+  animation: fadeIn var(--transition-normal) ease;
+}
+
+/* ==========================================
+   FORMS
+   ========================================== */
+
+input[type="text"],
+input[type="email"],
+input[type="number"],
+input[type="password"],
+select,
+textarea {
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  padding: 10px 12px;
+  font-size: 14px;
+  transition: all var(--transition-normal) ease;
+  background: white;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="number"]:focus,
+input[type="password"]:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--color-gold);
+  box-shadow: 0 0 0 3px rgba(212, 165, 55, 0.1);
+  background: #fafafa;
+}
+
+input[type="text"]::placeholder,
+input[type="email"]::placeholder,
+input[type="password"]::placeholder,
+textarea::placeholder {
+  color: #999;
+}
+
+label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: var(--color-black-deep);
+  font-size: 14px;
+}
+
+/* ==========================================
+   TABLES
+   ========================================== */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+thead {
+  background: linear-gradient(90deg, var(--color-gold) 0%, var(--color-gold-accent) 100%);
+  color: var(--color-black-deep);
+  font-weight: 600;
+}
+
+thead th {
+  padding: 16px 12px;
+  text-align: left;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  border: none;
+}
+
+tbody tr {
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color var(--transition-fast) ease;
+}
+
+tbody tr:hover {
+  background-color: rgba(212, 165, 55, 0.05);
+}
+
+tbody td {
+  padding: 14px 12px;
+  font-size: 14px;
+}
+
+tbody tr:last-child {
+  border-bottom: none;
+}
+
+/* ==========================================
+   BADGES & TAGS
+   ========================================== */
+
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.badge-gold {
+  background: rgba(212, 165, 55, 0.2);
+  color: var(--color-gold);
+  border: 1px solid var(--color-gold);
+}
+
+.badge-success {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+  border: 1px solid #22c55e;
+}
+
+.badge-warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+  border: 1px solid #f59e0b;
+}
+
+.badge-danger {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}
+
+/* ==========================================
+   ANIMATIONS
+   ========================================== */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.fade-in {
+  animation: fadeIn var(--transition-normal) ease;
+}
+
+.slide-in-down {
+  animation: slideInDown var(--transition-normal) ease;
+}
+
+.slide-in-right {
+  animation: slideInRight var(--transition-normal) ease;
+}
+
+.pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ==========================================
+   UTILITY CLASSES
+   ========================================== */
+
+.truncate-1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.truncate-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.truncate-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.shadow-gold {
+  box-shadow: 0 0 20px rgba(212, 165, 55, 0.3);
+}
+
+.border-gold {
+  border-color: var(--color-gold);
+}
+
+.text-gold {
+  color: var(--color-gold);
+}
+
+.bg-gold-light {
+  background-color: rgba(212, 165, 55, 0.1);
+}
+
+/* ==========================================
+   RESPONSIVE FIXES
+   ========================================== */
+
+@media (max-width: 768px) {
+  :root {
+    --sidebar-width: 0;
+  }
+
+  main {
+    margin-left: 0 !important;
+  }
+
+  header {
+    left: 0 !important;
+  }
+
+  .hidden-mobile {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: 16px;
+  }
+
+  thead th {
+    padding: 12px 8px;
+    font-size: 12px;
+  }
+
+  tbody td {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+
+  button {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+}
+
+/* ==========================================
+   DARK MODE COMPATIBILITY
+   ========================================== */
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%);
+    color: var(--color-offwhite);
+  }
+
+  .card {
+    background: var(--color-black-800);
+    color: var(--color-offwhite);
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="number"],
+  input[type="password"],
+  select,
+  textarea {
+    background: var(--color-black-900);
+    color: var(--color-offwhite);
+    border-color: rgba(212, 165, 55, 0.2);
+  }
+
+  table {
+    background: var(--color-black-800);
+    color: var(--color-offwhite);
+  }
+
+  tbody tr {
+    border-bottom-color: rgba(212, 165, 55, 0.1);
+  }
+}
+
+/* ==========================================
+   PRINT STYLES
+   ========================================== */
+
+@media print {
+  header,
+  aside,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+  }
+
+  .card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+}

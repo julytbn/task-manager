@@ -26,8 +26,7 @@ class RecurringBillingService {
         }
       },
       include: {
-        client: true,
-        service: true
+        client: true
       }
     });
 

@@ -84,6 +84,7 @@ export async function PUT(
             designation: l.designation,
             montant: Number(l.montant) || 0,
             intervenant: l.intervenant || null,
+            type: l.type || 'MAIN_D_OEUVRE', // Ajouter le type
             ordre: index
           }))
         }
@@ -91,28 +92,33 @@ export async function PUT(
     }
 
     // Mettre à jour la pro-forma
-    const updated = await prisma.proForma.update({
-      where: { id: params.id },
-      data: {
-        description: data.description ?? proForma.description,
-        montant: data.montant ?? proForma.montant,
-        statut: data.statut ?? proForma.statut,
-        dateEcheance: data.dateEcheance ? new Date(data.dateEcheance) : proForma.dateEcheance,
-        notes: data.notes ?? proForma.notes,
-        ...(lignesUpdate && { lignes: lignesUpdate })
-      },
-      include: {
-        client: {
-          select: { id: true, nom: true, prenom: true, entreprise: true }
+    const updated = await prisma.$transaction(async (tx) => {
+      // Mettre à jour la pro-forma
+      const updatedProForma = await tx.proForma.update({
+        where: { id: params.id },
+        data: {
+          description: data.description ?? proForma.description,
+          montant: data.montant ?? proForma.montant,
+          statut: data.statut ?? proForma.statut,
+          dateEcheance: data.dateEcheance ? new Date(data.dateEcheance) : proForma.dateEcheance,
+          notes: data.notes ?? proForma.notes,
+          ...(lignesUpdate && { lignes: lignesUpdate })
         },
-        projet: {
-          select: { id: true, titre: true }
-        },
-        lignes: {
-          orderBy: { ordre: 'asc' }
+        include: {
+          client: {
+            select: { id: true, nom: true, prenom: true, entreprise: true }
+          },
+          projet: {
+            select: { id: true, titre: true }
+          },
+          lignes: {
+            orderBy: { ordre: 'asc' }
+          }
         }
-      }
-    })
+      });
+
+      return updatedProForma;
+    });
 
     return NextResponse.json(updated)
   } catch (error) {

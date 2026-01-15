@@ -3,6 +3,7 @@ import { Bell, Search, AlertCircle, CheckCircle2, LogOut, User, ChevronDown } fr
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 
 export default function ManagerHeader() {
   const [showNotifications, setShowNotifications] = useState(false)
@@ -10,6 +11,7 @@ export default function ManagerHeader() {
   const [searchQuery, setSearchQuery] = useState('')
   const { data: session } = useSession()
   const profileMenuRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
 
   const [notifications, setNotifications] = useState<any[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -71,29 +73,35 @@ export default function ManagerHeader() {
     await signOut({ redirect: true, callbackUrl: '/connexion' })
   }
 
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      // Redirection vers recherche globale
+      router.push(`/search?q=${encodeURIComponent(searchQuery)}`)
+    }
+  }
+
   const displayName = session?.user?.prenom || 'Utilisateur'
   const initials = (session?.user?.prenom?.[0] || 'U') + (session?.user?.nom?.[0] || '')
 
   return (
-    <header className="bg-gradient-to-r from-[var(--color-black-deep)] to-[var(--color-black-900)] border-b border-[var(--color-gold)] border-opacity-20 shadow-sm">
-      <div className="flex items-center justify-between px-6 py-4">
+    <header className="fixed top-0 left-[250px] right-0 z-40 bg-gradient-to-r from-[#0f0f0f] via-[#1a1a1a] to-[#0f0f0f] h-16 flex items-center px-6 border-b border-[var(--color-gold)]/15 shadow-lg">
+      <div className="flex items-center justify-between w-full gap-4">
         {/* Left: Search Bar */}
-        <div className="flex items-center gap-4 flex-1">
-          <div className="flex-1 max-w-2xl">
-            <div className="relative group">
-              <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-gold)] opacity-70 group-focus-within:opacity-100 transition" />
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Rechercher projet, tâche, employé..."
-                className="w-full bg-white bg-opacity-10 border border-white border-opacity-20 rounded-lg py-2.5 px-4 pl-11 text-sm text-[var(--color-offwhite)] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-gold)] focus:bg-opacity-15 transition"
-              />
-            </div>
+        <div className="hidden md:flex flex-1 max-w-sm">
+          <div className="relative w-full">
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-gold)]/60" />
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearch}
+              placeholder="Rechercher... (Entrée)"
+              className="w-full bg-white border border-[var(--color-gold)]/40 rounded-lg py-2.5 pl-10 pr-4 text-sm text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-gold)] focus:border-[var(--color-gold)] transition-all duration-200 hover:border-[var(--color-gold)]/60"
+            />
           </div>
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-6 ml-8">
+        <div className="flex items-center gap-4 ml-auto">
           {/* Notifications Bell */}
           <div className="relative">
             <button
@@ -107,19 +115,17 @@ export default function ManagerHeader() {
                 }
               }}
               aria-label="notifications"
-              className="relative p-2 text-[var(--color-gold)] hover:opacity-80 rounded-lg transition duration-200"
+              className="relative p-2 text-[var(--color-gold)] hover:bg-white hover:bg-opacity-10 rounded-lg transition"
             >
               <Bell size={20} />
               {unreadCount > 0 && (
-                <span className="absolute top-1 right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full animate-pulse">
-                  {unreadCount}
-                </span>
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
               )}
             </button>
 
             {/* Notifications Dropdown */}
             {showNotifications && (
-              <div className="absolute top-full right-0 mt-3 w-96 bg-white border border-gray-200 rounded-lg shadow-xl z-50 overflow-hidden">
+              <div className="absolute right-0 mt-2 w-96 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                 <div className="p-4 border-b bg-gradient-to-r from-[var(--color-black-deep)] to-[var(--color-black-900)] flex items-center justify-between">
                   <h3 className="font-semibold text-[var(--color-gold)]">Notifications récentes</h3>
                   <button onClick={() => setShowNotifications(false)} className="text-gray-400 hover:text-gray-600 text-lg">✕</button>
@@ -173,14 +179,10 @@ export default function ManagerHeader() {
           <div className="relative" ref={profileMenuRef}>
             <button
               onClick={() => setShowProfileMenu(!showProfileMenu)}
-              className="flex items-center gap-3 pl-6 border-l border-white border-opacity-20 hover:bg-white hover:bg-opacity-10 px-3 py-2 rounded-lg transition"
+              className="flex items-center gap-2 hover:bg-white hover:bg-opacity-10 p-1.5 rounded-lg transition"
               aria-label="profil"
             >
-              <div className="text-right hidden sm:block">
-                <div className="text-sm font-semibold text-[var(--color-offwhite)]">{displayName}</div>
-                <div className="text-xs text-gray-400">Manager</div>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-[var(--color-gold)] text-[var(--color-black-deep)] font-bold text-sm flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-[var(--color-gold)] text-[var(--color-black-deep)] font-bold text-sm flex items-center justify-center">
                 {initials}
               </div>
               <ChevronDown size={16} className={`text-[var(--color-gold)] transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />

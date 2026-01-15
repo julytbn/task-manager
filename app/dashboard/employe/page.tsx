@@ -17,7 +17,6 @@ import DashboardAgenda from '@/components/dashboard/DashboardAgenda'
 import DashboardPerformance from '@/components/dashboard/DashboardPerformance'
 import EmployeeProjectTasks from '@/components/dashboard/EmployeeProjectTasks'
 import EmployeeTeamInfo from '@/components/dashboard/EmployeeTeamInfo'
-import MainLayout from '@/components/layouts/MainLayout'
 import StatCard from '@/components/StatCard'
 import DataTable from '@/components/DataTable'
 import DashboardPaymentTimeline from '@/components/dashboard/DashboardPaymentTimeline'
@@ -57,53 +56,67 @@ export default function EmployeeDashboardPage() {
   const [paymentsTotals, setPaymentsTotals] = useState<{ total: number; paid: number; pending: number }>({ total: 0, paid: 0, pending: 0 })
   const [loading, setLoading] = useState(true)
 
+  // Function to fetch dashboard data
+  const fetchDashboardData = async () => {
+    try {
+      // Fetch user's tasks
+      const tasksUrl = user?.id ? `/api/taches?userId=${user.id}` : '/api/taches'
+      const paymentsUrl = user?.id ? `/api/paiements?userId=${user.id}` : '/api/paiements'
+      
+      const [tRes, pRes] = await Promise.all([
+        fetch(tasksUrl),
+        fetch(paymentsUrl)
+      ])
+      
+      const tData = tRes.ok ? await tRes.json() : []
+      const pData = pRes.ok 
+        ? await pRes.json() 
+        : { payments: [], totals: { total: 0, paid: 0, pending: 0 } }
+        
+      setTasks(tData || [])
+      setPayments(pData.payments || [])
+      
+      // Calculate payment totals
+      const userPayments = pData.payments || []
+      const paid = userPayments
+        .filter((p: any) => p.statut?.toUpperCase().includes('CONFIRME'))
+        .reduce((sum: number, p: any) => sum + (p.montant || 0), 0)
+        
+      const pending = userPayments
+        .filter((p: any) => !p.statut?.toUpperCase().includes('CONFIRME'))
+        .reduce((sum: number, p: any) => sum + (p.montant || 0), 0)
+        
+      setPaymentsTotals({
+        total: paid + pending,
+        paid,
+        pending
+      })
+    } catch (err) {
+      console.error('Erreur récupération dashboard:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (isSessionLoading) return
     
     let mounted = true
-    ;(async () => {
-      try {
-        // Fetch user's tasks
-        const tasksUrl = user?.id ? `/api/taches?userId=${user.id}` : '/api/taches'
-        const paymentsUrl = user?.id ? `/api/paiements?userId=${user.id}` : '/api/paiements'
-        
-        const [tRes, pRes] = await Promise.all([
-          fetch(tasksUrl),
-          fetch(paymentsUrl)
-        ])
-        
-        const tData = tRes.ok ? await tRes.json() : []
-        const pData = pRes.ok 
-          ? await pRes.json() 
-          : { payments: [], totals: { total: 0, paid: 0, pending: 0 } }
-            
-        if (!mounted) return
-        
-        setTasks(tData || [])
-        setPayments(pData.payments || [])
-        
-        // Calculate payment totals
-        const userPayments = pData.payments || []
-        const paid = userPayments
-          .filter((p: any) => p.statut?.toUpperCase().includes('CONFIRME'))
-          .reduce((sum: number, p: any) => sum + (p.montant || 0), 0)
-          
-        const pending = userPayments
-          .filter((p: any) => !p.statut?.toUpperCase().includes('CONFIRME'))
-          .reduce((sum: number, p: any) => sum + (p.montant || 0), 0)
-          
-        setPaymentsTotals({
-          total: paid + pending,
-          paid,
-          pending
-        })
-      } catch (err) {
-        console.error('Erreur récupération dashboard:', err)
-      } finally {
-        if (mounted) setLoading(false)
+    
+    // Initial load
+    fetchDashboardData()
+
+    // Set up polling to refresh dashboard every 15 seconds
+    const interval = setInterval(() => {
+      if (mounted) {
+        fetchDashboardData()
       }
-    })()
-    return () => { mounted = false }
+    }, 15000) // Refresh every 15 seconds
+
+    return () => {
+      mounted = false
+      clearInterval(interval)
+    }
   }, [isSessionLoading, user])
 
   // Calculate statistics
@@ -230,20 +243,17 @@ export default function EmployeeDashboardPage() {
 
   if (loading || isSessionLoading) {
     return (
-      <MainLayout>
-        <div className="flex items-center justify-center p-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[var(--color-gold)]"></div>
-        </div>
-      </MainLayout>
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[var(--color-gold)]"></div>
+      </div>
     )
   }
 
   return (
-    <MainLayout>
-      <div className="space-y-8">
-        {/* Page Title */}
-        <div>
-          <h1 className="text-4xl font-bold gold-gradient-text">Tableau de bord</h1>
+    <div className="space-y-8">
+      {/* Page Title */}
+      <div>
+        <h1 className="text-4xl font-bold gold-gradient-text">Tableau de bord</h1>
           <p className="text-[var(--color-anthracite)]/70 mt-2">Bienvenue {user?.prenom || 'Employé'} - Suivi de vos tâches et paiements</p>
         </div>
 
@@ -363,6 +373,5 @@ export default function EmployeeDashboardPage() {
           <DashboardPerformance />
         </div>
       </div>
-    </MainLayout>
-  )
-}
+    )
+  }

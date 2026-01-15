@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useMemo, useState } from 'react'
-import MainLayout from '@/components/layouts/MainLayout'
+// MainLayout is provided by the route layout; do not wrap pages here
 import TaskDetailsModal from '@/components/dashboard/TaskDetailsModal'
 import KanbanBoard from '@/components/dashboard/KanbanBoard'
 import { Card, Badge, Button, Stat } from '@/components/ui'
@@ -164,8 +164,7 @@ export default function EmployeeTasksPage() {
   }
 
   return (
-    <MainLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold text-[#1E1E1E]">Mes Tâches</h1>
@@ -318,18 +317,18 @@ export default function EmployeeTasksPage() {
           <p className="text-[#5A6A80]">Aucune tâche trouvée</p>
         </Card>
       ) : mode === 'table' ? (
-        <div className="overflow-x-auto">
-          <Card className="overflow-hidden">
+        <div className="w-full overflow-x-auto">
+          <Card className="min-w-max">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-[#DCE3EB] bg-[#F4F7FA]">
-                  <th className="text-left p-4 font-semibold text-[#1E1E1E]">Tâche</th>
-                  <th className="text-left p-4 font-semibold text-[#1E1E1E]">Projet</th>
-                  <th className="text-left p-4 font-semibold text-[#1E1E1E]">Priorité</th>
-                  <th className="text-left p-4 font-semibold text-[#1E1E1E]">Deadline</th>
-                  <th className="text-left p-4 font-semibold text-[#1E1E1E]">Statut</th>
-                  <th className="text-left p-4 font-semibold text-[#1E1E1E]">Paiement</th>
-                  <th className="text-center p-4 font-semibold text-[#1E1E1E]">Actions</th>
+                <tr className="border-b-2 border-[var(--color-gold)]/30 bg-[var(--color-gold)]/10">
+                  <th className="text-left p-4 font-semibold text-[var(--color-black-deep)] min-w-[250px]">Tâche</th>
+                  <th className="text-left p-4 font-semibold text-[var(--color-black-deep)] min-w-[300px]">Projet</th>
+                  <th className="text-left p-4 font-semibold text-[var(--color-black-deep)] w-[120px]">Priorité</th>
+                  <th className="text-left p-4 font-semibold text-[var(--color-black-deep)] w-[120px]">Deadline</th>
+                  <th className="text-left p-4 font-semibold text-[var(--color-black-deep)] w-[150px]">Statut</th>
+                  <th className="text-left p-4 font-semibold text-[var(--color-black-deep)] w-[120px]">Paiement</th>
+                  <th className="text-center p-4 font-semibold text-[var(--color-black-deep)] w-[100px]">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -343,10 +342,12 @@ export default function EmployeeTasksPage() {
                       }`}
                     >
                       <td className="p-4">
-                        <div className="font-medium text-[#1E1E1E]">{t.titre}</div>
-                        {t.description && <p className="text-xs text-[#5A6A80] truncate">{t.description}</p>}
+                        <div className="font-medium text-[#1E1E1E] whitespace-normal">{t.titre}</div>
+                        {t.description && <p className="text-xs text-[#5A6A80] line-clamp-2">{t.description}</p>}
                       </td>
-                      <td className="p-4 text-[#5A6A80]">{t.projet?.titre || t.projet?.nom || '—'}</td>
+                      <td className="p-4 text-[#5A6A80] whitespace-normal">
+                        {t.projet?.titre || t.projet?.nom || '—'}
+                      </td>
                       <td className="p-4">
                         <Badge variant={getPriorityBadge(t.priorite)}>{t.priorite || '—'}</Badge>
                       </td>
@@ -384,6 +385,5 @@ export default function EmployeeTasksPage() {
         <TaskDetailsModal task={selectedTask} onClose={closeDetails} onUpdate={updateTaskLocal} />
       )}
       </div>
-    </MainLayout>
   )
 }

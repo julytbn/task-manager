@@ -92,6 +92,9 @@ Les crons sont configurés dans `vercel.json` :
 | `/api/cron/salary-notifications` | 09:00 | Notifications salaires |
 | `/api/cron/check-late-payments` | 10:00 | Vérifier paiements retardés |
 | `/api/cron/check-late-tasks` | 11:00 | Vérifier tâches retardées |
+| `/api/cron/create-daily-timesheets` | 00:00 | Créer timesheets obligatoires du jour |
+| `/api/cron/timesheet-reminder` | 17:00 | Rappeler de créer le timesheet |
+| `/api/cron/timesheet-progressive-reminders` | 18:00, 19:00 | Rappels progressifs (urgent) |
 | `/api/cron/salary/forecast-calculated` | J31 00:00 | Notifier prévisions salaires |
 | `/api/cron/salary/payment-due` | J1 08:00 | Rappel paiement salaires |
 | `/api/cron/salary/payment-late` | J3 09:00 | Alerte paiement retardé |

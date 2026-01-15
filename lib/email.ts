@@ -336,3 +336,262 @@ export function generateLatePaymentEmail(options: {
     `
   }
 }
+
+/**
+ * Génère l'email d'encouragement pour un objectif stagnant
+ */
+export function generateObjectifEncouragementEmail(titreObjectif: string, nomEmploye: string) {
+  const subject = `💪 Encouragement pour votre objectif: ${titreObjectif}`
+  const html = `
+    <!DOCTYPE html>
+    <html dir="ltr" lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+          }
+          .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #4F46E5;
+            padding-bottom: 20px;
+          }
+          .header h1 {
+            color: #4F46E5;
+            margin: 10px 0;
+            font-size: 24px;
+          }
+          .content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+          }
+          .highlight {
+            background-color: #FFF3CD;
+            border-left: 4px solid #FFC107;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+          }
+          .cta-button {
+            display: inline-block;
+            background-color: #4F46E5;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 20px 0;
+          }
+          .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid #e0e0e0;
+            padding-top: 15px;
+            margin-top: 20px;
+          }
+          .emoji {
+            font-size: 32px;
+            margin: 10px 0;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="emoji">💪</div>
+            <h1>Vous pouvez y arriver!</h1>
+          </div>
+
+          <div class="content">
+            <p>Bonjour <strong>${nomEmploye}</strong>,</p>
+            
+            <p>Nous avons remarqué que votre objectif <strong>"${titreObjectif}"</strong> n'a pas progressé depuis une semaine.</p>
+            
+            <div class="highlight">
+              <p><strong>Ne vous découragez pas!</strong> Chaque petit pas compte. Continuez vos efforts et vous atteindrez votre objectif.</p>
+            </div>
+
+            <p>Voici quelques conseils:</p>
+            <ul>
+              <li>💡 Divisez votre objectif en petites étapes réalisables</li>
+              <li>⏰ Fixez-vous des délais intermédiaires</li>
+              <li>📊 Suivez votre progression régulièrement</li>
+              <li>🤝 N'hésitez pas à demander de l'aide à votre manager</li>
+            </ul>
+
+            <p>Rendez-vous sur votre tableau de bord pour consulter votre objectif et mettre à jour votre progression:</p>
+            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/employe/performance" class="cta-button">Consulter mon objectif</a>
+
+            <p>Vous êtes capable de grandes choses! 🚀</p>
+          </div>
+
+          <div class="footer">
+            <p>&copy; 2024 KEKELI GROUP. Tous droits réservés.</p>
+            <p>Cet email a été envoyé automatiquement. Merci de ne pas répondre directement.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+  return { subject, html }
+}
+
+/**
+ * Génère l'email de félicitations pour un objectif atteint
+ */
+export function generateObjectifAchievementEmail(titreObjectif: string, nomEmploye: string, valeurCible: number) {
+  const subject = `🎉 Félicitations! Vous avez atteint votre objectif: ${titreObjectif}`
+  const html = `
+    <!DOCTYPE html>
+    <html dir="ltr" lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+          }
+          .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #f0f4ff 0%, #fff8f0 100%);
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #4F46E5;
+            padding-bottom: 20px;
+          }
+          .header h1 {
+            color: #4F46E5;
+            margin: 10px 0;
+            font-size: 28px;
+          }
+          .celebration {
+            font-size: 48px;
+            margin: 15px 0;
+            animation: bounce 0.6s ease-in-out;
+          }
+          .content {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #10B981;
+          }
+          .achievement-badge {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 20px 0;
+            font-size: 18px;
+            font-weight: bold;
+          }
+          .stats {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            border-left: 4px solid #4F46E5;
+          }
+          .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+            color: white;
+            padding: 14px 28px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 20px 0;
+          }
+          .next-challenge {
+            background-color: #FEF3C7;
+            border-left: 4px solid #FCD34D;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+          }
+          .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid #e0e0e0;
+            padding-top: 15px;
+            margin-top: 20px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="celebration">🎉🎊🏆</div>
+            <h1>Bravo, ${nomEmploye}!</h1>
+          </div>
+
+          <div class="content">
+            <p>Vous venez d'accomplir quelque chose de remarquable!</p>
+            
+            <div class="achievement-badge">
+              ✨ Objectif atteint: <strong>${titreObjectif}</strong> ✨
+            </div>
+
+            <p>Vous avez montré une détermination exceptionnelle en atteignant votre objectif de <strong>${valeurCible} tâches</strong>. C'est un témoignage de votre dévouement et de votre professionnalisme.</p>
+
+            <div class="stats">
+              <p><strong>📊 Vos accomplissements:</strong></p>
+              <ul>
+                <li>✅ Objectif principal atteint: ${titreObjectif}</li>
+                <li>💪 Vous avez dépassé vos attentes</li>
+                <li>🌟 Vous êtes un contributeur clé de l'équipe</li>
+              </ul>
+            </div>
+
+            <div class="next-challenge">
+              <p><strong>🚀 Et maintenant?</strong></p>
+              <p>Maintenant que vous avez atteint cet objectif, pourquoi ne pas en fixer un nouveau? Continuez à progresser et à vous dépasser. Chaque nouveau défi est une opportunité de croissance!</p>
+            </div>
+
+            <p>Rendez-vous sur votre tableau de bord pour:</p>
+            <ul>
+              <li>📈 Consulter votre progression</li>
+              <li>🎯 Définir de nouveaux objectifs</li>
+              <li>🏅 Voir vos autres objectifs actifs</li>
+            </ul>
+
+            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/employe/performance" class="cta-button">Continuer sur le dashboard</a>
+
+            <p style="text-align: center; font-size: 16px; color: #4F46E5; font-weight: bold;">Vous êtes formidable! 🌟</p>
+          </div>
+
+          <div class="footer">
+            <p>&copy; 2024 KEKELI GROUP. Tous droits réservés.</p>
+            <p>Cet email a été envoyé automatiquement. Merci de ne pas répondre directement.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+  return { subject, html }
+}

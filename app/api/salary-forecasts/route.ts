@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from "next/server";
 import { salaryForecastService } from "@/lib/services/salaryForecasting/salaryForecastService";
 import { prisma } from "@/lib/prisma";

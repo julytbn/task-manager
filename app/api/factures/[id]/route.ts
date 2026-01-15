@@ -24,17 +24,28 @@ export async function GET(request: Request, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Facture introuvable' }, { status: 404 })
     }
 
-    // Calculer le montant payé
-    const sumResult = await prisma.paiement.aggregate({
-      _sum: { montant: true },
-      where: { factureId: params.id }
-    })
-    const montantPaye = Number(sumResult._sum.montant ?? 0)
+    // Calculer le montant payé (confirmés et en attente)
+    const totalPaiements = facture.paiements
+      .filter(p => p.statut === 'CONFIRME' || p.statut === 'EN_ATTENTE')
+      .reduce((sum, p) => sum + (p.montant || 0), 0)
+
+    // Calculer le montant de main d'œuvre (bénéfice) seulement
+    const montantMainDoeuvre = facture.lignes
+      .filter((ligne) => ligne.type === 'MAIN_D_OEUVRE')
+      .reduce((sum, ligne) => sum + ligne.montant, 0)
+
+    // Le montantTotal est ce qui doit être payé
+    const montantTotal = facture.montant || 0
+
+    // Le montantRestant = montantTotal - montantPayé
+    const montantRestant = Math.max(0, montantTotal - totalPaiements)
 
     return NextResponse.json({
       ...facture,
-      montantPaye,
-      montantRestant: Math.max(0, (facture.montant || 0) - montantPaye)
+      montantPaye: totalPaiements,
+      montantMainDoeuvre,
+      montantTotal,
+      montantRestant
     })
   } catch (error) {
     console.error('Erreur récupération facture:', error)

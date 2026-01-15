@@ -35,7 +35,6 @@ export async function GET(request: Request) {
       where: whereClause,
       include: {
         client: true,
-        service: true,
         factures: {
           orderBy: { dateEmission: 'desc' },
           take: 3,
@@ -58,16 +57,16 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user || session.user.role !== 'MANAGER') {
+    if (!session?.user || (session.user.role !== 'MANAGER' && session.user.role !== 'ADMIN')) {
       return NextResponse.json({ error: 'Accès réservé aux managers' }, { status: 403 })
     }
 
     const data = await request.json()
 
     // Valider les champs obligatoires
-    if (!data.nom || !data.clientId || !data.serviceId || !data.montant || !data.frequence) {
+    if (!data.nom || !data.clientId || !data.montant || !data.frequence) {
       return NextResponse.json(
-        { error: 'Champs obligatoires: nom, clientId, serviceId, montant, frequence' },
+        { error: 'Champs obligatoires: nom, clientId, montant, frequence' },
         { status: 400 }
       )
     }
@@ -97,8 +96,9 @@ export async function POST(request: Request) {
       data: {
         nom: data.nom,
         description: data.description,
-        clientId: data.clientId,
-        serviceId: data.serviceId,
+        client: {
+          connect: { id: data.clientId }
+        },
         montant: parseFloat(data.montant),
         frequence: data.frequence,
         statut: 'ACTIF',
@@ -108,7 +108,6 @@ export async function POST(request: Request) {
       },
       include: {
         client: true,
-        service: true,
       },
     })
 
@@ -142,7 +141,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user || session.user.role !== 'MANAGER') {
+    if (!session?.user || (session.user.role !== 'MANAGER' && session.user.role !== 'ADMIN')) {
       return NextResponse.json({ error: 'Accès réservé aux managers' }, { status: 403 })
     }
 
@@ -162,7 +161,6 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       data: updateData,
       include: {
         client: true,
-        service: true,
       },
     })
 
@@ -180,7 +178,7 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   try {
     const session = await getServerSession(authOptions)
 
-    if (!session?.user || session.user.role !== 'MANAGER') {
+    if (!session?.user || (session.user.role !== 'MANAGER' && session.user.role !== 'ADMIN')) {
       return NextResponse.json({ error: 'Accès réservé aux managers' }, { status: 403 })
     }
 

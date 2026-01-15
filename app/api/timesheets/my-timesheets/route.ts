@@ -14,15 +14,37 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
 
-    // Récupérer le statut depuis les query params
-    const statutParam = new URL(req.url).searchParams.get('statut');
+    // Récupérer les query params
+    const searchParams = new URL(req.url).searchParams;
+    const statutParam = searchParams.get('statut');
+    const startDateParam = searchParams.get('startDate');
+    const endDateParam = searchParams.get('endDate');
     const statut = statutParam as StatutTimeSheet | undefined;
 
+    // Construire le where clause
+    const whereClause: any = { 
+      employeeId: session.user.id,
+    };
+
+    // Ajouter le statut si fourni
+    if (statut) {
+      whereClause.statut = statut;
+    }
+
+    // Ajouter les dates si fournies
+    if (startDateParam && endDateParam) {
+      const startDate = new Date(startDateParam);
+      const endDate = new Date(endDateParam);
+      endDate.setHours(23, 59, 59, 999); // Inclure toute la journée
+      
+      whereClause.date = {
+        gte: startDate,
+        lte: endDate,
+      };
+    }
+
     const timesheets = await prisma.timeSheet.findMany({
-      where: { 
-        employeeId: session.user.id,
-        ...(statut ? { statut } : {})
-      },
+      where: whereClause,
       include: {
         project: true,
         task: true,
@@ -35,7 +57,7 @@ export async function GET(req: NextRequest) {
           }
         }
       },
-      orderBy: { dateCreation: 'desc' }
+      orderBy: { date: 'asc' }
     });
 
     // Calculer les stats

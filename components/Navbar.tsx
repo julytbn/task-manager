@@ -58,7 +58,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
       }}
     >
       {/* Navbar background with glass effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-black-deep)] to-[var(--color-black-900)]/90 backdrop-blur-md border-b border-[var(--color-gold)]/20 opacity-95" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#1a1a1a] via-[var(--color-black-deep)] to-[var(--color-black-900)]/90 backdrop-blur-lg border-b border-[var(--color-gold)]/30 opacity-98 shadow-lg" />
 
       {/* Navbar content */}
       <div className="relative h-full flex items-center justify-between px-8 py-4">
@@ -66,11 +66,11 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
         <div className="flex items-center gap-4 flex-1">
           <button
             onClick={onMenuClick}
-            className="lg:hidden text-[var(--color-gold)] hover:text-[var(--color-gold-accent)] transition-all duration-300 p-2"
+            className="lg:hidden text-[var(--color-gold)] hover:text-[var(--color-gold-accent)] hover:scale-110 transition-all duration-300 p-2 rounded-lg hover:bg-[var(--color-black-900)]/50"
           >
             <Menu size={24} />
           </button>
-          <h1 className="text-2xl font-semibold gold-gradient-text hidden md:block">Dashboard</h1>
+          <h1 className="text-2xl font-bold gold-gradient-text hidden md:block drop-shadow-lg">Dashboard</h1>
         </div>
 
         {/* Center section: Search bar */}
@@ -85,10 +85,10 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
             />
             <input
               type="text"
-              placeholder="Rechercher..."
+              placeholder="Rechercher projet, tâche, client..."
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
-              className="w-full pl-12 pr-4 py-2.5 rounded-lg bg-[var(--color-offwhite)] text-[var(--color-black-deep)] border border-[var(--color-gold)]/30 focus:border-[var(--color-gold)] focus:outline-none transition-all duration-200 placeholder:text-[var(--color-anthracite)]/50"
+              className="w-full pl-12 pr-4 py-2.5 rounded-lg bg-[var(--color-offwhite)]/95 text-[var(--color-black-deep)] border border-[var(--color-gold)]/40 focus:border-[var(--color-gold)] focus:outline-none focus:ring-2 focus:ring-[var(--color-gold)]/30 transition-all duration-200 placeholder:text-[var(--color-anthracite)]/60 font-medium"
             />
           </div>
         </form>
@@ -96,10 +96,10 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
         {/* Right section: Notifications + Avatar */}
         <div className="flex items-center gap-6">
           {/* Notifications */}
-          <button className="relative text-[var(--color-gold)] hover:text-[var(--color-gold-accent)] transition-all duration-200 p-2 rounded-lg hover:bg-[var(--color-black-900)]/30">
+          <button className="relative text-[var(--color-gold)] hover:text-[var(--color-gold-accent)] hover:scale-110 transition-all duration-300 p-2 rounded-lg hover:bg-[var(--color-black-900)]/50 group">
             <Bell size={22} />
             {notificationCount > 0 && (
-              <span className="absolute top-0 right-0 flex items-center justify-center w-5 h-5 bg-[var(--color-gold)] text-[var(--color-black-deep)] text-xs font-semibold rounded-full">
+              <span className="absolute top-0 right-0 flex items-center justify-center w-5 h-5 bg-gradient-to-br from-[var(--color-gold)] to-[var(--color-gold-shadow)] text-[var(--color-black-deep)] text-xs font-bold rounded-full shadow-lg animate-pulse">
                 {notificationCount}
               </span>
             )}
@@ -109,23 +109,29 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
           <div className="relative">
             <button
               onClick={() => setIsProfileOpen(!isProfileOpen)}
-              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[var(--color-black-900)]/30 transition-all duration-200"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[var(--color-black-900)]/50 transition-all duration-300 group"
             >
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--color-gold)] to-[var(--color-gold-shadow)] flex items-center justify-center text-[var(--color-black-deep)] font-semibold text-sm">
-                {session?.user?.nom?.charAt(0)?.toUpperCase() || 'U'}
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--color-gold)] to-[var(--color-gold-shadow)] flex items-center justify-center text-[var(--color-black-deep)] font-bold text-sm shadow-lg group-hover:scale-110 transition-transform duration-300">
+                {(session?.user?.nom?.charAt(0) || 'U')?.toUpperCase()}
               </div>
               <div className="hidden sm:block">
-                <p className="text-sm font-medium text-[var(--color-offwhite)]">{session?.user?.nom || 'Utilisateur'}</p>
-                <p className="text-xs text-[var(--color-gold)]">{session?.user?.role || 'Utilisateur'}</p>
+                <p className="text-sm font-semibold text-[var(--color-offwhite)] group-hover:text-[var(--color-gold)] transition-colors">
+                  {session?.user?.prenom && session?.user?.nom 
+                    ? `${session.user.prenom} ${session.user.nom}` 
+                    : session?.user?.nom 
+                    ? session.user.nom 
+                    : 'Utilisateur'}
+                </p>
+                <p className="text-xs text-[var(--color-gold)]/80">{session?.user?.role || 'Utilisateur'}</p>
               </div>
             </button>
 
             {/* Dropdown menu */}
             {isProfileOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-[var(--color-black-900)] border border-[var(--color-gold)]/30 rounded-lg shadow-lg overflow-hidden animate-in fade-in-50 duration-200">
+              <div className="absolute right-0 mt-2 w-48 bg-gradient-to-b from-[var(--color-black-900)] to-[#1a1a1a] border border-[var(--color-gold)]/40 rounded-lg shadow-2xl overflow-hidden animate-in fade-in-50 duration-300">
                 <Link
                   href="/parametres"
-                  className="flex items-center gap-3 px-4 py-3 text-[var(--color-offwhite)] hover:bg-[var(--color-black-deep)] hover:text-[var(--color-gold)] transition-all duration-200 text-sm"
+                  className="flex items-center gap-3 px-4 py-3 text-[var(--color-offwhite)] hover:bg-[var(--color-gold)]/20 hover:text-[var(--color-gold)] transition-all duration-300 text-sm group"
                 >
                   <User size={18} />
                   <span>Profil</span>
@@ -135,7 +141,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
                     signOut()
                     setIsProfileOpen(false)
                   }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-[var(--color-offwhite)] hover:bg-[var(--color-black-deep)] hover:text-[var(--color-gold)] transition-all duration-200 text-sm border-t border-[var(--color-gold)]/20"
+                  className="w-full flex items-center gap-3 px-4 py-3 text-[var(--color-offwhite)] hover:bg-[var(--color-gold)]/20 hover:text-[var(--color-gold)] transition-all duration-300 text-sm border-t border-[var(--color-gold)]/20 group"
                 >
                   <LogOut size={18} />
                   <span>Déconnexion</span>
@@ -147,7 +153,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
       </div>
 
       {/* Gold separator line */}
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--color-gold)] to-transparent opacity-50" />
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[var(--color-gold)] to-transparent opacity-60" />
     </header>
   )
 }

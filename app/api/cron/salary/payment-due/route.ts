@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { notifySalaryPaymentDue } from '@/lib/services/salaryForecasting/salaryNotificationService';
 import { autoCreateSalaryCharges } from '@/lib/services/salaryForecasting/autoCreateChargesService';

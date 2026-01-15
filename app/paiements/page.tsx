@@ -38,10 +38,34 @@ export type Paiement = {
       nom: string
       prenom?: string | null
     }
+    projet?: {
+      id: string
+      nom: string
+      projetServices?: Array<{
+        id: string
+        ordre: number
+        service?: {
+          id: string
+          nom: string
+          description?: string | null
+          tarif: number
+        }
+      }>
+    }
   }
   projet?: {
     id: string
     nom: string
+    projetServices?: Array<{
+      id: string
+      ordre: number
+      service?: {
+        id: string
+        nom: string
+        description?: string | null
+        tarif: number
+      }
+    }>
   } | null
   tache?: {
     id: string
@@ -67,14 +91,8 @@ export default function PaiementsPage() {
         if (!res.ok) throw new Error('Erreur API paiements')
         const data = await res.json()
         
-        // Vérifier la structure de la réponse
+        // Mapper les données reçues de l'API
         const paiementsData = data.payments || []
-        console.log('Paiements chargés (API):', JSON.stringify(paiementsData, null, 2))
-        
-        // Vérifier la structure d'une facture
-        if (paiementsData.length > 0 && paiementsData[0].facture) {
-          console.log('Structure de la facture du premier paiement:', JSON.stringify(paiementsData[0].facture, null, 2))
-        }
         
         // Mapper les données pour correspondre au type attendu
         const formattedPaiements = paiementsData.map((p: any) => ({
@@ -106,17 +124,25 @@ export default function PaiementsPage() {
               id: p.facture.client.id,
               nom: p.facture.client.nom,
               prenom: p.facture.client.prenom
+            } : undefined,
+            projet: p.facture.projet ? {
+              id: p.facture.projet.id,
+              nom: p.facture.projet.nom,
+              projetServices: p.facture.projet.projetServices
             } : undefined
           } : undefined,
           projet: p.projet ? {
             id: p.projet.id,
-            nom: p.projet.nom
-          } : (p.tache?.projet ? {
-            id: p.tache.projet.id,
-            nom: p.tache.projet.nom
+            nom: p.projet.nom,
+            projetServices: p.projet.projetServices
           } : (p.facture?.projet ? {
             id: p.facture.projet.id,
-            nom: p.facture.projet.nom
+            nom: p.facture.projet.nom,
+            projetServices: p.facture.projet.projetServices
+          } : (p.tache?.projet ? {
+            id: p.tache.projet.id,
+            nom: p.tache.projet.nom,
+            projetServices: (p.tache.projet as any).projetServices
           } : null)),
           tache: p.tache ? {
             id: p.tache.id,

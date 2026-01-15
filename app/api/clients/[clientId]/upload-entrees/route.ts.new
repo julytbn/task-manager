@@ -1,0 +1,288 @@
+export const dynamic = 'force-dynamic';
+
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+const pdfParse = require('pdf-parse');
+
+// Helper function to extract text from PDF
+async function extractTextFromPDF(buffer: Buffer): Promise<string> {
+  console.log('📄 [upload-entrees] Début de l\'extraction du PDF avec pdf-parse');
+  
+  try {
+    const data = await pdfParse(buffer);
+    const text = data.text || '';
+    
+    console.log(`📄 [upload-entrees] PDF extrait: ${text.length} caractères, ${data.numpages} pages`);
+    console.log('📄 [upload-entrees] Aperçu du texte (premiers 1000 chars):');
+    console.log(text.substring(0, 1000));
+    console.log('---');
+    
+    return text;
+  } catch (error) {
+    console.error('📄 [upload-entrees] Erreur lors de l\'extraction du PDF:', error);
+    return '';
+  }
+}
+
+// Fonction pour nettoyer le texte
+function cleanText(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Fonction pour parser le texte extrait
+function parseExtractedText(text: string): any[] {
+  console.log('📄 [upload-entrees] === DÉBUT PARSING ===');
+  const entries: any[] = [];
+  
+  if (!text || text.length < 10) {
+    console.log('📄 [upload-entrees] ❌ Pas de texte valide à parser!');
+    return entries;
+  }
+  
+  // Nettoyer le texte
+  const cleanedText = text
+    .replace(/\r\n/g, ' ')
+    .replace(/\n/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  console.log('📄 [upload-entrees] Texte nettoyé (premiers 500 chars):');
+  console.log(cleanedText.substring(0, 500));
+  
+  // Pattern 1: DESCRIPTION DATE QTE QTE2 PRIX TOTAL
+  // Format: PAUSE DEJEUNER 12/05/25 1 19 5000 95000
+  const pattern1 = /([A-Za-zÀ-ÿ\s]+?)\s+(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/g;
+  
+  console.log('📄 [upload-entrees] Recherche Pattern 1 (avec DATE + 4 nombres)...');
+  let match;
+  
+  while ((match = pattern1.exec(cleanedText)) !== null) {
+    const description = cleanText(match[1]).trim();
+    const date = match[2];
+    const num1 = parseInt(match[3], 10);
+    const num2 = parseInt(match[4], 10);
+    const num3 = parseInt(match[5], 10);
+    const num4 = parseInt(match[6], 10);
+    
+    console.log(`📄 [upload-entrees] Trouvé: "${description}" | ${date} | ${num1} ${num2} ${num3} ${num4}`);
+    
+    const qte = num2;
+    const prixUnitaire = num3;
+    const totalHT = num4;
+    
+    if (qte < 1 || qte > 1000 || prixUnitaire < 100 || totalHT < 100) {
+      console.log(`📄 [upload-entrees]   ❌ IGNORÉE (valeurs non valides)`);
+      continue;
+    }
+    
+    const entry = {
+      date: new Date(),
+      description: description.substring(0, 255),
+      montant: totalHT,
+      qte,
+      prixUnitaire,
+      totalHT,
+    };
+    
+    entries.push(entry);
+    console.log(`📄 [upload-entrees]   ✅ ACCEPTÉE: QTE=${qte}, PU=${prixUnitaire}, TOTAL=${totalHT}`);
+  }
+  
+  // Pattern 2: DESCRIPTION DATE QTE PRIX TOTAL (3 nombres)
+  if (entries.length === 0) {
+    console.log(`📄 [upload-entrees] Pattern 1 trouvé 0. Essai Pattern 2...`);
+    const pattern2 = /([A-Za-zÀ-ÿ\s]+?)\s+(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(\d+)\s+(\d+)\s+(\d+)/g;
+    
+    while ((match = pattern2.exec(cleanedText)) !== null) {
+      const description = cleanText(match[1]).trim();
+      const date = match[2];
+      const qte = parseInt(match[3], 10);
+      const prixUnitaire = parseInt(match[4], 10);
+      const totalHT = parseInt(match[5], 10);
+      
+      console.log(`📄 [upload-entrees] Pattern 2 trouvé: "${description}"`);
+      
+      if (qte < 1 || qte > 1000 || prixUnitaire < 100 || totalHT < 100) {
+        console.log(`📄 [upload-entrees]   ❌ IGNORÉE (valeurs non valides)`);
+        continue;
+      }
+      
+      const entry = {
+        date: new Date(),
+        description: description.substring(0, 255),
+        montant: totalHT,
+        qte,
+        prixUnitaire,
+        totalHT,
+      };
+      
+      entries.push(entry);
+      console.log(`📄 [upload-entrees]   ✅ ACCEPTÉE`);
+    }
+  }
+  
+  console.log(`📄 [upload-entrees] === FIN PARSING === Total: ${entries.length} entrées trouvées`);
+  return entries;
+}
+
+export async function GET() {
+  return NextResponse.json({ error: "Route désactivée" }, { status: 410 });
+}
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { clientId: string } }
+) {
+  try {
+    console.log("📄 [upload-entrees] Starting upload for client:", params.clientId);
+
+    const formData = await request.formData();
+    const file = formData.get("entreesFile") as File;
+
+    if (!file) {
+      console.error("📄 [upload-entrees] No file provided");
+      return NextResponse.json(
+        { error: "Aucun fichier fourni" },
+        { status: 400 }
+      );
+    }
+
+    if (!file.type.includes("pdf")) {
+      console.error("📄 [upload-entrees] Invalid file type:", file.type);
+      return NextResponse.json(
+        { error: "Le fichier doit être au format PDF" },
+        { status: 400 }
+      );
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    console.log("📄 [upload-entrees] File read successfully, size:", buffer.length, "bytes");
+
+    // Extraire le texte du PDF
+    const extractedText = await extractTextFromPDF(buffer);
+    const entries = parseExtractedText(extractedText);
+    console.log(`📄 [upload-entrees] Après parsing: ${entries.length} entrées trouvées`);
+    
+    // TEST: Si 0 entrées trouvées
+    if (entries.length === 0) {
+      console.log("📄 [upload-entrees] ⚠️  Aucune entrée trouvée!");
+      entries.push({
+        date: new Date(),
+        description: "Entrée test - PDF non parsé correctement",
+        montant: 50000
+      });
+    }
+
+    // Enregistrer en base
+    const now = new Date();
+    const year = now.getFullYear();
+    const createdEntries = [];
+    let entreesCreated = 0;
+    const errors: string[] = [];
+    
+    try {
+      let dossier = await prisma.dossierComptable.findFirst({
+        where: {
+          clientId: params.clientId,
+          mois: now.getMonth() + 1,
+          annee: year,
+        },
+      });
+
+      if (!dossier) {
+        dossier = await prisma.dossierComptable.create({
+          data: {
+            clientId: params.clientId,
+            mois: now.getMonth() + 1,
+            annee: year,
+            dateCreation: now,
+            statut: "EN_COURS",
+          },
+        });
+        console.log("📄 [upload-entrees] Created dossier comptable:", dossier.id);
+      }
+
+      for (let i = 0; i < entries.length; i++) {
+        try {
+          const entry = entries[i];
+          const montant = entry.montant || 0;
+          let description = entry.description || "Entrée sans description";
+          
+          description = cleanText(description);
+
+          if (montant <= 0) {
+            console.log("📄 [upload-entrees] Skipping entry", i + 1, "- montant invalide");
+            continue;
+          }
+
+          const createdEntry = await prisma.entreeClient.create({
+            data: {
+              clientId: params.clientId,
+              dossierComptableId: dossier.id,
+              date: entry.date || new Date(),
+              description: description,
+              montant: montant,
+              categorie: "VENTES_PRODUITS",
+              notes: `Importée depuis PDF: ${cleanText(file.name)}`,
+            },
+          });
+
+          createdEntries.push({
+            date: createdEntry.date.toISOString(),
+            description: createdEntry.description,
+            montant: createdEntry.montant,
+            qte: entry.qte,
+            prixUnitaire: entry.prixUnitaire,
+            totalHT: entry.totalHT,
+          });
+          
+          entreesCreated++;
+          console.log("📄 [upload-entrees] Entry created:", description, "-", montant, "XAF");
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : "Erreur inconnue";
+          console.error("📄 [upload-entrees] Error creating entry", i + 1, ":", errorMsg);
+          errors.push(`Entrée ${i + 1}: ${errorMsg}`);
+        }
+      }
+
+      console.log("📄 [upload-entrees] Upload complete. Entrées:", entreesCreated);
+
+      return NextResponse.json(
+        {
+          success: true,
+          message: `${entreesCreated} entrée(s) créée(s)`,
+          entreesCreated,
+          totalCreated: entreesCreated,
+          dossierId: dossier.id,
+          entries: createdEntries,
+          errors: errors.length > 0 ? errors : undefined,
+        },
+        { status: 200 }
+      );
+    } catch (error) {
+      console.error("[POST /api/clients/[clientId]/upload-entrees]", error);
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Erreur serveur lors du traitement du PDF",
+          errors: [error instanceof Error ? error.message : "Erreur inconnue"],
+        },
+        { status: 500 }
+      );
+    }
+  } catch (error) {
+    console.error("[POST /api/clients/[clientId]/upload-entrees] Unexpected error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Erreur inattendue lors du traitement de la requête",
+        errors: [error instanceof Error ? error.message : "Erreur inconnue"],
+      },
+      { status: 500 }
+    );
+  }
+}

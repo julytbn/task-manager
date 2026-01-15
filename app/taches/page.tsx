@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react'
 import DataTable from '@/components/DataTable'
 import { FormField, Select, Button } from '@/components/FormField'
 import MainLayout from '@/components/layouts/MainLayout'
+import TaskDocumentsModal from '@/components/TaskDocumentsModal'
 
 interface TacheItem {
   id: string
@@ -16,6 +17,7 @@ interface TacheItem {
   priorite?: string
   dateEcheance?: string
   montant?: number
+  DocumentTache?: Array<{ id: string }>
 }
 
 export default function TachesPage() {
@@ -25,21 +27,40 @@ export default function TachesPage() {
     priorite: '',
   })
   const [isLoading, setIsLoading] = useState(true)
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [selectedTaskTitle, setSelectedTaskTitle] = useState('')
+  const [isDocumentsModalOpen, setIsDocumentsModalOpen] = useState(false)
+
+  // Function to fetch tasks
+  const fetchTasks = async () => {
+    try {
+      const res = await fetch('/api/taches')
+      const data = res.ok ? await res.json() : []
+      setTasks(data || [])
+    } catch (err) {
+      console.error('Erreur chargement tâches:', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
     let mounted = true
-    ;(async () => {
-      try {
-        const res = await fetch('/api/taches')
-        const data = res.ok ? await res.json() : []
-        if (mounted) setTasks(data || [])
-      } catch (err) {
-        console.error('Erreur chargement tâches:', err)
-      } finally {
-        if (mounted) setIsLoading(false)
+    
+    // Load tasks on mount
+    fetchTasks()
+
+    // Set up polling to refresh tasks every 10 seconds
+    const interval = setInterval(() => {
+      if (mounted) {
+        fetchTasks()
       }
-    })()
-    return () => { mounted = false }
+    }, 10000) // Refresh every 10 seconds
+
+    return () => {
+      mounted = false
+      clearInterval(interval)
+    }
   }, [])
 
   const filteredTasks = useMemo(() => {
@@ -62,8 +83,7 @@ export default function TachesPage() {
           description: task.description,
           statut: task.statut,
           priorite: task.priorite,
-          dateEcheance: task.dateEcheance,
-          assigneAId: task.assigneA?.id || null
+          dateEcheance: task.dateEcheance
         })
       });
 
@@ -109,7 +129,9 @@ export default function TachesPage() {
   };
 
   const handleView = (task: any) => {
-    console.log('Afficher tâche:', task)
+    setSelectedTaskId(task.id)
+    setSelectedTaskTitle(task.titre)
+    setIsDocumentsModalOpen(true)
   }
 
   return (
@@ -121,10 +143,19 @@ export default function TachesPage() {
             <h1 className="text-4xl font-bold gold-gradient-text">Gestion des tâches</h1>
             <p className="text-[var(--color-anthracite)]/70 mt-2">Tous les projets et leurs tâches associées</p>
           </div>
-          <Button variant="primary" size="lg">
-            <Plus size={20} />
-            Nouvelle tâche
-          </Button>
+          <div className="flex gap-3">
+            <button
+              onClick={fetchTasks}
+              className="px-4 py-2 bg-[var(--color-gold)] text-[var(--color-black-deep)] rounded-lg font-semibold hover:bg-[var(--color-gold)]/90 transition"
+              title="Rafraîchir les tâches"
+            >
+              🔄 Rafraîchir
+            </button>
+            <Button variant="primary" size="lg">
+              <Plus size={20} />
+              Nouvelle tâche
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -174,20 +205,23 @@ export default function TachesPage() {
           ) : (
             <DataTable
               columns={[
-                { key: 'titre', label: 'Titre', sortable: true, width: '25%' },
-                { key: 'projet', label: 'Projet', sortable: true, width: '20%' },
-                { key: 'assignee', label: 'Assignée à', width: '20%' },
-                { key: 'statut', label: 'Statut', sortable: true, width: '15%' },
-                { key: 'priorite', label: 'Priorité', width: '10%' },
+                { key: 'titre', label: 'Titre', sortable: true, width: '22%' },
+                { key: 'projet', label: 'Projet', sortable: true, width: '18%' },
+                { key: 'assignee', label: 'Assignée à', width: '15%' },
+                { key: 'statut', label: 'Statut', sortable: true, width: '12%' },
+                { key: 'priorite', label: 'Priorité', width: '8%' },
                 { key: 'dateEcheance', label: 'Échéance', sortable: true, width: '10%' },
+                { key: 'documents', label: 'Documents', width: '15%' },
               ]}
               data={filteredTasks.map(t => ({
+                id: t.id,
                 titre: t.titre || 'Sans titre',
                 projet: t.projet?.nom || t.projet?.titre || '-',
                 assignee: t.assigneA?.nom || 'Non assigné',
                 statut: t.statut || 'N/A',
                 priorite: t.priorite || 'Normale',
                 dateEcheance: t.dateEcheance ? new Date(t.dateEcheance).toLocaleDateString('fr-FR') : '-',
+                documents: t.DocumentTache?.length ? `${t.DocumentTache.length} document${t.DocumentTache.length > 1 ? 's' : ''}` : 'Aucun',
               }))}
               onEdit={handleEdit}
               onDelete={handleDelete}
@@ -197,6 +231,18 @@ export default function TachesPage() {
           )}
         </div>
       </div>
+
+      {/* Modal Documents */}
+      <TaskDocumentsModal
+        isOpen={isDocumentsModalOpen}
+        onClose={() => {
+          setIsDocumentsModalOpen(false)
+          setSelectedTaskId(null)
+          setSelectedTaskTitle('')
+        }}
+        taskId={selectedTaskId || ''}
+        taskTitle={selectedTaskTitle}
+      />
     </MainLayout>
   )
 }

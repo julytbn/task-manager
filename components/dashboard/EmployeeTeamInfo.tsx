@@ -220,23 +220,7 @@ export default function EmployeeTeamInfo() {
             setError(null);
           }
         } else {
-          // Créer une équipe par défaut si l'utilisateur n'en a pas
-          const defaultTeam = {
-            id: 'default-team',
-            nom: 'Équipe Dev',
-            description: 'Équipe de développement',
-            lead: null,
-            membres: [{
-              id: data.id,
-              nom: data.nom,
-              prenom: data.prenom,
-              email: data.email,
-              role: 'Développeur'
-            }],
-            projets: [],
-            status: 'Active'
-          };
-          
+          // User has no teams - set empty teams array
           const formattedUser: UserData = {
             id: data.id,
             nom: data.nom,
@@ -245,11 +229,11 @@ export default function EmployeeTeamInfo() {
             telephone: data.telephone,
             role: data.role,
             departement: data.departement,
-            equipes: [defaultTeam]
+            equipes: []  // Empty array - no default team
           };
           
           if (mounted) {
-            console.log('Définition des données utilisateur avec équipe:', formattedUser);
+            console.log('Utilisateur sans équipe:', formattedUser);
             setUserData(formattedUser);
             setError(null);
           }

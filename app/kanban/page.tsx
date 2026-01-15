@@ -4,6 +4,7 @@ import { Search, Plus, Filter, ChevronDown, AlertTriangle, ArrowUp, ArrowDown, M
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { NouvelleTacheModal } from '@/components/NouvelleTacheModal'
+import TaskDetailModal from '@/components/TaskDetailModal'
 import MainLayout from '@/components/layouts/MainLayout'
 
 type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done' | 'paid' | 'submitted'
@@ -46,6 +47,7 @@ export default function KanbanPage() {
   const [editingTask, setEditingTask] = useState<any | null>(null)
   const [viewingTask, setViewingTask] = useState<any | null>(null)
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
+  const [fullTaskData, setFullTaskData] = useState<any | null>(null)
   const [validationComment, setValidationComment] = useState<string>('')
   const [isValidating, setIsValidating] = useState(false)
   const router = useRouter()
@@ -320,15 +322,25 @@ export default function KanbanPage() {
                         {task.dueDate}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--color-black-deep)]">
-                        {typeof task.amount === 'number' ? task.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) : '—'}
+                        {typeof task.amount === 'number' ? task.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF', minimumFractionDigits: 0 }) : '—'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end space-x-2">
                           <button
                             className="text-gray-400 hover:text-gray-600"
-                            onClick={() => {
-                              setViewingTask(task);
-                              setIsViewModalOpen(true);
+                            onClick={async () => {
+                              try {
+                                const res = await fetch('/api/taches')
+                                if (!res.ok) throw new Error('Erreur récupération tâches')
+                                const data = await res.json()
+                                const found = data.find((d: any) => d.id === task.id)
+                                if (!found) throw new Error('Tâche introuvable')
+                                setFullTaskData(found)
+                                setIsViewModalOpen(true)
+                              } catch (err) {
+                                console.error(err)
+                                alert('Impossible de charger les détails de la tâche')
+                              }
                             }}
                           >
                             <Eye size={16} />
@@ -447,193 +459,69 @@ export default function KanbanPage() {
 
       {/* Modal nouvelle tâche */}
       {/* Modal de détails de tâche - Style Dashboard */}
-      {isViewModalOpen && viewingTask && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-3xl">
-            {/* En-tête */}
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-[var(--color-black-deep)]">{viewingTask.title}</h2>
-                <p className="text-sm text-[var(--color-anthracite)] mt-1">ID: #{viewingTask.id}</p>
-              </div>
-              <button
-                onClick={() => { setIsViewModalOpen(false); setViewingTask(null); }}
-                className="text-[var(--color-anthracite)] hover:text-[var(--color-black-deep)] text-2xl"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Tableau des détails */}
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <tbody className="divide-y divide-[var(--color-border)]">
-                  <tr className="hover:bg-[var(--color-offwhite)]">
-                    <td className="px-4 py-3 text-sm font-semibold text-[var(--color-anthracite)] bg-[var(--color-offwhite)] w-32">Projet</td>
-                    <td className="px-4 py-3 text-sm text-[var(--color-black-deep)]">{viewingTask.project || '—'}</td>
-                  </tr>
-                  <tr className="hover:bg-[var(--color-offwhite)]">
-                    <td className="px-4 py-3 text-sm font-semibold text-[var(--color-anthracite)] bg-[var(--color-offwhite)]">Client</td>
-                    <td className="px-4 py-3 text-sm text-[var(--color-black-deep)]">{viewingTask.client || '—'}</td>
-                  </tr>
-                  <tr className="hover:bg-[var(--color-offwhite)]">
-                    <td className="px-4 py-3 text-sm font-semibold text-[var(--color-anthracite)] bg-[var(--color-offwhite)]">Assigné à</td>
-                    <td className="px-4 py-3 text-sm text-[var(--color-black-deep)]">
-                      <div className="flex items-center">
-                        <div className="h-8 w-8 rounded-full bg-[var(--color-gold)] flex items-center justify-center text-[var(--color-black-deep)] font-medium text-sm mr-2">
-                          {viewingTask.assignee ? viewingTask.assignee.split(' ').map((n: string) => n[0]).join('') : ''}
-                        </div>
-                        <span>{viewingTask.assignee || '—'}</span>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-[var(--color-offwhite)]">
-                    <td className="px-4 py-3 text-sm font-semibold text-[var(--color-anthracite)] bg-[var(--color-offwhite)]">Statut</td>
-                    <td className="px-4 py-3 text-sm text-[var(--color-black-deep)]">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusMap[viewingTask.status as TaskStatus]?.color || 'bg-gray-100'}`}>
-                        {statusMap[viewingTask.status as TaskStatus]?.label || viewingTask.status}
-                      </span>
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-[var(--color-offwhite)]">
-                    <td className="px-4 py-3 text-sm font-semibold text-[var(--color-anthracite)] bg-[var(--color-offwhite)]">Priorité</td>
-                    <td className="px-4 py-3 text-sm text-[var(--color-black-deep)]">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityMap[(viewingTask.priority ?? 'medium') as Priority]?.color}`}>
-                        {priorityMap[(viewingTask.priority ?? 'medium') as Priority]?.icon}
-                        <span className="ml-1">{priorityMap[(viewingTask.priority ?? 'medium') as Priority]?.label}</span>
-                      </span>
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-[var(--color-offwhite)]">
-                    <td className="px-4 py-3 text-sm font-semibold text-[var(--color-anthracite)] bg-[var(--color-offwhite)]">Date limite</td>
-                    <td className="px-4 py-3 text-sm text-[var(--color-black-deep)]">{viewingTask.dueDate || '—'}</td>
-                  </tr>
-                  <tr className="hover:bg-[var(--color-offwhite)]">
-                    <td className="px-4 py-3 text-sm font-semibold text-[var(--color-anthracite)] bg-[var(--color-offwhite)]">Montant</td>
-                    <td className="px-4 py-3 text-sm font-semibold text-[var(--color-gold)]">
-                      {typeof viewingTask.amount === 'number' ? viewingTask.amount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' }) : '—'}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pied de page */}
-            <div className="mt-8 pt-6 border-t border-[var(--color-border)] flex justify-end space-x-3">
-              {viewingTask.status === 'submitted' && (
-                <>
-                  <div className="flex-1 mr-auto">
-                    <label className="block text-sm font-semibold text-[var(--color-anthracite)] mb-2">
-                      Commentaire (optionnel)
-                    </label>
-                    <textarea
-                      value={validationComment}
-                      onChange={(e) => setValidationComment(e.target.value)}
-                      placeholder="Ajouter un commentaire pour l'employé..."
-                      className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                      rows={3}
-                    />
-                  </div>
-                  <button
-                    onClick={async () => {
-                      setIsValidating(true)
-                      try {
-                        const res = await fetch('/api/taches', {
-                          method: 'PATCH',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            id: viewingTask.id,
-                            statut: 'TERMINE',
-                            commentaire: validationComment || undefined
-                          })
-                        })
-                        if (!res.ok) {
-                          const error = await res.json()
-                          throw new Error(error.error || 'Erreur lors de la validation')
-                        }
-                        alert('Tâche validée avec succès!')
-                        setIsViewModalOpen(false)
-                        setViewingTask(null)
-                        setValidationComment('')
-                        await loadTasks()
-                      } catch (err: any) {
-                        alert(err.message || 'Erreur lors de la validation')
-                      } finally {
-                        setIsValidating(false)
-                      }
-                    }}
-                    disabled={isValidating}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold disabled:opacity-50"
-                  >
-                    {isValidating ? 'Validation...' : '✓ Valider'}
-                  </button>
-                  <button
-                    onClick={async () => {
-                      setIsValidating(true)
-                      try {
-                        const res = await fetch('/api/taches', {
-                          method: 'PATCH',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            id: viewingTask.id,
-                            statut: 'ANNULE',
-                            commentaire: validationComment || undefined
-                          })
-                        })
-                        if (!res.ok) {
-                          const error = await res.json()
-                          throw new Error(error.error || 'Erreur lors du rejet')
-                        }
-                        alert('Tâche rejetée avec succès!')
-                        setIsViewModalOpen(false)
-                        setViewingTask(null)
-                        setValidationComment('')
-                        await loadTasks()
-                      } catch (err: any) {
-                        alert(err.message || 'Erreur lors du rejet')
-                      } finally {
-                        setIsValidating(false)
-                      }
-                    }}
-                    disabled={isValidating}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-semibold disabled:opacity-50"
-                  >
-                    {isValidating ? 'Rejet...' : '✗ Rejeter'}
-                  </button>
-                </>
-              )}
-              <button
-                className="px-4 py-2 text-[var(--color-anthracite)] border border-[var(--color-border)] rounded-lg hover:bg-[var(--color-offwhite)]"
-                onClick={() => { setIsViewModalOpen(false); setViewingTask(null); setValidationComment('') }}
-              >
-                Fermer
-              </button>
-              {viewingTask.status !== 'submitted' && (
-                <button
-                  className="px-4 py-2 bg-[var(--color-gold)] text-[var(--color-black-deep)] rounded-lg hover:brightness-95 font-semibold"
-                  onClick={async () => {
-                    try {
-                      const res = await fetch('/api/taches')
-                      if (!res.ok) throw new Error('Erreur récupération tâche')
-                      const data = await res.json()
-                      const found = data.find((d: any) => d.id === viewingTask.id)
-                      if (!found) throw new Error('Tâche introuvable')
-                      setEditingTask(found)
-                      setIsViewModalOpen(false)
-                      setIsModalOpen(true)
-                    } catch (err) {
-                      console.error(err)
-                      alert('Impossible de charger la tâche pour édition')
-                    }
-                  }}
-                >
-                  Éditer
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Task Detail Modal */}
+      <TaskDetailModal
+        isOpen={isViewModalOpen}
+        onClose={() => {
+          setIsViewModalOpen(false)
+          setFullTaskData(null)
+        }}
+        task={fullTaskData}
+        onValidate={async (taskId) => {
+          setIsValidating(true)
+          try {
+            const res = await fetch('/api/taches', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: taskId,
+                statut: 'TERMINE',
+                commentaire: validationComment || undefined
+              })
+            })
+            if (!res.ok) {
+              const error = await res.json()
+              throw new Error(error.error || 'Erreur lors de la validation')
+            }
+            alert('Tâche validée avec succès!')
+            setIsViewModalOpen(false)
+            setFullTaskData(null)
+            setValidationComment('')
+            await loadTasks()
+          } catch (err: any) {
+            alert(err.message || 'Erreur lors de la validation')
+          } finally {
+            setIsValidating(false)
+          }
+        }}
+        onReject={async (taskId, reason) => {
+          setIsValidating(true)
+          try {
+            const res = await fetch('/api/taches', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: taskId,
+                statut: 'ANNULE',
+                commentaire: reason
+              })
+            })
+            if (!res.ok) {
+              const error = await res.json()
+              throw new Error(error.error || 'Erreur lors du rejet')
+            }
+            alert('Tâche rejetée avec succès!')
+            setIsViewModalOpen(false)
+            setFullTaskData(null)
+            setValidationComment('')
+            await loadTasks()
+          } catch (err: any) {
+            alert(err.message || 'Erreur lors du rejet')
+          } finally {
+            setIsValidating(false)
+          }
+        }}
+      />
       <NouvelleTacheModal
         isOpen={isModalOpen}
         initial={editingTask || undefined}

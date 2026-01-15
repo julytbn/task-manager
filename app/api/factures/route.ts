@@ -29,36 +29,44 @@ export async function GET(request: Request) {
           } 
         },
         abonnement: { select: { id: true, nom: true } },
+        lignes: {
+          select: {
+            montant: true,
+            type: true
+          }
+        },
         paiements: {
           select: {
             id: true,
             montant: true,
             datePaiement: true,
             statut: true
-          },
-          where: { statut: 'CONFIRME' } // Ne prendre que les paiements confirmés
+          }
         }
       },
       orderBy: { dateEmission: 'desc' }
     })
 
-    console.log('Factures brutes de la base de données:', JSON.stringify(factures, null, 2));
-    
-    // Si on inclut les paiements, on calcule le montant restant pour chaque facture
+    // Calculer montantPaye et montantRestant pour TOUTES les factures
     const facturesAvecMontantRestant = factures.map(facture => {
-      if (!includePaiements) return facture
+      // Calculer le total des paiements (confirmés et en attente)
+      const totalPaiements = facture.paiements
+        .filter((p: any) => p.statut === 'CONFIRME' || p.statut === 'EN_ATTENTE')
+        .reduce(
+          (sum: number, p: any) => sum + (p.montant || 0), 
+          0
+        ) || 0
       
-      // Calculer le total des paiements confirmés
-      const totalPaiements = facture.paiements?.reduce(
-        (sum: number, p: any) => sum + (p.montant || 0), 
-        0
-      ) || 0
+      // Calculer le montant de main d'œuvre (bénéfice) seulement
+      const montantMainDoeuvre = facture.lignes
+        .filter((ligne: any) => ligne.type === 'MAIN_D_OEUVRE')
+        .reduce((sum: number, ligne: any) => sum + (ligne.montant || 0), 0) || 0
       
-      // Calculer le montant total (utiliser montant du projet si disponible, sinon montant de la facture)
-      const montantTotal = facture.projet?.montantTotal || facture.montant || 0
+      // Le montantTotal est ce qui doit être payé (main d'œuvre + frais externes)
+      const montantTotal = facture.montant || 0
       
-      // Calculer le montant restant
-      const montantRestant = montantTotal - totalPaiements
+      // Le montantRestant = montantTotal - montantPayé (peu importe le type)
+      const montantRestant = Math.max(0, montantTotal - totalPaiements)
       
       // Formater la date d'échéance si elle existe
       const dateEcheance = facture.dateEcheance ? 
@@ -70,24 +78,19 @@ export async function GET(request: Request) {
       const factureAvecMontants = {
         ...facture,
         montantPaye: totalPaiements,
-        montantRestant: Math.max(0, montantRestant),
+        montantRestant: montantRestant,
+        montantMainDoeuvre: montantMainDoeuvre,
+        montantTotal: montantTotal,
         dateEcheance: dateEcheance,
-        montantTotal: montantTotal
       };
       
       console.log('Facture traitée:', {
         id: facture.id,
         numero: facture.numero,
-        montantTotal: factureAvecMontants.montantTotal,
+        montantMainDoeuvre: factureAvecMontants.montantMainDoeuvre,
         montantPaye: factureAvecMontants.montantPaye,
         montantRestant: factureAvecMontants.montantRestant,
         dateEcheance: factureAvecMontants.dateEcheance,
-        projet: facture.projet ? {
-          id: facture.projet.id,
-          titre: facture.projet.titre,
-          montantTotal: facture.projet.montantTotal,
-          dateEcheance: facture.projet.dateEcheance
-        } : null
       });
       
       return factureAvecMontants;
@@ -133,8 +136,8 @@ export async function POST(request: Request) {
     const lignesCreate = Array.isArray(data.lignes) && data.lignes.length ? data.lignes.map((l: any) => ({
       designation: l.designation,
       intervenant: l.intervenant || null,
-      montantAPayer: Number(l.montantAPayer) || 0,
-      montantGlobal: Number(l.montantGlobal) || (Number(l.montantAPayer) || 0),
+      montant: Number(l.montantAPayer) || 0,
+      type: l.type || 'MAIN_D_OEUVRE',
       ordre: typeof l.ordre === 'number' ? l.ordre : 0,
     })) : undefined
 

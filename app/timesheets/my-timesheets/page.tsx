@@ -128,8 +128,8 @@ export default function MyTimesheetsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!formData.projectId || !formData.taskId || !formData.date) {
-      setError('Veuillez remplir tous les champs obligatoires')
+    if (!formData.date) {
+      setError('La date est obligatoire')
       return
     }
 
@@ -387,12 +387,11 @@ export default function MyTimesheetsPage() {
 
               {/* Projet */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Projet *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Projet (optionnel)</label>
                 <select
                   name="projectId"
                   value={formData.projectId}
                   onChange={handleFormChange}
-                  required
                   disabled={loadingModal}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-gold)]"
                 >
@@ -405,12 +404,11 @@ export default function MyTimesheetsPage() {
 
               {/* Tâche */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Tâche *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Tâche (optionnelle)</label>
                 <select
                   name="taskId"
                   value={formData.taskId}
                   onChange={handleFormChange}
-                  required
                   disabled={loadingModal}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-gold)]"
                 >
@@ -486,14 +484,15 @@ export default function MyTimesheetsPage() {
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description (optionnel)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description <span className="text-red-500">*</span></label>
                 <textarea
                   name="description"
                   value={formData.description}
                   onChange={handleFormChange}
                   disabled={loadingModal}
+                  required
                   rows={3}
-                  placeholder="Détails supplémentaires sur votre journée..."
+                  placeholder="Décrivez en détail le travail effectué..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-gold)] resize-none"
                 />
               </div>

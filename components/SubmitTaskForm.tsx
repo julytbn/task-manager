@@ -57,6 +57,7 @@ export default function SubmitTaskForm({ services = [], projects = [] }: SubmitT
     fd.append('dateEcheance', form.dateEcheance);
     fd.append('priorite', form.priorite);
     fd.append('service', form.service);
+    fd.append('statut', 'SOUMISE'); // Ajouter le statut SOUMISE
     if (form.projet) fd.append('projet', form.projet);
     form.files.forEach(f => fd.append('files', f));
     try {

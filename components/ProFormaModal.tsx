@@ -10,6 +10,7 @@ type ProFormaLigne = {
   designation: string
   montant: number
   intervenant?: string
+  type?: string
   ordre: number
 }
 
@@ -30,6 +31,8 @@ export default function ProFormaModal({
   projets = [],
   editingProForma
 }: ProFormaModalProps) {
+  console.log('[ProFormaModal] Props received - clientId:', clientId, 'projets count:', projets?.length, 'projets:', projets)
+  
   const [formData, setFormData] = useState({
     description: '',
     projetId: '',
@@ -42,6 +45,7 @@ export default function ProFormaModal({
   const [error, setError] = useState<string | null>(null)
   const [showPreview, setShowPreview] = useState(false)
   const [clientData, setClientData] = useState<any>(null)
+  const [localProjets, setLocalProjets] = useState<any[]>(projets || [])
 
   // Récupérer les infos du client et charger la pro-forma si en édition
   useEffect(() => {
@@ -49,8 +53,24 @@ export default function ProFormaModal({
       // Récupérer les infos du client
       fetch(`/api/clients/${clientId}`)
         .then(res => res.json())
-        .then(data => setClientData(data))
-        .catch(err => console.error(err))
+        .then(data => {
+          console.log('[ProFormaModal] Client data fetched:', data)
+          console.log('[ProFormaModal] Client projets from API:', data?.projets)
+          setClientData(data)
+          
+          // Si les projets viennent de l'API ET qu'on n'avait pas reçu via props, les utiliser
+          if (data?.projets && Array.isArray(data.projets) && data.projets.length > 0) {
+            console.log('[ProFormaModal] Using projets from API client')
+            setLocalProjets(data.projets)
+          } else if (projets && projets.length > 0) {
+            console.log('[ProFormaModal] Using projets from props')
+            setLocalProjets(projets)
+          } else {
+            console.warn('[ProFormaModal] No projets found from API or props')
+            setLocalProjets([])
+          }
+        })
+        .catch(err => console.error('[ProFormaModal] Erreur fetch client:', err))
 
       // Si édition, charger les données de la pro-forma
       if (editingProForma) {
@@ -66,12 +86,12 @@ export default function ProFormaModal({
         if (formData.lignes.length === 0) {
           setFormData(prev => ({
             ...prev,
-            lignes: [{ designation: '', montant: 0, ordre: 0 }]
+            lignes: [{ designation: '', montant: 0, type: 'MAIN_D_OEUVRE', ordre: 0 }]
           }))
         }
       }
     }
-  }, [isOpen, clientId, editingProForma])
+  }, [isOpen, clientId, editingProForma, projets])
 
   const addLigne = () => {
     setFormData(prev => ({
@@ -81,6 +101,7 @@ export default function ProFormaModal({
         {
           designation: '',
           montant: 0,
+          type: 'MAIN_D_OEUVRE',
           ordre: prev.lignes.length
         }
       ]
@@ -248,10 +269,25 @@ export default function ProFormaModal({
             </div>
           )}
 
-          {/* Info client */}
+          {/* 📌 Info Clarification */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="font-bold text-sm text-blue-900 mb-2">💡 Important : Clarification sur les Montants</h3>
+            <p className="text-xs text-blue-800 leading-relaxed">
+              Les montants saisis incluent la main d'œuvre et les frais de prestation. 
+              Après déduction des coûts externes, le solde constitue le bénéfice net de l'entreprise.
+            </p>
+          </div>          {/* Info client */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-700">
               <strong>Client ID:</strong> {clientId}
+            </p>
+            <p className="text-sm text-blue-700 mt-2">
+              <strong>Projets disponibles:</strong> {localProjets.length} projet{localProjets.length !== 1 ? 's' : ''}
+              {localProjets.length > 0 && (
+                <span className="text-xs block mt-1">
+                  {localProjets.map(p => `${p.titre || p.nom}`).join(', ')}
+                </span>
+              )}
             </p>
           </div>
 
@@ -284,12 +320,19 @@ export default function ProFormaModal({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-gold)]"
               >
                 <option value="">-- Sélectionner un projet --</option>
-                {projets.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.titre}
-                  </option>
-                ))}
+                {Array.isArray(localProjets) && localProjets.length > 0 ? (
+                  localProjets.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.titre || p.nom || `Projet ${p.id}`}
+                    </option>
+                  ))
+                ) : (
+                  <option disabled>Aucun projet disponible</option>
+                )}
               </select>
+              {Array.isArray(localProjets) && localProjets.length === 0 && (
+                <p className="text-xs text-orange-600 mt-1">⚠️ Aucun projet lié à ce client</p>
+              )}
             </div>
           </div>
 
@@ -327,7 +370,7 @@ export default function ProFormaModal({
             <div className="space-y-4 border border-gray-200 rounded-lg p-4 bg-gray-50">
               {formData.lignes.map((ligne, index) => (
                 <div key={index} className="bg-white p-4 rounded border border-gray-200">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         Désignation
@@ -341,6 +384,22 @@ export default function ProFormaModal({
                         placeholder="Ex: Audit fiscal Q3"
                         className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-gold)]"
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Type
+                      </label>
+                      <select
+                        value={ligne.type || 'MAIN_D_OEUVRE'}
+                        onChange={(e) =>
+                          updateLigne(index, 'type', e.target.value)
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[var(--color-gold)]"
+                      >
+                        <option value="MAIN_D_OEUVRE">Main d'œuvre</option>
+                        <option value="FRAIS_EXTERNES">Frais externes</option>
+                      </select>
                     </div>
 
                     <div>
@@ -360,7 +419,7 @@ export default function ProFormaModal({
 
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Montant HT (€)
+                        Montant HT (FCFA)
                       </label>
                       <input
                         type="number"
@@ -377,7 +436,7 @@ export default function ProFormaModal({
 
                   <div className="mt-3 flex justify-between items-center text-sm">
                     <span className="text-gray-600">
-                      Montant: <strong className="text-[var(--color-gold)]">{ligne.montant.toFixed(2)}€</strong>
+                      Montant: <strong className="text-[var(--color-gold)]">{ligne.montant.toLocaleString('fr-FR')} FCFA</strong>
                     </span>
                     {formData.lignes.length > 1 && (
                       <button
@@ -400,7 +459,7 @@ export default function ProFormaModal({
               <div className="border-t border-gray-300 pt-2 flex justify-between text-lg">
                 <span className="font-bold">TOTAL HT:</span>
                 <span className="font-bold text-[var(--color-gold)]">
-                  {totalHT.toFixed(2)}€
+                  {totalHT.toLocaleString('fr-FR')} FCFA
                 </span>
               </div>
             </div>

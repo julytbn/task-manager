@@ -109,6 +109,7 @@ export async function POST(request: Request) {
           designation: l.designation,
           montant: Number(l.montant) || 0,
           intervenant: l.intervenant || null,
+          type: l.type || 'MAIN_D_OEUVRE', // Ajouter le type pour différencier les lignes
           ordre: index
         }))
       : undefined

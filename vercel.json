@@ -1,6 +1,11 @@
 {
   "crons": [
     {
+      "path": "/api/cron/greetings",
+      "schedule": "0 9 * * *",
+      "description": "Envoyer les messages de vœux d'anniversaire et de fêtes à 9h00"
+    },
+    {
       "path": "/api/cron/generate-invoices",
       "schedule": "0 8 * * *",
       "description": "Generate invoices daily at 08:00"
@@ -21,6 +26,21 @@
       "description": "Check for late tasks daily at 11:00"
     },
     {
+      "path": "/api/cron/create-daily-timesheets",
+      "schedule": "0 0 * * *",
+      "description": "Create mandatory daily timesheets for all employees at 00:00"
+    },
+    {
+      "path": "/api/cron/timesheet-reminder",
+      "schedule": "0 17 * * *",
+      "description": "Send timesheet reminders to all employees daily at 17:00"
+    },
+    {
+      "path": "/api/cron/timesheet-progressive-reminders",
+      "schedule": "0 18,19 * * *",
+      "description": "Send progressive timesheet reminders at 18:00 and 19:00"
+    },
+    {
       "path": "/api/cron/salary/forecast-calculated",
       "schedule": "0 0 31 * *",
       "description": "Notifier les ADMINs que les prévisions salariales sont calculées (31 du mois)"
@@ -34,6 +54,16 @@
       "path": "/api/cron/salary/payment-late",
       "schedule": "0 9 3 * *",
       "description": "Alerte paiement retard si non payé (3 du mois)"
+    },
+    {
+      "path": "/api/cron/goal-encouragement",
+      "schedule": "0 8 * * 1",
+      "description": "Send encouragement emails for stagnant objectives every Monday at 08:00"
+    },
+    {
+      "path": "/api/cron/goal-achievement",
+      "schedule": "0 * * * *",
+      "description": "Send congratulation emails for achieved objectives every hour"
     }
   ]
 }
