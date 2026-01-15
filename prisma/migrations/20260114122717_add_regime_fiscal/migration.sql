@@ -104,13 +104,13 @@ DROP COLUMN "type",
 ADD COLUMN     "type" TEXT;
 
 -- AlterTable
-ALTER TABLE "facture_lignes" DROP COLUMN "type";
+ALTER TABLE "facture_lignes" DROP COLUMN IF EXISTS "type";
 
 -- AlterTable
 ALTER TABLE "factures" DROP COLUMN "pro_forma_id";
 
 -- AlterTable
-ALTER TABLE "pro_forma_lignes" DROP COLUMN "type";
+ALTER TABLE "pro_forma_lignes" DROP COLUMN IF EXISTS "type";
 
 -- DropTable
 DROP TABLE "charges_detaillees";

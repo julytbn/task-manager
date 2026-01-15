@@ -1,10 +1,21 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+  engineType     = "binary"  // Améliore les performances avec Neon
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider     = "postgresql"
+  url          = env("DATABASE_URL")
+  directUrl    = env("DATABASE_URL")  // Requis pour les migrations avec Neon
+  relationMode = "prisma"             // Important pour la compatibilité avec Neon
+  // Pour spécifier la version de PostgreSQL
+  // (à décommenter si nécessaire après vérification de la version dans Neon)
+  // providerFlavor = "postgresql"
+  // previewFeatures = ["postgresqlExtensions"]
+  
+  // Extensions PostgreSQL (décommentez si nécessaire)
+  // extensions = [pgcrypto, uuid_ossp, pg_trgm]
 }
 
 model Client {
