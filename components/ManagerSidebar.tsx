@@ -48,8 +48,23 @@ export default function ManagerSidebar({ mobile, onClose }: Props) {
 
   return (
     <div
-      className="h-full bg-gradient-to-b from-[#0f0f0f] via-[#1a1a1a] to-[#0f0f0f] text-[var(--color-offwhite)] shadow-2xl flex flex-col border-r border-[var(--color-gold)]/15 overflow-hidden"
+      className="h-full bg-gradient-to-b from-[#0f0f0f] via-[#1a1a1a] to-[#0f0f0f] text-[var(--color-offwhite)] shadow-2xl flex flex-col border-r border-[var(--color-gold)]/15 overflow-hidden w-full"
     >
+      {/* Logo Header */}
+      <div className="px-4 py-3 border-b border-[var(--color-gold)]/10">
+        <div className="flex items-center">
+          <img 
+            src="/imgkekeli.jpg" 
+            alt="KEKELI GROUP Logo" 
+            className="w-10 h-10 rounded-lg object-cover mr-3"
+          />
+          <div>
+            <div className="text-base font-bold text-[var(--color-gold)]">KEKELI GROUP</div>
+            <div className="text-xs text-gray-400">Cabinet d'expertise</div>
+          </div>
+        </div>
+      </div>
+      
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-[var(--color-gold)]/30">
         {navItems.map((item) => {
           const isActive = pathname?.startsWith(item.href)

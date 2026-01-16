@@ -59,9 +59,7 @@ export default function MainLayout({
             <aside 
               className={`fixed left-0 top-0 h-screen w-[250px] z-40 transition-transform duration-300 ease-in-out ${
                 isMobile && !sidebarOpen ? '-translate-x-full' : 'translate-x-0'
-              } ${
-                showHeader ? (isMobile ? 'mt-32' : 'mt-16') : 'mt-0'
-              } overflow-y-auto`}
+              }`}
             >
               <ManagerSidebar 
                 mobile={isMobile} 

@@ -72,7 +72,7 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
 
         {/* Logo */}
         <div className="flex items-center gap-2 sm:gap-3 mr-2 sm:mr-4 md:mr-6 flex-shrink-0">
-          <KekeliLogo className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9" />
+          <KekeliLogo size={36} />
           <div className="hidden sm:block">
             <div className="text-xs md:text-sm lg:text-base font-bold text-[var(--color-gold)]">KEKELI</div>
             <div className="text-xs text-white opacity-80 -mt-0.5">GROUP</div>

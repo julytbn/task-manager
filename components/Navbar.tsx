@@ -66,7 +66,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
         {/* Left section: Logo + Hamburger (mobile) + Page title */}
         <div className="flex items-center gap-2 sm:gap-4 flex-1 z-10 min-w-0">
           <div className="flex-shrink-0">
-            <KekeliLogo className="h-8 w-8 sm:h-10 sm:w-10" />
+            <KekeliLogo size={40} />
           </div>
           <button
             onClick={onMenuClick}

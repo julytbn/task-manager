@@ -1,19 +1,26 @@
 'use client'
 
-export default function KekeliLogo({ className = "w-8 h-8" }: { className?: string }) {
-  const classes = className || "w-8 h-8"
+interface LogoProps {
+  className?: string
+  size?: number
+}
+
+export default function KekeliLogo({ className = "", size = 32 }: LogoProps) {
   return (
-    <div 
-      className={`${classes} bg-yellow-400 rounded-lg flex items-center justify-center font-black text-black flex-shrink-0`}
+    <img
+      src="/imgkekeli.jpg"
+      alt="Kekeli Logo"
+      className={className}
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#FBBF24',
-        borderRadius: '0.5rem'
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: '0.5rem',
+        objectFit: 'cover',
+        flexShrink: 0,
+        zIndex: 50,
+        display: 'block'
       }}
-    >
-      <span style={{fontSize: 'inherit', fontWeight: 900, lineHeight: 1}}>K</span>
-    </div>
+      data-testid="kekeli-logo"
+    />
   )
 }
