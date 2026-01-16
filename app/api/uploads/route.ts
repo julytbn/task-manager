@@ -144,8 +144,19 @@ export async function POST(request: NextRequest) {
         console.error('❌ Erreur Vercel Blob:', errorMsg)
         console.error('   Stack:', blobError instanceof Error ? blobError.stack : 'N/A')
         
-        // Fallback to local storage if Vercel Blob fails (NOT RECOMMENDED for Vercel!)
-        console.warn('⚠️ Falling back to local storage (this will NOT persist on Vercel!)')
+        // On Vercel, we CANNOT use local storage fallback (filesystem is ephemeral)
+        if (process.env.NODE_ENV === 'production') {
+          return NextResponse.json(
+            {
+              error: 'Erreur Vercel Blob Storage - Vérifiez que BLOB_READ_WRITE_TOKEN est correct',
+              details: errorMsg,
+            },
+            { status: 500 }
+          )
+        }
+        
+        // Fallback to local storage only in development
+        console.warn('⚠️ Falling back to local storage (dev mode only)')
         const destDir = clientId
           ? path.join(UPLOAD_DIR, 'clients', clientId)
           : taskId

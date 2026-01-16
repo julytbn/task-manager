@@ -46,10 +46,9 @@ export default function ManagerSidebar({ mobile, onClose }: Props) {
 
   const navItems = isEmployee ? employeeItems : managerItems
 
-  const sidebarContent = (
+  return (
     <div
-      className="fixed left-0 bg-gradient-to-b from-[#0f0f0f] via-[#1a1a1a] to-[#0f0f0f] text-[var(--color-offwhite)] shadow-2xl z-40 transition-all duration-300 flex flex-col border-r border-[var(--color-gold)]/15 overflow-hidden"
-      style={{ width: '250px', top: '64px', bottom: 0 }}
+      className="h-full bg-gradient-to-b from-[#0f0f0f] via-[#1a1a1a] to-[#0f0f0f] text-[var(--color-offwhite)] shadow-2xl flex flex-col border-r border-[var(--color-gold)]/15 overflow-hidden"
     >
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-[var(--color-gold)]/30">
         {navItems.map((item) => {
@@ -85,32 +84,5 @@ export default function ManagerSidebar({ mobile, onClose }: Props) {
         <p className="text-xs text-[var(--color-offwhite)]/50 text-center">© 2025 KEKELI GROUP</p>
       </div>
     </div>
-  )
-
-  // Responsive sidebar: mobile overlay, tablet collapsed, desktop full
-  if (mobile) {
-    return (
-      <div className="fixed inset-0 z-50">
-        <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-        <div className="absolute left-0 top-0 bottom-0">
-          <div className="h-full bg-gradient-to-b from-[#0f0f0f] via-[#1a1a1a] to-[#0f0f0f] shadow-2xl flex flex-col" style={{ width: '250px' }}>
-            <div className="p-4 border-b border-[var(--color-gold)]/20 flex items-center justify-between bg-[var(--color-black-900)]/50">
-              <h2 className="text-lg font-semibold gold-gradient-text">Menu</h2>
-              <button onClick={onClose} className="text-[var(--color-offwhite)] hover:text-[var(--color-gold)] hover:scale-110 transition-all duration-300 p-1 rounded-lg hover:bg-[var(--color-gold)]/10"><X size={20} /></button>
-            </div>
-            {sidebarContent}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <aside
-      className="h-screen fixed left-0 top-0 z-40 transition-all duration-300"
-      style={{ width: '250px' }}
-    >
-      {sidebarContent}
-    </aside>
   )
 }

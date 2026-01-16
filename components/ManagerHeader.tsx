@@ -5,7 +5,11 @@ import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
-export default function ManagerHeader() {
+interface ManagerHeaderProps {
+  onMenuClick?: () => void;
+}
+
+export default function ManagerHeader({ onMenuClick }: ManagerHeaderProps = {}) {
   const [showNotifications, setShowNotifications] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')

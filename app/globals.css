@@ -4,6 +4,7 @@
 @tailwind utilities;
 @import './theme.css';
 @import './ui.css';
+@import './responsive.css';
 /* stylelint-enable at-rule-no-unknown */
 
 :root {

@@ -93,7 +93,7 @@ export default function ResetPasswordContent() {
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
               <Image
-                src="/kekeli-logo.svg"
+                src="/imgkekeli.jpg"
                 alt="Kekeli Logo"
                 width={80}
                 height={40}
@@ -131,7 +131,7 @@ export default function ResetPasswordContent() {
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
             <Image
-              src="/kekeli-logo.svg"
+              src="/imgkekeli.jpg"
               alt="Kekeli Logo"
               width={80}
               height={40}

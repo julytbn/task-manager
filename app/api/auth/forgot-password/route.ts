@@ -44,7 +44,8 @@ export async function POST(request: NextRequest) {
     })
 
     // Envoyer l'email de réinitialisation
-    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reinitialiser-mot-de-passe?token=${resetToken}`
+    const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const resetUrl = `${baseUrl}/reinitialiser-mot-de-passe?token=${resetToken}`
     const emailContent = generatePasswordResetEmail(resetUrl, user.prenom)
 
     try {
