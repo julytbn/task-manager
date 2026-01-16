@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { signOut, useSession } from 'next-auth/react'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
+import KekeliLogo from './KekeliLogo'
 
 // Dynamic import to avoid SSR issues for the sidebar overlay
 const ManagerSidebar = dynamic(() => import('@/components/ManagerSidebar'), { ssr: false })
@@ -71,16 +72,7 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
 
         {/* Logo */}
         <div className="flex items-center gap-2 sm:gap-3 mr-2 sm:mr-4 md:mr-6 flex-shrink-0">
-          <img 
-            src="/kekeli-logo.svg" 
-            alt="Kekeli Group" 
-            className="h-7 sm:h-8 md:h-9 w-auto object-contain" 
-            style={{ filter: 'brightness(0) invert(1)' }}
-            onError={(e) => {
-              console.error('Logo failed to load:', e);
-              (e.target as HTMLImageElement).style.display = 'none';
-            }}
-          />
+          <KekeliLogo className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9" />
           <div className="hidden sm:block">
             <div className="text-xs md:text-sm lg:text-base font-bold text-[var(--color-gold)]">KEKELI</div>
             <div className="text-xs text-white opacity-80 -mt-0.5">GROUP</div>

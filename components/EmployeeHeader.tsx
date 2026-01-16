@@ -2,6 +2,7 @@
 import { Bell, Search, AlertCircle, Mail } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
+import KekeliLogo from './KekeliLogo'
 
 export default function EmployeeHeader() {
   const [notifications, setNotifications] = useState<any[]>([])
@@ -57,7 +58,7 @@ export default function EmployeeHeader() {
       <div className="flex items-center justify-between px-6 py-4">
         {/* Left: Logo + Search Bar */}
         <div className="flex items-center gap-4 flex-1">
-          <img src="/kekeli-logo.svg" alt="Kekeli Group" className="w-8 h-8 object-contain flex-shrink-0" />
+          <KekeliLogo className="w-8 h-8" />
           <div className="flex-1 max-w-2xl">
             <div className="relative group">
               <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition" />

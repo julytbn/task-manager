@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { Search, Bell, Menu, User, LogOut } from 'lucide-react'
 import Link from 'next/link'
 import { signOut } from 'next-auth/react'
+import KekeliLogo from './KekeliLogo'
 
 type NavbarProps = {
   onMenuClick?: () => void
@@ -65,15 +66,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
         {/* Left section: Logo + Hamburger (mobile) + Page title */}
         <div className="flex items-center gap-2 sm:gap-4 flex-1 z-10 min-w-0">
           <div className="flex-shrink-0">
-            <img 
-              src="/imgkekeli.jpg" 
-              alt="Kekeli Logo" 
-              className="h-8 w-8 sm:h-10 sm:w-10 object-contain rounded"
-              onError={(e) => {
-                console.error('Logo failed to load:', e);
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
+            <KekeliLogo className="h-8 w-8 sm:h-10 sm:w-10" />
           </div>
           <button
             onClick={onMenuClick}
