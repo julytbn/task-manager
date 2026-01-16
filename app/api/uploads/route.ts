@@ -7,16 +7,26 @@ import { prisma } from '@/lib/prisma'
 
 // Vercel Blob import (only available in production)
 let vercelBlob: any = null
+let blobAvailable = false
 try {
   vercelBlob = require('@vercel/blob')
+  blobAvailable = true
+  console.log('✅ Vercel Blob loaded successfully')
 } catch (e) {
-  // Vercel Blob not available in dev
+  console.warn('⚠️ Vercel Blob not available:', (e as Error).message)
 }
 
 // Configuration
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads')
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-const USE_VERCEL_BLOB = process.env.BLOB_READ_WRITE_TOKEN ? true : false
+const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN || ''
+const USE_VERCEL_BLOB = BLOB_TOKEN && blobAvailable ? true : false
+
+console.log(`📦 Upload Configuration:`)
+console.log(`   - BLOB_READ_WRITE_TOKEN: ${BLOB_TOKEN ? 'SET ✅' : 'MISSING ❌'}`)
+console.log(`   - Blob Available: ${blobAvailable ? 'YES ✅' : 'NO ❌'}`)
+console.log(`   - USE_VERCEL_BLOB: ${USE_VERCEL_BLOB ? 'YES ✅' : 'NO ❌'}`)
+console.log(`   - NODE_ENV: ${process.env.NODE_ENV}`)
 
 const ALLOWED_EXTENSIONS = [
   '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.txt', '.ppt', '.pptx',
@@ -108,6 +118,12 @@ export async function POST(request: NextRequest) {
     let fileUrl: string
     let documentId: string | null = null
 
+    console.log(`\n📤 Starting upload for file: ${file.name}`)
+    console.log(`   - Size: ${(file.size / 1024).toFixed(2)} KB`)
+    console.log(`   - Type: ${file.type}`)
+    console.log(`   - USE_VERCEL_BLOB: ${USE_VERCEL_BLOB}`)
+    console.log(`   - vercelBlob available: ${!!vercelBlob}`)
+
     if (USE_VERCEL_BLOB && vercelBlob) {
       try {
         const blobPath = clientId 
@@ -115,6 +131,8 @@ export async function POST(request: NextRequest) {
           : taskId 
           ? `tasks/${taskId}/${filename}`
           : `uploads/${filename}`
+        console.log(`   📍 Blob path: ${blobPath}`)
+        console.log(`   🔄 Uploading to Vercel Blob...`)
         const blob = await vercelBlob.put(blobPath, fileBuffer, {
           access: 'public',
           contentType: file.type || 'application/octet-stream',
@@ -122,8 +140,12 @@ export async function POST(request: NextRequest) {
         fileUrl = blob.url
         console.log(`✅ Fichier uploadé sur Vercel Blob: ${fileUrl}`)
       } catch (blobError) {
-        console.error('❌ Erreur Vercel Blob:', blobError)
-        // Fallback to local storage if Vercel Blob fails
+        const errorMsg = blobError instanceof Error ? blobError.message : String(blobError)
+        console.error('❌ Erreur Vercel Blob:', errorMsg)
+        console.error('   Stack:', blobError instanceof Error ? blobError.stack : 'N/A')
+        
+        // Fallback to local storage if Vercel Blob fails (NOT RECOMMENDED for Vercel!)
+        console.warn('⚠️ Falling back to local storage (this will NOT persist on Vercel!)')
         const destDir = clientId
           ? path.join(UPLOAD_DIR, 'clients', clientId)
           : taskId
