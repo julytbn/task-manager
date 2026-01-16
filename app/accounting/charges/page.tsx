@@ -174,7 +174,7 @@ export default function ChargesPage() {
             <select
               value={yearFilter}
               onChange={(e) => setYearFilter(e.target.value)}
-              className="px-3 py-2 border border-[var(--color-gold)] rounded outline-none text-[var(--color-black-deep)]"
+              className="px-3 py-2 border border-[var(--color-gold)] rounded outline-none text-[var(--color-black-deep)] bg-white"
             >
               {[2024, 2025, 2026, 2027].map(year => (
                 <option key={year} value={year.toString()}>{year}</option>
@@ -210,7 +210,7 @@ export default function ChargesPage() {
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-3 py-2 border border-[var(--color-gold)] rounded outline-none text-[var(--color-black-deep)]"
+              className="px-3 py-2 border border-[var(--color-gold)] rounded outline-none text-[var(--color-black-deep)] bg-white"
             >
               <option value="">Toutes les catégories</option>
               <option value="Salaires">Salaires</option>
