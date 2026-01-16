@@ -1,5 +1,5 @@
 "use client"
-import { Bell, Search, AlertCircle, CheckCircle2, LogOut, User, ChevronDown } from 'lucide-react'
+import { Bell, Search, AlertCircle, CheckCircle2, LogOut, User, ChevronDown, Menu } from 'lucide-react'
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useSession, signOut } from 'next-auth/react'
@@ -88,8 +88,17 @@ export default function ManagerHeader({ onMenuClick }: ManagerHeaderProps = {}) 
   const initials = (session?.user?.prenom?.[0] || 'U') + (session?.user?.nom?.[0] || '')
 
   return (
-    <header className="fixed top-0 left-[250px] right-0 z-40 bg-gradient-to-r from-[#0f0f0f] via-[#1a1a1a] to-[#0f0f0f] h-16 flex items-center px-6 border-b border-[var(--color-gold)]/15 shadow-lg">
+    <header className="fixed top-0 left-[250px] right-0 z-40 bg-gradient-to-r from-[#0f0f0f] via-[#1a1a1a] to-[#0f0f0f] h-16 flex items-center px-6 border-b border-[var(--color-gold)]/15 shadow-lg md:left-[250px]">
       <div className="flex items-center justify-between w-full gap-4">
+        {/* Mobile Menu Button */}
+        <button
+          onClick={onMenuClick}
+          className="md:hidden p-1.5 rounded-lg hover:bg-white/10 transition-colors text-[var(--color-gold)]"
+          aria-label="Toggle sidebar"
+        >
+          <Menu size={20} />
+        </button>
+
         {/* Left: Search Bar */}
         <div className="hidden md:flex flex-1 max-w-sm">
           <div className="relative w-full">

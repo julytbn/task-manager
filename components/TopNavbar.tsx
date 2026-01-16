@@ -8,7 +8,11 @@ import Link from 'next/link'
 // Dynamic import to avoid SSR issues for the sidebar overlay
 const ManagerSidebar = dynamic(() => import('@/components/ManagerSidebar'), { ssr: false })
 
-export default function TopNavbar() {
+interface TopNavbarProps {
+  onMenuClick?: () => void
+}
+
+export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
   const [openMobileMenu, setOpenMobileMenu] = useState(false)
   const [openProfileMenu, setOpenProfileMenu] = useState(false)
   const [userInfo, setUserInfo] = useState<{ nom: string; prenom: string; email: string; role: string } | null>(null)
@@ -60,7 +64,7 @@ export default function TopNavbar() {
         <button
           aria-label="open menu"
           className="mr-1 sm:mr-2 md:hidden text-[var(--color-gold)] hover:opacity-80 transition-opacity flex-shrink-0 p-1"
-          onClick={() => setOpenMobileMenu(true)}
+          onClick={() => onMenuClick?.()}
         >
           <Menu size={18} />
         </button>

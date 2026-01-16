@@ -38,28 +38,12 @@ export default function MainLayout({
       {/* Main Header with Toggle Button */}
       {showHeader && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-white">
-          <div className="flex items-center gap-2 px-3 sm:px-4 h-16 md:hidden border-b border-gray-200">
-            {showSidebar && (
-              <button 
-                onClick={toggleSidebar}
-                className="p-1.5 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors flex-shrink-0"
-                aria-label="Toggle sidebar"
-              >
-                {sidebarOpen ? (
-                  <X size={20} className="text-[var(--color-gold)]" />
-                ) : (
-                  <Menu size={20} className="text-[var(--color-gold)]" />
-                )}
-              </button>
-            )}
-            <span className="text-sm font-semibold text-[var(--color-gold)]">KEKELI</span>
-          </div>
-          <ManagerHeader />
+          <ManagerHeader onMenuClick={toggleSidebar} />
         </div>
       )}
       
       {/* Main Layout with Sidebar */}
-      <div className={`flex flex-1 overflow-hidden ${showHeader ? 'mt-32 md:mt-16' : ''}`}>
+      <div className={`flex flex-1 overflow-hidden ${showHeader ? 'mt-16' : ''}`}>
         {/* Sidebar */}
         {showSidebar && (
           <>
