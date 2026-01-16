@@ -108,7 +108,7 @@ export default function ManagerHeader({ onMenuClick }: ManagerHeaderProps = {}) 
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleSearch}
               placeholder="Rechercher... (Entrée)"
-              className="w-full bg-white border border-[var(--color-gold)]/40 rounded-lg py-2.5 pl-10 pr-4 text-sm text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-gold)] focus:border-[var(--color-gold)] transition-all duration-200 hover:border-[var(--color-gold)]/60"
+              className="w-full bg-white border border-[var(--color-gold)]/40 rounded-lg py-2.5 pl-10 pr-4 text-sm text-black placeholder:text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-gold)] focus:border-[var(--color-gold)] transition-all duration-200 hover:border-[var(--color-gold)]/60"
             />
           </div>
         </div>

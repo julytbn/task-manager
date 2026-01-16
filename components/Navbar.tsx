@@ -99,7 +99,7 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
               placeholder="Rechercher..."
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
-              className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2 text-sm sm:text-base rounded-lg bg-[var(--color-offwhite)]/95 text-[var(--color-black-deep)] border border-[var(--color-gold)]/40 focus:border-[var(--color-gold)] focus:outline-none focus:ring-2 focus:ring-[var(--color-gold)]/30 transition-all duration-200 placeholder:text-[var(--color-anthracite)]/60 font-medium"
+              className="w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2 text-sm sm:text-base rounded-lg bg-[var(--color-offwhite)]/95 text-[var(--color-black-deep)] border border-[var(--color-gold)]/40 focus:border-[var(--color-gold)] focus:outline-none focus:ring-2 focus:ring-[var(--color-gold)]/30 transition-all duration-200 placeholder:text-[var(--color-anthracite)]/80 font-medium"
             />
           </div>
         </form>

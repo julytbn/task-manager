@@ -38,7 +38,7 @@ export const FormField = React.forwardRef<HTMLInputElement, FormFieldProps>(
           )}
           <input
             ref={ref}
-            className={`w-full ${Icon ? 'pl-12' : 'px-4'} py-3 rounded-lg bg-[var(--color-offwhite)] text-[var(--color-black-deep)] border-2 transition-all duration-200 placeholder:text-[var(--color-anthracite)]/50 focus:outline-none ${
+            className={`w-full ${Icon ? 'pl-12' : 'px-4'} py-3 rounded-lg bg-[var(--color-offwhite)] text-[var(--color-black-deep)] border-2 transition-all duration-200 placeholder:text-[var(--color-anthracite)]/70 focus:outline-none ${
               error
                 ? 'border-red-500 focus:border-red-600'
                 : 'border-[var(--color-gold)]/30 focus:border-[var(--color-gold)]'

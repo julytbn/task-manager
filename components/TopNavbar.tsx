@@ -94,7 +94,7 @@ export default function TopNavbar({ onMenuClick }: TopNavbarProps) {
             <input
               aria-label="search"
               placeholder="Rechercher..."
-              className="w-full pl-8 md:pl-10 pr-3 md:pr-4 py-1.5 md:py-2 text-sm bg-white bg-opacity-10 border border-white border-opacity-20 rounded-lg text-[var(--color-offwhite)] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-gold)]"
+              className="w-full pl-8 md:pl-10 pr-3 md:pr-4 py-1.5 md:py-2 text-sm bg-white bg-opacity-10 border border-white border-opacity-20 rounded-lg text-[var(--color-offwhite)] placeholder:text-gray-200 focus:outline-none focus:ring-2 focus:ring-[var(--color-gold)]"
             />
           </div>
         </div>
