@@ -1,27 +1,19 @@
 'use client'
 
 export default function KekeliLogo({ className = "w-8 h-8" }: { className?: string }) {
+  const classes = className || "w-8 h-8"
   return (
-    <svg 
-      className={className}
-      viewBox="0 0 100 100"
-      xmlns="http://www.w3.org/2000/svg"
+    <div 
+      className={`${classes} bg-yellow-400 rounded-lg flex items-center justify-center font-black text-black flex-shrink-0`}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#FBBF24',
+        borderRadius: '0.5rem'
+      }}
     >
-      {/* Yellow background */}
-      <rect width="100" height="100" fill="#FBBF24" rx="8"/>
-      
-      {/* Black K letter */}
-      <text 
-        x="50" 
-        y="70" 
-        fontSize="70" 
-        fontWeight="bold" 
-        textAnchor="middle"
-        fill="#000000"
-        fontFamily="Arial, sans-serif"
-      >
-        K
-      </text>
-    </svg>
+      <span style={{fontSize: 'inherit', fontWeight: 900, lineHeight: 1}}>K</span>
+    </div>
   )
 }
