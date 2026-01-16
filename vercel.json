@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npx prisma migrate deploy --skip-generate && npm run build",
+  "buildCommand": "npx prisma migrate deploy && npm run build",
   "crons": [
     {
       "path": "/api/cron/generate-invoices",
